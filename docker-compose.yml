@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Bookmark Manager
+  bookmark-manager:
+    build: ./bookmark-manager
+    container_name: bookmark-manager
+    restart: unless-stopped
+    volumes:
+      - ./bookmark-manager/data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/bookmarks.db
+
+  # Canvas
+  canvas:
+    build: ./canvas
+    container_name: canvas
+    restart: unless-stopped
+    volumes:
+      - ./canvas/data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/canvas.db
+
+  # Kasten
+  kasten:
+    build: ./kasten
+    container_name: kasten
+    restart: unless-stopped
+    volumes:
+      - ./kasten/data:/app/data
+      - /home/ags/notes:/app/notes:ro
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/kasten.db
+      - NOTES_PATH=/app/notes
+      - CANVAS_URL=https://canvas.gstoehl.dev
+
+  # Caddy - reverse proxy with automatic HTTPS
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

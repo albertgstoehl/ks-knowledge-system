@@ -1,0 +1,11 @@
+bookmark.gstoehl.dev {
+    reverse_proxy bookmark-manager:8000
+}
+
+canvas.gstoehl.dev {
+    reverse_proxy canvas:8000
+}
+
+kasten.gstoehl.dev {
+    reverse_proxy kasten:8000
+}
