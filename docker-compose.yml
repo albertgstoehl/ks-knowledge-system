@@ -10,6 +10,7 @@ services:
       - ./bookmark-manager/data:/app/data
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/bookmarks.db
+      - CANVAS_URL=http://canvas:8000
 
   # Canvas
   canvas:
@@ -20,6 +21,7 @@ services:
       - ./canvas/data:/app/data
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/canvas.db
+      - KASTEN_URL=http://kasten:8000
 
   # Kasten
   kasten:
@@ -28,7 +30,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./kasten/data:/app/data
-      - /home/ags/notes:/app/notes:ro
+      - /home/ags/notes:/app/notes
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/kasten.db
       - NOTES_PATH=/app/notes
