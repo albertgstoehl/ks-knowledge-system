@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: canvas-daily-wipe
+  namespace: default
+spec:
+  schedule: "0 0 * * *"
+  timeZone: "Europe/Zurich"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: wipe
+            image: curlimages/curl:latest
+            command:
+            - curl
+            - -X
+            - DELETE
+            - http://canvas:8000/api/canvas
+          restartPolicy: OnFailure
