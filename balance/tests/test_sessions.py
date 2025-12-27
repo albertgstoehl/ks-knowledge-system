@@ -149,3 +149,63 @@ async def test_session_active_on_break():
         assert data["allowed"] is False
         assert data["reason"] == "on_break"
         assert data["break_remaining"] > 0
+
+
+async def test_quick_start_success():
+    """Test quick-starting a session from terminal."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/api/session/quick-start", json={
+            "type": "personal",
+            "intention": "Fix bug"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["session_id"] is not None
+
+        # Verify session was created
+        current = await client.get("/api/sessions/current")
+        assert current.json()["active"] is True
+        assert current.json()["session"]["intention"] == "Fix bug"
+
+
+async def test_quick_start_on_break():
+    """Test quick-start fails when on break."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create a break
+        await client.post("/api/sessions/start", json={"type": "expected"})
+        await client.post("/api/sessions/end", json={
+            "distractions": "none",
+            "did_the_thing": True
+        })
+
+        # Try to quick-start
+        response = await client.post("/api/session/quick-start", json={
+            "type": "personal",
+            "intention": "Another task"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert data["reason"] == "on_break"
+        assert data["remaining"] > 0
+
+
+async def test_quick_start_already_in_session():
+    """Test quick-start fails when already in session."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Start a session
+        await client.post("/api/sessions/start", json={"type": "expected"})
+
+        # Try to quick-start another
+        response = await client.post("/api/session/quick-start", json={
+            "type": "personal",
+            "intention": "Another task"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert data["reason"] == "session_active"

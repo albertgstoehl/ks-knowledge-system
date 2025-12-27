@@ -5,7 +5,8 @@ from ..database import get_db
 from ..models import (
     SessionStart, SessionEnd, Session,
     BreakCheck, CanStart,
-    SessionActiveResponse, SessionInfo
+    SessionActiveResponse, SessionInfo,
+    QuickStartRequest, QuickStartResponse
 )
 
 router = APIRouter(prefix="/api", tags=["sessions"])
@@ -313,6 +314,49 @@ async def check_session_active() -> SessionActiveResponse:
             remaining_seconds=remaining
         )
     )
+
+
+@router.post("/session/quick-start")
+async def quick_start_session(data: QuickStartRequest) -> QuickStartResponse:
+    """Start a session from terminal (for Claude Code hook).
+
+    Returns success/failure without raising HTTP exceptions,
+    so the hook can handle the response gracefully.
+    """
+    # Check if on break
+    state = await get_app_state()
+    if state["break_until"]:
+        break_until = datetime.fromisoformat(state["break_until"])
+        now = datetime.now()
+        if now < break_until:
+            remaining = int((break_until - now).total_seconds())
+            return QuickStartResponse(
+                success=False,
+                reason="on_break",
+                remaining=remaining
+            )
+
+    # Check if already in session
+    current = await get_current_session()
+    if current:
+        return QuickStartResponse(success=False, reason="session_active")
+
+    # Check can-start constraints (evening cutoff, hard max)
+    can_start = await check_can_start()
+    if not can_start.allowed:
+        return QuickStartResponse(success=False, reason=can_start.reason)
+
+    # Create the session
+    async with get_db() as db:
+        cursor = await db.execute(
+            """INSERT INTO sessions (type, intention, started_at)
+               VALUES (?, ?, ?)""",
+            (data.type, data.intention, datetime.now().isoformat())
+        )
+        session_id = cursor.lastrowid
+        await db.commit()
+
+    return QuickStartResponse(success=True, session_id=session_id)
 
 
 @router.get("/status")
