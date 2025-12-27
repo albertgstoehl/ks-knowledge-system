@@ -13,8 +13,18 @@ Read this file first. Based on your task, read only the relevant documentation f
 |------|------|
 | Local development setup | `docs/DEV-ENVIRONMENT.md` |
 | K8s deployment, logs, debugging | `k8s/OPERATIONS.md` |
-| UI styling (brutalist, monospace) | `bookmark-manager/docs/style.md` |
+| **UI components, buttons, forms** | `docs/COMPONENT-LIBRARY.md` |
 | Terminal output styling | `docs/TERMINAL-STYLE-GUIDE.md` |
+
+### Shared Component Library
+
+All services use shared UI components from `shared/`. When building UI:
+
+1. Import macros: `{% import "components.html" as ui %}`
+2. Use components: `{{ ui.button("Save", primary=true) }}`, `{{ ui.header("Title", tabs) }}`
+3. Preview: Open `shared/styleguide.html` in browser
+
+See `docs/COMPONENT-LIBRARY.md` for full API reference.
 
 ## Service-Specific Documentation
 
@@ -84,7 +94,8 @@ Read this file first. Based on your task, read only the relevant documentation f
 - balance.gstoehl.dev
 
 **Key Patterns:**
-- All services use brutalist UI (monospace, black borders)
+- All services use shared component library from `shared/`
+- Brutalist UI (monospace, black borders) via CSS tokens
 - SQLite databases in `./data/` directories
 - Hot reload in dev via uvicorn `--reload`
 - K8s uses local images (`imagePullPolicy: Never`)

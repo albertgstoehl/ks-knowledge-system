@@ -1,0 +1,248 @@
+{# ==========================================================================
+   COMPONENT MACROS
+   Reusable Jinja2 macros for all services
+
+   Usage: {% import "components.html" as ui %}
+   ========================================================================== #}
+
+
+{# ==========================================================================
+   BUTTON
+
+   {{ ui.button("Save") }}
+   {{ ui.button("Submit", primary=true) }}
+   {{ ui.button("Delete", danger=true) }}
+   {{ ui.button("Cancel", ghost=true) }}
+   {{ ui.button("Full Width", primary=true, full=true) }}
+   ========================================================================== #}
+{% macro button(text, primary=false, danger=false, ghost=false, full=false, lg=false, sm=false, type="button", disabled=false, id=none, class=none) %}
+<button
+  type="{{ type }}"
+  class="btn{% if primary %} btn--primary{% endif %}{% if danger %} btn--danger{% endif %}{% if ghost %} btn--ghost{% endif %}{% if full %} btn--full{% endif %}{% if lg %} btn--lg{% endif %}{% if sm %} btn--sm{% endif %}{% if class %} {{ class }}{% endif %}"
+  {% if disabled %}disabled{% endif %}
+  {% if id %}id="{{ id }}"{% endif %}
+>{{ text }}</button>
+{% endmacro %}
+
+
+{# ==========================================================================
+   LINK BUTTON
+
+   {{ ui.link_button("Go Home", "/") }}
+   {{ ui.link_button("Dashboard", "/dashboard", primary=true) }}
+   ========================================================================== #}
+{% macro link_button(text, href, primary=false, danger=false, full=false, class=none) %}
+<a
+  href="{{ href }}"
+  class="btn{% if primary %} btn--primary{% endif %}{% if danger %} btn--danger{% endif %}{% if full %} btn--full{% endif %}{% if class %} {{ class }}{% endif %}"
+>{{ text }}</a>
+{% endmacro %}
+
+
+{# ==========================================================================
+   HEADER
+
+   {{ ui.header("Balance") }}
+   {{ ui.header("Balance", [("Timer", "/"), ("Log", "/log")], active="Timer") }}
+   ========================================================================== #}
+{% macro header(title, tabs=[], active=none) %}
+<header class="header">
+  <h1 class="header__title">{{ title }}</h1>
+  {% if tabs %}
+  <nav class="tabs">
+    {% for label, url in tabs %}
+    <a href="{{ url }}" class="tab{% if label == active %} tab--active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+</header>
+{% endmacro %}
+
+
+{# ==========================================================================
+   INPUT
+
+   {{ ui.input("email", placeholder="Enter email") }}
+   {{ ui.input("password", type="password", required=true) }}
+   ========================================================================== #}
+{% macro input(name, placeholder="", type="text", value="", required=false, id=none, class=none, autofocus=false) %}
+<input
+  type="{{ type }}"
+  name="{{ name }}"
+  {% if id %}id="{{ id }}"{% else %}id="{{ name }}"{% endif %}
+  placeholder="{{ placeholder }}"
+  value="{{ value }}"
+  class="input{% if class %} {{ class }}{% endif %}"
+  {% if required %}required{% endif %}
+  {% if autofocus %}autofocus{% endif %}
+>
+{% endmacro %}
+
+
+{# ==========================================================================
+   TEXTAREA
+
+   {{ ui.textarea("content", placeholder="Write something...") }}
+   ========================================================================== #}
+{% macro textarea(name, placeholder="", value="", rows=4, required=false, id=none) %}
+<textarea
+  name="{{ name }}"
+  {% if id %}id="{{ id }}"{% else %}id="{{ name }}"{% endif %}
+  placeholder="{{ placeholder }}"
+  rows="{{ rows }}"
+  class="textarea"
+  {% if required %}required{% endif %}
+>{{ value }}</textarea>
+{% endmacro %}
+
+
+{# ==========================================================================
+   FORM GROUP
+
+   {% call ui.form_group("Email", "email") %}
+     {{ ui.input("email", placeholder="you@example.com") }}
+   {% endcall %}
+   ========================================================================== #}
+{% macro form_group(label, for_id=none, help=none) %}
+<div class="form-group">
+  <label class="form-group__label" {% if for_id %}for="{{ for_id }}"{% endif %}>{{ label }}</label>
+  {{ caller() }}
+  {% if help %}
+  <div class="form-group__help">{{ help }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   CARD
+
+   {% call ui.card() %}
+     <p>Card content here</p>
+   {% endcall %}
+
+   {% call ui.card(hover=true) %}
+     <p>Clickable card</p>
+   {% endcall %}
+   ========================================================================== #}
+{% macro card(hover=false, class=none) %}
+<div class="card{% if hover %} card--hover{% endif %}{% if class %} {{ class }}{% endif %}">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   TABS (standalone, not in header)
+
+   {{ ui.tabs([("Tab 1", "/tab1"), ("Tab 2", "/tab2")], active="Tab 1") }}
+   ========================================================================== #}
+{% macro tabs(items, active=none) %}
+<nav class="tabs">
+  {% for label, url in items %}
+  <a href="{{ url }}" class="tab{% if label == active %} tab--active{% endif %}">{{ label }}</a>
+  {% endfor %}
+</nav>
+{% endmacro %}
+
+
+{# ==========================================================================
+   BOTTOM NAV (mobile navigation)
+
+   {{ ui.bottom_nav([("Timer", "/"), ("Log", "/log"), ("Stats", "/stats")], active="Timer") }}
+   ========================================================================== #}
+{% macro bottom_nav(items, active=none) %}
+<nav class="bottom-nav">
+  <div class="bottom-nav__links">
+    {% for label, url in items %}
+    <a href="{{ url }}" class="bottom-nav__link{% if label == active %} bottom-nav__link--active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+</nav>
+{% endmacro %}
+
+
+{# ==========================================================================
+   PROGRESS BAR
+
+   {{ ui.progress(75) }}
+   {{ ui.progress(50, lg=true) }}
+   ========================================================================== #}
+{% macro progress(percent, lg=false) %}
+<div class="progress{% if lg %} progress--lg{% endif %}">
+  <div class="progress__fill" style="width: {{ percent }}%"></div>
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   EMPTY STATE
+
+   {{ ui.empty_state("No bookmarks yet", "Add your first bookmark to get started") }}
+   ========================================================================== #}
+{% macro empty_state(title, message=none) %}
+<div class="empty-state">
+  <div class="empty-state__title">{{ title }}</div>
+  {% if message %}
+  <div class="empty-state__message">{{ message }}</div>
+  {% endif %}
+  {{ caller() if caller }}
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   LIST
+
+   {% call ui.list() %}
+     {% for item in items %}
+       {{ ui.list_item(item.title, item.meta) }}
+     {% endfor %}
+   {% endcall %}
+   ========================================================================== #}
+{% macro list() %}
+<div class="list">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro list_item(title, meta=none, selected=false) %}
+<div class="list__item{% if selected %} list__item--selected{% endif %}">
+  <div class="list__item-title">{{ title }}</div>
+  {% if meta %}
+  <div class="list__item-meta">{{ meta }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   MODAL
+
+   {% call ui.modal("Confirm Delete", id="delete-modal") %}
+     <p>Are you sure?</p>
+   {% endcall %}
+   ========================================================================== #}
+{% macro modal(title, id=none, hidden=true) %}
+<div class="modal" {% if id %}id="{{ id }}"{% endif %} {% if hidden %}hidden{% endif %}>
+  <div class="modal__content">
+    <div class="modal__header">
+      <span class="modal__title">{{ title }}</span>
+      <button class="btn btn--ghost" onclick="this.closest('.modal').hidden = true">&times;</button>
+    </div>
+    <div class="modal__body">
+      {{ caller() }}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   LABEL
+
+   {{ ui.label("Status") }}
+   ========================================================================== #}
+{% macro label(text) %}
+<span class="label">{{ text }}</span>
+{% endmacro %}

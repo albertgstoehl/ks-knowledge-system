@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Component Library - Styleguide</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/utilities.css">
+  <style>
+    .styleguide-section {
+      margin-bottom: var(--space-2xl);
+      padding-bottom: var(--space-xl);
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .styleguide-section:last-child {
+      border-bottom: none;
+    }
+    .styleguide-title {
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .styleguide-row {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-md);
+      align-items: center;
+    }
+    .styleguide-preview {
+      border: 1px dashed var(--color-border-light);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-md);
+    }
+    .styleguide-code {
+      background: var(--color-hover);
+      padding: var(--space-sm) var(--space-md);
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-md);
+      overflow-x: auto;
+    }
+    .color-swatch {
+      width: 60px;
+      height: 60px;
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: flex-end;
+      padding: var(--space-xs);
+    }
+    .color-swatch span {
+      font-size: var(--font-size-xs);
+      background: #fff;
+      padding: 2px 4px;
+    }
+    .spacing-demo {
+      background: var(--color-text);
+      height: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" style="max-width: 900px; padding: var(--space-xl);">
+    <h1 class="mb-xl">Component Library</h1>
+    <p class="text-muted mb-2xl">Shared UI components for knowledge-system services</p>
+
+    <!-- Colors -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Colors</div>
+      <div class="styleguide-row">
+        <div class="color-swatch" style="background: var(--color-bg);"><span>bg</span></div>
+        <div class="color-swatch" style="background: var(--color-text);"><span style="color:#fff;background:#000;">text</span></div>
+        <div class="color-swatch" style="background: var(--color-muted);"><span>muted</span></div>
+        <div class="color-swatch" style="background: var(--color-hover);"><span>hover</span></div>
+        <div class="color-swatch" style="background: var(--color-border-light);"><span>border-light</span></div>
+        <div class="color-swatch" style="background: var(--color-danger);"><span style="color:#fff;">danger</span></div>
+      </div>
+    </section>
+
+    <!-- Typography -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Typography</div>
+      <p class="text-3xl mb-sm">Text 3XL (2rem)</p>
+      <p class="text-2xl mb-sm">Text 2XL (1.5rem)</p>
+      <p class="text-xl mb-sm">Text XL (1.25rem)</p>
+      <p class="text-lg mb-sm">Text LG (1rem)</p>
+      <p class="text-base mb-sm">Text Base (0.875rem)</p>
+      <p class="text-sm mb-sm">Text SM (0.75rem)</p>
+      <p class="text-xs mb-md">Text XS (0.625rem)</p>
+      <p class="text-muted mb-sm">Muted text</p>
+      <p class="text-danger mb-sm">Danger text</p>
+      <p class="label">Label Style</p>
+    </section>
+
+    <!-- Spacing -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Spacing Scale</div>
+      <div class="flex items-center gap-md mb-sm">
+        <span class="text-sm" style="width:60px;">xs (4px)</span>
+        <div class="spacing-demo" style="width: var(--space-xs);"></div>
+      </div>
+      <div class="flex items-center gap-md mb-sm">
+        <span class="text-sm" style="width:60px;">sm (8px)</span>
+        <div class="spacing-demo" style="width: var(--space-sm);"></div>
+      </div>
+      <div class="flex items-center gap-md mb-sm">
+        <span class="text-sm" style="width:60px;">md (16px)</span>
+        <div class="spacing-demo" style="width: var(--space-md);"></div>
+      </div>
+      <div class="flex items-center gap-md mb-sm">
+        <span class="text-sm" style="width:60px;">lg (24px)</span>
+        <div class="spacing-demo" style="width: var(--space-lg);"></div>
+      </div>
+      <div class="flex items-center gap-md mb-sm">
+        <span class="text-sm" style="width:60px;">xl (32px)</span>
+        <div class="spacing-demo" style="width: var(--space-xl);"></div>
+      </div>
+      <div class="flex items-center gap-md">
+        <span class="text-sm" style="width:60px;">2xl (48px)</span>
+        <div class="spacing-demo" style="width: var(--space-2xl);"></div>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Buttons</div>
+      <div class="styleguide-row">
+        <button class="btn">Default</button>
+        <button class="btn btn--primary">Primary</button>
+        <button class="btn btn--danger">Danger</button>
+        <button class="btn btn--ghost">Ghost</button>
+        <button class="btn" disabled>Disabled</button>
+      </div>
+      <div class="styleguide-row">
+        <button class="btn btn--sm">Small</button>
+        <button class="btn">Normal</button>
+        <button class="btn btn--lg">Large</button>
+      </div>
+      <div class="styleguide-row">
+        <button class="btn btn--primary btn--full">Full Width Button</button>
+      </div>
+      <div class="styleguide-code">
+        {{ ui.button("Save", primary=true) }}
+      </div>
+    </section>
+
+    <!-- Header -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Header + Tabs</div>
+      <div class="styleguide-preview">
+        <header class="header">
+          <h1 class="header__title">Service Name</h1>
+          <nav class="tabs">
+            <a href="#" class="tab tab--active">Active Tab</a>
+            <a href="#" class="tab">Tab Two</a>
+            <a href="#" class="tab">Tab Three</a>
+          </nav>
+        </header>
+      </div>
+      <div class="styleguide-code">
+        {{ ui.header("Balance", [("Timer", "/"), ("Log", "/log")], active="Timer") }}
+      </div>
+    </section>
+
+    <!-- Tabs Standalone -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Tabs (Standalone)</div>
+      <div class="styleguide-preview">
+        <nav class="tabs">
+          <a href="#" class="tab tab--active">Tab 1</a>
+          <a href="#" class="tab">Tab 2</a>
+          <a href="#" class="tab">Tab 3</a>
+        </nav>
+      </div>
+    </section>
+
+    <!-- Inputs -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Inputs</div>
+      <div class="styleguide-preview" style="max-width: 400px;">
+        <div class="form-group">
+          <label class="form-group__label">Email</label>
+          <input class="input" type="email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-group__label">Small Input</label>
+          <input class="input input--sm" placeholder="Smaller">
+        </div>
+        <div class="form-group">
+          <label class="form-group__label">Message</label>
+          <textarea class="textarea" placeholder="Write something..."></textarea>
+          <div class="form-group__help">Optional help text</div>
+        </div>
+      </div>
+      <div class="styleguide-code">
+        {{ ui.input("email", placeholder="you@example.com") }}
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Cards</div>
+      <div class="grid grid-cols-2 gap-md">
+        <div class="card">
+          <div class="card__title">Card Title</div>
+          <div class="card__meta">Meta info here</div>
+          <p>Card content goes here. Can contain any content.</p>
+        </div>
+        <div class="card card--hover">
+          <div class="card__title">Hover Card</div>
+          <div class="card__meta">Clickable</div>
+          <p>Has hover shadow effect.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- List -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">List</div>
+      <div style="max-width: 400px;">
+        <div class="list">
+          <div class="list__item">
+            <div class="list__item-title">List Item One</div>
+            <div class="list__item-meta">Meta information</div>
+          </div>
+          <div class="list__item list__item--selected">
+            <div class="list__item-title">Selected Item</div>
+            <div class="list__item-meta">This one is selected</div>
+          </div>
+          <div class="list__item">
+            <div class="list__item-title">List Item Three</div>
+            <div class="list__item-meta">Another item</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Progress -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Progress Bar</div>
+      <div style="max-width: 400px;">
+        <p class="text-sm mb-sm">Default (25%)</p>
+        <div class="progress mb-md">
+          <div class="progress__fill" style="width: 25%"></div>
+        </div>
+        <p class="text-sm mb-sm">Large (75%)</p>
+        <div class="progress progress--lg">
+          <div class="progress__fill" style="width: 75%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty State -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Empty State</div>
+      <div class="styleguide-preview">
+        <div class="empty-state">
+          <div class="empty-state__title">No items yet</div>
+          <div class="empty-state__message">Add your first item to get started.</div>
+          <button class="btn btn--primary">Add Item</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modal -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Modal</div>
+      <button class="btn" onclick="document.getElementById('demo-modal').hidden = false">Open Modal</button>
+      <div class="modal" id="demo-modal" hidden>
+        <div class="modal__content">
+          <div class="modal__header">
+            <span class="modal__title">Modal Title</span>
+            <button class="btn btn--ghost" onclick="document.getElementById('demo-modal').hidden = true">&times;</button>
+          </div>
+          <div class="modal__body">
+            <p>Modal content goes here. Can contain forms, text, or any other content.</p>
+          </div>
+          <div class="modal__footer">
+            <button class="btn" onclick="document.getElementById('demo-modal').hidden = true">Cancel</button>
+            <button class="btn btn--primary">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Nav -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Bottom Navigation (Mobile)</div>
+      <p class="text-sm text-muted mb-md">Only visible on mobile (&lt;768px). Resize browser to see.</p>
+      <div class="styleguide-preview" style="max-width: 400px; background: #f5f5f5; padding: 0;">
+        <div style="border-top: 1px solid var(--color-border); display: flex; height: 56px;">
+          <a href="#" class="bottom-nav__link bottom-nav__link--active" style="flex:1; display:flex; align-items:center; justify-content:center; border-right: 1px solid var(--color-border); background: var(--color-text); color: var(--color-bg);">Timer</a>
+          <a href="#" class="bottom-nav__link" style="flex:1; display:flex; align-items:center; justify-content:center; border-right: 1px solid var(--color-border);">Log</a>
+          <a href="#" class="bottom-nav__link" style="flex:1; display:flex; align-items:center; justify-content:center; border-right: 1px solid var(--color-border);">Stats</a>
+          <a href="#" class="bottom-nav__link" style="flex:1; display:flex; align-items:center; justify-content:center;">Settings</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dark Mode -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Dark Mode</div>
+      <div class="styleguide-preview" data-theme="dark" style="background: #000; color: #fff;">
+        <div class="styleguide-row">
+          <button class="btn">Default</button>
+          <button class="btn btn--primary">Primary</button>
+          <button class="btn btn--ghost">Ghost</button>
+        </div>
+        <input class="input mt-md" placeholder="Input in dark mode" style="max-width: 300px;">
+      </div>
+      <div class="styleguide-code">
+        &lt;div data-theme="dark"&gt;...&lt;/div&gt;
+      </div>
+    </section>
+
+    <!-- Utilities -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Utility Classes</div>
+      <div class="styleguide-code">
+        <strong>Spacing:</strong> .m-{xs|sm|md|lg|xl}, .mt-*, .mb-*, .p-*, .pt-*, .pb-*<br>
+        <strong>Flex:</strong> .flex, .flex-col, .items-center, .justify-between, .gap-*<br>
+        <strong>Grid:</strong> .grid, .grid-cols-2, .grid-cols-3<br>
+        <strong>Text:</strong> .text-{xs|sm|base|lg|xl|2xl|3xl}, .text-muted, .text-center<br>
+        <strong>Display:</strong> .hidden, .hidden-mobile, .hidden-desktop<br>
+        <strong>Border:</strong> .border, .border-t, .border-b, .border-light
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>
