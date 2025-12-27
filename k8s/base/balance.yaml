@@ -1,0 +1,57 @@
+# /home/ags/knowledge-system/k8s/base/balance.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: balance
+  namespace: knowledge-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: balance
+  template:
+    metadata:
+      labels:
+        app: balance
+    spec:
+      containers:
+        - name: balance
+          image: docker.io/library/balance:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: "./data/balance.db"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: balance-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: balance
+  namespace: knowledge-system
+spec:
+  selector:
+    app: balance
+  ports:
+    - port: 8000
+      targetPort: 8000
