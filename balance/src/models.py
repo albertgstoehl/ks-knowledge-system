@@ -86,3 +86,34 @@ class BreakCheck(BaseModel):
 class CanStart(BaseModel):
     allowed: bool
     reason: Optional[str] = None
+
+
+# Claude Code integration models
+class SessionInfo(BaseModel):
+    id: int
+    type: str
+    intention: Optional[str]
+    remaining_seconds: int
+
+
+class SessionActiveResponse(BaseModel):
+    allowed: bool
+    reason: Optional[Literal["no_session", "on_break"]] = None
+    break_remaining: Optional[int] = None
+    session: Optional[SessionInfo] = None
+
+
+class QuickStartRequest(BaseModel):
+    type: Literal["expected", "personal"]
+    intention: str
+
+
+class QuickStartResponse(BaseModel):
+    success: bool
+    session_id: Optional[int] = None
+    reason: Optional[str] = None
+    remaining: Optional[int] = None
+
+
+class MarkClaudeUsedResponse(BaseModel):
+    marked: bool
