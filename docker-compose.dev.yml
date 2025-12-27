@@ -1,0 +1,57 @@
+# Development environment - no sudo required
+# Usage: docker compose -f docker-compose.dev.yml up --build
+
+services:
+  bookmark-manager:
+    build: ./bookmark-manager
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./bookmark-manager/src:/app/src
+      - ./bookmark-manager/data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/bookmarks.db
+      - CANVAS_URL=http://canvas:8000
+      - CANVAS_EXTERNAL_URL=http://localhost:8002
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+  canvas:
+    build: ./canvas
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./canvas/src:/app/src
+      - ./canvas/templates:/app/templates
+      - ./canvas/static:/app/static
+      - ./canvas/data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/canvas.db
+      - KASTEN_URL=http://localhost:8003
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+  kasten:
+    build: ./kasten
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./kasten/src:/app/src
+      - ./kasten/templates:/app/templates
+      - ./kasten/static:/app/static
+      - ./kasten/data:/app/data
+      - /home/ags/notesdev:/app/notes
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/kasten.db
+      - NOTES_PATH=/app/notes
+      - CANVAS_URL=http://canvas:8000
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+  balance:
+    build: ./balance
+    ports:
+      - "8004:8000"
+    volumes:
+      - ./balance/src:/app/src
+      - ./balance/data:/app/data
+    environment:
+      - DATABASE_URL=./data/balance.db
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload

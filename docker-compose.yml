@@ -21,7 +21,7 @@ services:
       - ./canvas/data:/app/data
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/canvas.db
-      - KASTEN_URL=http://kasten:8000
+      - KASTEN_URL=https://kasten.gstoehl.dev
 
   # Kasten
   kasten:
@@ -35,6 +35,16 @@ services:
       - DATABASE_URL=sqlite+aiosqlite:///./data/kasten.db
       - NOTES_PATH=/app/notes
       - CANVAS_URL=https://canvas.gstoehl.dev
+
+  # Balance
+  balance:
+    build: ./balance
+    container_name: balance
+    restart: unless-stopped
+    volumes:
+      - ./balance/data:/app/data
+    environment:
+      - DATABASE_URL=./data/balance.db
 
   # Caddy - reverse proxy with automatic HTTPS
   caddy:
