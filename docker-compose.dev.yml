@@ -52,6 +52,7 @@ services:
     volumes:
       - ./balance/src:/app/src
       - ./balance/data:/app/data
+      - ./shared:/app/shared
     environment:
       - DATABASE_URL=./data/balance.db
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload

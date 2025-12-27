@@ -26,8 +26,14 @@ app.include_router(settings.router)
 # Static files and templates
 static_path = os.path.join(os.path.dirname(__file__), "static")
 templates_path = os.path.join(os.path.dirname(__file__), "templates")
-shared_css_path = os.path.join(os.path.dirname(__file__), "..", "..", "shared", "css")
-shared_templates_path = os.path.join(os.path.dirname(__file__), "..", "..", "shared", "templates")
+
+# Shared paths: try Docker mount first (/app/shared), then local (../../shared)
+_base = os.path.dirname(__file__)
+_docker_shared = os.path.join(_base, "..", "shared")
+_local_shared = os.path.join(_base, "..", "..", "shared")
+_shared_base = _docker_shared if os.path.exists(_docker_shared) else _local_shared
+shared_css_path = os.path.join(_shared_base, "css")
+shared_templates_path = os.path.join(_shared_base, "templates")
 
 # Mount shared CSS first, then service-specific static
 app.mount("/static/shared", StaticFiles(directory=shared_css_path), name="shared")
