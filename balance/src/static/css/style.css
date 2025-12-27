@@ -144,11 +144,19 @@ body.evening-mode {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  padding: 0.75rem 1rem;
+  min-height: 44px;  /* Touch target */
+  cursor: pointer;
 }
 
 .btn-ghost:hover {
   color: var(--color-text);
   background: transparent;
+}
+
+.btn-ghost:active {
+  color: var(--color-text);
+  background: var(--color-surface);
 }
 
 /* ==========================================================================
