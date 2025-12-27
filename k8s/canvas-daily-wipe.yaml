@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: canvas-daily-wipe
-  namespace: default
+  namespace: knowledge-system
 spec:
   schedule: "0 0 * * *"
   timeZone: "Europe/Zurich"
