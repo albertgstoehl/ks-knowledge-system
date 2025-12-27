@@ -35,8 +35,8 @@ _shared_base = _docker_shared if os.path.exists(_docker_shared) else _local_shar
 shared_css_path = os.path.join(_shared_base, "css")
 shared_templates_path = os.path.join(_shared_base, "templates")
 
-# Mount shared CSS first, then service-specific static
-app.mount("/static/shared", StaticFiles(directory=shared_css_path), name="shared")
+# Mount shared (css + js) first, then service-specific static
+app.mount("/static/shared", StaticFiles(directory=_shared_base), name="shared")
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 # Include shared templates in search path
