@@ -1,0 +1,70 @@
+# /home/ags/knowledge-system/k8s/base/bookmark-manager.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookmark-manager
+  namespace: knowledge-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookmark-manager
+  template:
+    metadata:
+      labels:
+        app: bookmark-manager
+    spec:
+      containers:
+        - name: bookmark-manager
+          image: docker.io/library/bookmark-manager:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: CANVAS_URL
+              value: "http://canvas.knowledge-system.svc.cluster.local:8000"
+            - name: CANVAS_EXTERNAL_URL
+              value: "https://canvas.gstoehl.dev"
+            - name: DATABASE_URL
+              value: "sqlite+aiosqlite:///./data/bookmarks.db"
+          envFrom:
+            - secretRef:
+                name: bookmark-manager-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "100m"
+            limits:
+              memory: "4Gi"
+              cpu: "1000m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bookmark-manager-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookmark-manager
+  namespace: knowledge-system
+spec:
+  selector:
+    app: bookmark-manager
+  ports:
+    - port: 8000
+      targetPort: 8000

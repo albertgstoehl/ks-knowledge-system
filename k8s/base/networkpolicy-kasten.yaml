@@ -1,0 +1,23 @@
+# /home/ags/knowledge-system/k8s/base/networkpolicy-kasten.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kasten-egress
+  namespace: knowledge-system
+spec:
+  podSelector:
+    matchLabels:
+      app: kasten
+  policyTypes:
+    - Egress
+  egress:
+    # DNS only - kasten doesn't need to call other services
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

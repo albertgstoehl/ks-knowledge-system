@@ -1,0 +1,30 @@
+# /home/ags/knowledge-system/k8s/base/networkpolicy-canvas.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: canvas-egress
+  namespace: knowledge-system
+spec:
+  podSelector:
+    matchLabels:
+      app: canvas
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+
+    # Internal only - can reach other pods in namespace
+    - to:
+        - podSelector: {}
+      ports:
+        - port: 8000
+          protocol: TCP

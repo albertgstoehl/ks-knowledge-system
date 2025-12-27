@@ -1,0 +1,7 @@
+# /home/ags/knowledge-system/k8s/base/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: knowledge-system
+  labels:
+    name: knowledge-system

@@ -1,0 +1,44 @@
+# /home/ags/knowledge-system/k8s/base/networkpolicy-telegram-bot.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: telegram-bot-egress
+  namespace: knowledge-system
+spec:
+  podSelector:
+    matchLabels:
+      app: telegram-bot
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+
+    # Internal: bookmark-manager API
+    - to:
+        - podSelector:
+            matchLabels:
+              app: bookmark-manager
+      ports:
+        - port: 8000
+          protocol: TCP
+
+    # External: Telegram API (api.telegram.org)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - port: 443
+          protocol: TCP
