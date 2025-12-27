@@ -43,12 +43,8 @@ echo ""
 # Build, save, import, restart each service
 for svc in "${selected[@]}"; do
     echo "=== Building $svc ==="
-    if [[ "$svc" == "balance" ]]; then
-        # Balance needs root context for shared/ directory
-        docker build -f "$svc/Dockerfile" -t "$svc:latest" .
-    else
-        docker build -t "$svc:latest" "./$svc"
-    fi
+    # All services use root context for shared/ directory
+    docker build -f "$svc/Dockerfile" -t "$svc:latest" .
 
     echo "=== Saving $svc ==="
     docker save "$svc:latest" -o "/tmp/$svc.tar"
