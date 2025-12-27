@@ -279,7 +279,7 @@
   }
 
   /* Hide header tabs on mobile when using bottom nav */
-  body:has(.bottom-nav) .header .tabs {
+  .header__tabs {
     display: none;
   }
 
