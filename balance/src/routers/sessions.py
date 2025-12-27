@@ -265,3 +265,82 @@ async def check_rabbit_hole():
         "consecutive_count": count,
         "threshold": settings["rabbit_hole_check"]
     }
+
+
+@router.get("/status")
+async def get_full_status():
+    """Get complete timer status with server timestamp for accurate sync.
+
+    This endpoint is the source of truth for client-side timer calculations.
+    Returns server_timestamp so client can calculate time offset.
+    """
+    now = datetime.now()
+    server_timestamp = now.timestamp()
+
+    # Check break status
+    state = await get_app_state()
+    settings = await get_settings()
+
+    if state["break_until"]:
+        break_until = datetime.fromisoformat(state["break_until"])
+        if now < break_until:
+            remaining = int((break_until - now).total_seconds())
+            return {
+                "mode": "break",
+                "remaining_seconds": remaining,
+                "end_timestamp": break_until.timestamp(),
+                "server_timestamp": server_timestamp,
+                "total_duration": settings["short_break"] * 60,  # Could be long break
+            }
+        else:
+            # Break expired, clear it
+            async with get_db() as db:
+                await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
+                await db.commit()
+
+    # Check for active session
+    session = await get_current_session()
+    if session:
+        started_at = datetime.fromisoformat(session["started_at"])
+        session_duration = settings["session_duration"] * 60
+        end_time = started_at + timedelta(seconds=session_duration)
+
+        if now < end_time:
+            remaining = int((end_time - now).total_seconds())
+            return {
+                "mode": "session",
+                "remaining_seconds": remaining,
+                "end_timestamp": end_time.timestamp(),
+                "server_timestamp": server_timestamp,
+                "total_duration": session_duration,
+                "session": {
+                    "id": session["id"],
+                    "type": session["type"],
+                    "intention": session["intention"],
+                    "started_at": session["started_at"],
+                }
+            }
+        else:
+            # Session expired - should show end page
+            return {
+                "mode": "session_ended",
+                "remaining_seconds": 0,
+                "end_timestamp": end_time.timestamp(),
+                "server_timestamp": server_timestamp,
+                "total_duration": session_duration,
+                "session": {
+                    "id": session["id"],
+                    "type": session["type"],
+                    "intention": session["intention"],
+                    "started_at": session["started_at"],
+                }
+            }
+
+    # Idle - no active session or break
+    return {
+        "mode": "idle",
+        "remaining_seconds": settings["session_duration"] * 60,
+        "end_timestamp": None,
+        "server_timestamp": server_timestamp,
+        "total_duration": settings["session_duration"] * 60,
+    }

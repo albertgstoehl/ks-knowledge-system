@@ -1,30 +1,43 @@
-// Balance Timer - Single Page Application
+// Balance Timer - Server-Driven Timer with Visibility Sync
+// Key patterns:
+// 1. Server is source of truth (end_timestamp, not countdown)
+// 2. Calculate remaining = endTimestamp - adjustedNow
+// 3. Page Visibility API resyncs when tab becomes visible
+// 4. No local state survives reload - always fetch from server
+
 const Balance = {
-  // State
+  // Server sync state
+  serverTimeDiff: 0,  // Offset between server and client clocks
+  endTimestamp: null, // Unix timestamp when timer ends
+  totalDuration: 0,   // Total duration for progress calculation
+
+  // UI state
   currentPage: 'home',
   sessionType: 'expected',
   intention: '',
-  sessionDuration: 25 * 60,  // seconds
-  shortBreak: 5 * 60,
-  longBreak: 15 * 60,
-  timeRemaining: 25 * 60,
-  breakRemaining: 0,
-  timerInterval: null,
-  breakInterval: null,
-  dailyCap: 10,
-  todaySessions: { expected: 0, personal: 0 },
+  tickInterval: null,
+
+  // Session data from server
+  currentSession: null,
 
   // Session end state
   selectedDistractions: null,
   selectedDidThing: null,
 
+  // Today's stats
+  todaySessions: { expected: 0, personal: 0 },
+  dailyCap: 10,
+
   // DOM elements
   el: {},
 
-  init() {
+  async init() {
     this.cacheElements();
     this.bindEvents();
-    this.checkCurrentState();
+    this.setupVisibilityHandler();
+
+    // Immediately fetch server state (no flash of wrong time)
+    await this.syncWithServer();
   },
 
   cacheElements() {
@@ -118,60 +131,77 @@ const Balance = {
     document.getElementById('quick-exercise')?.addEventListener('click', () => this.quickLog('exercise'));
   },
 
-  async checkCurrentState() {
+  setupVisibilityHandler() {
+    // Resync with server when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        console.log('Tab visible - resyncing with server');
+        this.syncWithServer();
+      }
+    });
+  },
+
+  async syncWithServer() {
     try {
-      // Check if on break
-      const breakCheck = await fetch('/api/check').then(r => r.json());
-      if (breakCheck.on_break) {
-        this.breakRemaining = breakCheck.remaining_seconds;
-        this.showPage('break');
-        this.startBreakTimer();
-        return;
-      }
+      const response = await fetch('/api/status');
+      const status = await response.json();
 
-      // Check for active session
-      const current = await fetch('/api/sessions/current').then(r => r.json());
-      if (current.active) {
-        // Resume session
-        const session = current.session;
-        this.sessionType = session.type;
-        this.intention = session.intention || '';
+      // Calculate server-client time difference
+      const clientNow = Date.now() / 1000;
+      this.serverTimeDiff = status.server_timestamp - clientNow;
 
-        // Calculate remaining time
-        const startedAt = new Date(session.started_at);
-        const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
-        this.timeRemaining = Math.max(0, this.sessionDuration - elapsed);
+      // Store timing data
+      this.endTimestamp = status.end_timestamp;
+      this.totalDuration = status.total_duration;
 
-        if (this.timeRemaining > 0) {
+      // Handle different modes
+      switch (status.mode) {
+        case 'idle':
+          this.stopTick();
+          await this.loadTodaySessions();
+          this.updateProgressDots();
+          this.el.homeTime.textContent = this.formatTime(status.remaining_seconds);
+          this.showPage('home');
+          break;
+
+        case 'session':
+          this.currentSession = status.session;
+          this.sessionType = status.session.type;
+          this.intention = status.session.intention || '';
           this.showPage('active');
-          this.startTimer();
-        } else {
-          // Timer expired while away
+          this.updateActiveUI();
+          this.startTick();
+          break;
+
+        case 'session_ended':
+          this.currentSession = status.session;
+          this.sessionType = status.session.type;
+          this.intention = status.session.intention || '';
           this.showPage('end');
-        }
-        return;
+          this.updateEndUI();
+          break;
+
+        case 'break':
+          this.showPage('break');
+          this.startTick();
+          break;
       }
 
-      // Load settings and today's sessions
+      // Load settings for dailyCap
       await this.loadSettings();
-      await this.loadTodaySessions();
-      this.updateProgressDots();
 
     } catch (err) {
-      console.error('Failed to check state:', err);
+      console.error('Failed to sync with server:', err);
     }
   },
 
   async loadSettings() {
     try {
       const settings = await fetch('/api/settings').then(r => r.json());
-      this.sessionDuration = settings.session_duration * 60;
-      this.shortBreak = settings.short_break * 60;
-      this.longBreak = settings.long_break * 60;
       this.dailyCap = settings.daily_cap;
-      this.timeRemaining = this.sessionDuration;
-      this.el.homeTime.textContent = this.formatTime(this.sessionDuration);
-      this.el.sessionCap.textContent = this.dailyCap;
+      if (this.el.sessionCap) {
+        this.el.sessionCap.textContent = this.dailyCap;
+      }
     } catch (err) {
       console.error('Failed to load settings:', err);
     }
@@ -227,26 +257,24 @@ const Balance = {
     switch (page) {
       case 'home':
         this.el.pageHome.classList.add('active');
-        this.el.headerNav.classList.remove('hidden');
-        this.el.bottomNav.classList.remove('hidden');
+        this.el.headerNav?.classList.remove('hidden');
+        this.el.bottomNav?.classList.remove('hidden');
         break;
       case 'active':
         this.el.pageActive.classList.add('active');
-        this.el.headerNav.classList.add('hidden');
-        this.el.bottomNav.classList.add('hidden');
+        this.el.headerNav?.classList.add('hidden');
+        this.el.bottomNav?.classList.add('hidden');
         document.body.classList.add('dark-mode');
-        this.updateActiveUI();
         break;
       case 'end':
         this.el.pageEnd.classList.add('active');
-        this.el.headerNav.classList.add('hidden');
-        this.el.bottomNav.classList.add('hidden');
-        this.updateEndUI();
+        this.el.headerNav?.classList.add('hidden');
+        this.el.bottomNav?.classList.add('hidden');
         break;
       case 'break':
         this.el.pageBreak.classList.add('active');
-        this.el.headerNav.classList.add('hidden');
-        this.el.bottomNav.classList.add('hidden');
+        this.el.headerNav?.classList.add('hidden');
+        this.el.bottomNav?.classList.add('hidden');
         document.body.classList.add('break-mode');
         break;
     }
@@ -255,7 +283,10 @@ const Balance = {
   updateActiveUI() {
     this.el.activeType.textContent = this.sessionType.charAt(0).toUpperCase() + this.sessionType.slice(1);
     this.el.activeIntention.textContent = this.intention || '-';
-    this.el.activeTime.textContent = this.formatTime(this.timeRemaining);
+
+    // Calculate remaining time from server timestamp
+    const remaining = this.calculateRemainingSeconds();
+    this.el.activeTime.textContent = this.formatTime(remaining);
 
     const totalSessions = this.todaySessions.expected + this.todaySessions.personal + 1;
     this.el.sessionNum.textContent = totalSessions;
@@ -278,6 +309,63 @@ const Balance = {
     this.el.continueBtn.disabled = !(this.selectedDistractions && this.selectedDidThing !== null);
   },
 
+  // Calculate remaining seconds using server-adjusted time
+  calculateRemainingSeconds() {
+    if (!this.endTimestamp) return 0;
+    const adjustedNow = (Date.now() / 1000) + this.serverTimeDiff;
+    return Math.max(0, Math.ceil(this.endTimestamp - adjustedNow));
+  },
+
+  // Start the display tick - updates every 100ms for smooth countdown
+  startTick() {
+    this.stopTick();
+
+    const circumference = 2 * Math.PI * 90;
+
+    this.tickInterval = setInterval(() => {
+      const remaining = this.calculateRemainingSeconds();
+
+      if (this.currentPage === 'active') {
+        // Update session timer
+        this.el.activeTime.textContent = this.formatTime(remaining);
+
+        // Update progress ring
+        const elapsed = this.totalDuration - remaining;
+        const progress = elapsed / this.totalDuration;
+        const offset = circumference * (1 - progress);
+        this.el.progressCircle.style.strokeDashoffset = offset;
+
+        // Timer complete - go to end page
+        if (remaining <= 0) {
+          this.stopTick();
+          this.showPage('end');
+          this.updateEndUI();
+        }
+      } else if (this.currentPage === 'break') {
+        // Update break timer
+        this.el.breakTime.textContent = this.formatTime(remaining);
+
+        // Update progress bar
+        const elapsed = this.totalDuration - remaining;
+        const progress = (elapsed / this.totalDuration) * 100;
+        this.el.breakProgress.style.width = `${progress}%`;
+
+        // Break complete - return to home
+        if (remaining <= 0) {
+          this.stopTick();
+          this.syncWithServer(); // Refresh full state
+        }
+      }
+    }, 100); // Update frequently for smooth display
+  },
+
+  stopTick() {
+    if (this.tickInterval) {
+      clearInterval(this.tickInterval);
+      this.tickInterval = null;
+    }
+  },
+
   async startSession() {
     try {
       const response = await fetch('/api/sessions/start', {
@@ -295,9 +383,8 @@ const Balance = {
         return;
       }
 
-      this.timeRemaining = this.sessionDuration;
-      this.showPage('active');
-      this.startTimer();
+      // Sync with server to get correct end_timestamp
+      await this.syncWithServer();
 
     } catch (err) {
       console.error('Failed to start session:', err);
@@ -305,42 +392,20 @@ const Balance = {
     }
   },
 
-  startTimer() {
-    const circumference = 2 * Math.PI * 90;
-
-    this.timerInterval = setInterval(() => {
-      this.timeRemaining--;
-
-      // Update display
-      this.el.activeTime.textContent = this.formatTime(this.timeRemaining);
-
-      // Update progress ring
-      const progress = 1 - (this.timeRemaining / this.sessionDuration);
-      const offset = circumference * (1 - progress);
-      this.el.progressCircle.style.strokeDashoffset = offset;
-
-      // Timer complete
-      if (this.timeRemaining <= 0) {
-        clearInterval(this.timerInterval);
-        this.timerInterval = null;
-        this.showPage('end');
-      }
-    }, 1000);
-  },
-
   async abandonSession() {
     if (!confirm('Abandon this session?')) return;
 
     try {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-
+      this.stopTick();
       await fetch('/api/sessions/abandon', { method: 'POST' });
 
-      await this.loadTodaySessions();
-      this.updateProgressDots();
-      this.resetForm();
-      this.showPage('home');
+      // Reset form
+      this.intention = '';
+      this.el.intentionInput.value = '';
+      this.el.charCount.textContent = '0';
+
+      // Sync with server
+      await this.syncWithServer();
 
     } catch (err) {
       console.error('Failed to abandon session:', err);
@@ -363,56 +428,24 @@ const Balance = {
         return;
       }
 
-      // Get break duration from API
-      const breakCheck = await fetch('/api/check').then(r => r.json());
-      this.breakRemaining = breakCheck.remaining_seconds;
-
       // Update session counts
       this.todaySessions[this.sessionType]++;
 
-      this.showPage('break');
-      this.startBreakTimer();
+      // Reset form for next session
+      this.intention = '';
+      this.el.intentionInput.value = '';
+      this.el.charCount.textContent = '0';
+
+      // Sync with server to get break timing
+      await this.syncWithServer();
 
     } catch (err) {
       console.error('Failed to end session:', err);
     }
   },
 
-  startBreakTimer() {
-    const totalBreak = this.breakRemaining;
-
-    this.breakInterval = setInterval(async () => {
-      this.breakRemaining--;
-
-      // Update display
-      this.el.breakTime.textContent = this.formatTime(this.breakRemaining);
-
-      // Update progress bar
-      const progress = 1 - (this.breakRemaining / totalBreak);
-      this.el.breakProgress.style.width = `${progress * 100}%`;
-
-      // Break complete
-      if (this.breakRemaining <= 0) {
-        clearInterval(this.breakInterval);
-        this.breakInterval = null;
-
-        await this.loadTodaySessions();
-        this.updateProgressDots();
-        this.resetForm();
-        this.showPage('home');
-      }
-    }, 1000);
-  },
-
-  resetForm() {
-    this.intention = '';
-    this.el.intentionInput.value = '';
-    this.el.charCount.textContent = '0';
-    this.timeRemaining = this.sessionDuration;
-    this.el.homeTime.textContent = this.formatTime(this.sessionDuration);
-  },
-
   formatTime(seconds) {
+    if (seconds < 0) seconds = 0;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
