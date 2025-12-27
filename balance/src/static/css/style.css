@@ -42,18 +42,7 @@ body.evening-mode {
 
 /* ==========================================================================
    MOBILE RESPONSIVENESS
-   Hide header tabs on mobile, show bottom nav
    ========================================================================== */
-
-@media (max-width: 768px) {
-  .header {
-    display: none;
-  }
-
-  body {
-    padding-bottom: calc(60px + var(--safe-bottom));
-  }
-}
 
 .bottom-nav.hidden {
   display: none !important;
