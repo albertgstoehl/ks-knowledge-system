@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Balance - Stats{% endblock %}
+
+{% block content %}
+<main class="main">
+  <div class="container">
+    <header class="header">
+      <h1>Stats</h1>
+    </header>
+
+    <div class="period-selector">
+      <button class="period-btn active" data-period="week">Week</button>
+      <button class="period-btn" data-period="month">Month</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="value" id="stat-sessions">0</div>
+        <div class="label">Sessions</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-expected">0</div>
+        <div class="label">Expected</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-personal">0</div>
+        <div class="label">Personal</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-meditation">0m</div>
+        <div class="label">Meditation</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-exercise">0m</div>
+        <div class="label">Exercise</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="stat-focus">-</div>
+        <div class="label">Focus Rate</div>
+      </div>
+    </div>
+
+    <div class="compass-section">
+      <div class="compass-title">Life Compass</div>
+      <div class="compass-grid">
+        <div class="compass-item">
+          <div class="name">Focus</div>
+          <div class="status" id="compass-focus">-</div>
+        </div>
+        <div class="compass-item">
+          <div class="name">Body</div>
+          <div class="status" id="compass-body">-</div>
+        </div>
+        <div class="compass-item">
+          <div class="name">Connection</div>
+          <div class="status" id="compass-connection">-</div>
+        </div>
+        <div class="compass-item">
+          <div class="name">Mood</div>
+          <div class="status" id="compass-mood">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="north-star-section" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--color-border);">
+      <div class="compass-title">North Star</div>
+      <p id="north-star" style="font-size: 0.875rem; line-height: 1.6; color: var(--color-muted); text-align: center;">-</p>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const Stats = {
+  period: 'week',
+
+  init() {
+    this.bindEvents();
+    this.loadStats();
+    this.loadNorthStar();
+  },
+
+  bindEvents() {
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.period = btn.dataset.period;
+        this.loadStats();
+      });
+    });
+  },
+
+  async loadStats() {
+    try {
+      const endpoint = this.period === 'week' ? '/api/stats/week' : '/api/stats/month';
+      const stats = await fetch(endpoint).then(r => r.json());
+
+      document.getElementById('stat-sessions').textContent = stats.session_count || 0;
+      document.getElementById('stat-expected').textContent = stats.expected_sessions || 0;
+      document.getElementById('stat-personal').textContent = stats.personal_sessions || 0;
+      document.getElementById('stat-meditation').textContent = `${stats.meditation_minutes || 0}m`;
+      document.getElementById('stat-exercise').textContent = `${stats.exercise_minutes || 0}m`;
+
+      // Calculate focus rate (sessions with did_the_thing = true)
+      // For now, just show a placeholder
+      document.getElementById('stat-focus').textContent = '-';
+
+      // Update compass
+      this.updateCompass(stats);
+    } catch (err) {
+      console.error('Failed to load stats:', err);
+    }
+  },
+
+  updateCompass(stats) {
+    // Focus: based on session count
+    const sessionGoal = this.period === 'week' ? 35 : 140;
+    const focusPercent = Math.min(100, Math.round((stats.session_count / sessionGoal) * 100));
+    document.getElementById('compass-focus').textContent = focusPercent > 0 ? `${focusPercent}%` : '-';
+
+    // Body: based on meditation + exercise
+    const bodyMinutes = (stats.meditation_minutes || 0) + (stats.exercise_minutes || 0);
+    const bodyGoal = this.period === 'week' ? 150 : 600;
+    const bodyPercent = Math.min(100, Math.round((bodyMinutes / bodyGoal) * 100));
+    document.getElementById('compass-body').textContent = bodyPercent > 0 ? `${bodyPercent}%` : '-';
+
+    // Connection and Mood require pulse data - placeholder
+    document.getElementById('compass-connection').textContent = '-';
+    document.getElementById('compass-mood').textContent = '-';
+  },
+
+  async loadNorthStar() {
+    try {
+      const state = await fetch('/api/state').then(r => r.json());
+      document.getElementById('north-star').textContent = state.north_star || 'Not set';
+    } catch (err) {
+      console.error('Failed to load north star:', err);
+    }
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => Stats.init());
+</script>
+{% endblock %}

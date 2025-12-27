@@ -37,6 +37,30 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "active_nav": "timer"})
 
 
+@app.get("/log", response_class=HTMLResponse)
+async def log_page(request: Request):
+    """Activity logging page."""
+    return templates.TemplateResponse("log.html", {"request": request, "active_nav": "log"})
+
+
+@app.get("/stats", response_class=HTMLResponse)
+async def stats_page(request: Request):
+    """Stats and life compass page."""
+    return templates.TemplateResponse("stats.html", {"request": request, "active_nav": "stats"})
+
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    """Settings page."""
+    return templates.TemplateResponse("settings.html", {"request": request, "active_nav": "settings"})
+
+
+@app.get("/evening", response_class=HTMLResponse)
+async def evening_page(request: Request):
+    """Evening check-in page."""
+    return templates.TemplateResponse("evening.html", {"request": request, "active_nav": ""})
+
+
 @app.get("/health")
 async def health():
     """Health check endpoint."""

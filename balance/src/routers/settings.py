@@ -74,16 +74,22 @@ async def get_state() -> AppState:
         )
 
 
+from pydantic import BaseModel
+
+class NorthStarUpdate(BaseModel):
+    north_star: str
+
+
 @router.put("/state/north-star")
-async def update_north_star(north_star: str):
+async def update_north_star(data: NorthStarUpdate):
     """Update the north star goal."""
     async with get_db() as db:
         await db.execute(
             "UPDATE app_state SET north_star = ? WHERE id = 1",
-            (north_star,)
+            (data.north_star,)
         )
         await db.commit()
-        return {"status": "updated", "north_star": north_star}
+        return {"status": "updated", "north_star": data.north_star}
 
 
 @router.put("/state/pause")

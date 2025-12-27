@@ -48,7 +48,7 @@ services:
   balance:
     build: ./balance
     ports:
-      - "8004:8000"
+      - "8005:8000"
     volumes:
       - ./balance/src:/app/src
       - ./balance/data:/app/data

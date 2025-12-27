@@ -154,3 +154,134 @@ async def get_today_pulse():
         if row:
             return {"logged": True, "pulse": dict(row)}
         return {"logged": False}
+
+
+@router.get("/stats/week")
+async def get_week_stats():
+    """Get this week's activity summary."""
+    today = date.today().isoformat()
+    async with get_db() as db:
+        # Meditation stats
+        cursor = await db.execute(
+            """SELECT COUNT(*) as count, COALESCE(SUM(duration_minutes), 0) as total_minutes
+               FROM meditation
+               WHERE date(logged_at) >= date(?, '-7 days')""",
+            (today,)
+        )
+        med_row = await cursor.fetchone()
+
+        # Exercise stats
+        cursor = await db.execute(
+            """SELECT COUNT(*) as count, COALESCE(SUM(duration_minutes), 0) as total_minutes
+               FROM exercise
+               WHERE date(logged_at) >= date(?, '-7 days')""",
+            (today,)
+        )
+        ex_row = await cursor.fetchone()
+
+        # Session stats
+        cursor = await db.execute(
+            """SELECT COUNT(*) as count,
+                      SUM(CASE WHEN type = 'expected' THEN 1 ELSE 0 END) as expected,
+                      SUM(CASE WHEN type = 'personal' THEN 1 ELSE 0 END) as personal
+               FROM sessions
+               WHERE date(started_at) >= date(?, '-7 days') AND ended_at IS NOT NULL""",
+            (today,)
+        )
+        sess_row = await cursor.fetchone()
+
+        return {
+            "meditation_count": med_row["count"],
+            "meditation_minutes": med_row["total_minutes"],
+            "exercise_count": ex_row["count"],
+            "exercise_minutes": ex_row["total_minutes"],
+            "session_count": sess_row["count"],
+            "expected_sessions": sess_row["expected"] or 0,
+            "personal_sessions": sess_row["personal"] or 0
+        }
+
+
+@router.get("/stats/today")
+async def get_today_stats():
+    """Get today's activity summary."""
+    today = date.today().isoformat()
+    async with get_db() as db:
+        # Sessions
+        cursor = await db.execute(
+            """SELECT COUNT(*) as count,
+                      SUM(CASE WHEN type = 'expected' THEN 1 ELSE 0 END) as expected,
+                      SUM(CASE WHEN type = 'personal' THEN 1 ELSE 0 END) as personal
+               FROM sessions
+               WHERE date(started_at) = ? AND ended_at IS NOT NULL""",
+            (today,)
+        )
+        sess_row = await cursor.fetchone()
+
+        # Meditation
+        cursor = await db.execute(
+            """SELECT COALESCE(SUM(duration_minutes), 0) as total
+               FROM meditation WHERE date(logged_at) = ?""",
+            (today,)
+        )
+        med_row = await cursor.fetchone()
+
+        # Exercise
+        cursor = await db.execute(
+            """SELECT COALESCE(SUM(duration_minutes), 0) as total
+               FROM exercise WHERE date(logged_at) = ?""",
+            (today,)
+        )
+        ex_row = await cursor.fetchone()
+
+        return {
+            "sessions": sess_row["count"],
+            "expected": sess_row["expected"] or 0,
+            "personal": sess_row["personal"] or 0,
+            "meditation_minutes": med_row["total"],
+            "exercise_minutes": ex_row["total"]
+        }
+
+
+@router.get("/stats/month")
+async def get_month_stats():
+    """Get this month's activity summary."""
+    today = date.today().isoformat()
+    async with get_db() as db:
+        # Meditation stats
+        cursor = await db.execute(
+            """SELECT COUNT(*) as count, COALESCE(SUM(duration_minutes), 0) as total_minutes
+               FROM meditation
+               WHERE date(logged_at) >= date(?, '-30 days')""",
+            (today,)
+        )
+        med_row = await cursor.fetchone()
+
+        # Exercise stats
+        cursor = await db.execute(
+            """SELECT COUNT(*) as count, COALESCE(SUM(duration_minutes), 0) as total_minutes
+               FROM exercise
+               WHERE date(logged_at) >= date(?, '-30 days')""",
+            (today,)
+        )
+        ex_row = await cursor.fetchone()
+
+        # Session stats
+        cursor = await db.execute(
+            """SELECT COUNT(*) as count,
+                      SUM(CASE WHEN type = 'expected' THEN 1 ELSE 0 END) as expected,
+                      SUM(CASE WHEN type = 'personal' THEN 1 ELSE 0 END) as personal
+               FROM sessions
+               WHERE date(started_at) >= date(?, '-30 days') AND ended_at IS NOT NULL""",
+            (today,)
+        )
+        sess_row = await cursor.fetchone()
+
+        return {
+            "meditation_count": med_row["count"],
+            "meditation_minutes": med_row["total_minutes"],
+            "exercise_count": ex_row["count"],
+            "exercise_minutes": ex_row["total_minutes"],
+            "session_count": sess_row["count"],
+            "expected_sessions": sess_row["expected"] or 0,
+            "personal_sessions": sess_row["personal"] or 0
+        }
