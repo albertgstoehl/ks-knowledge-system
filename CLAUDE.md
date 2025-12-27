@@ -69,6 +69,7 @@ See `docs/COMPONENT-LIBRARY.md` for full API reference.
 |------|------|
 | Balance design (rhythm tracker) | `docs/plans/2025-12-27-balance-app-design.md` |
 | Implementation plan | `docs/plans/2025-12-27-balance-implementation-plan.md` |
+| Claude Code integration | `docs/plans/2025-12-27-claude-balance-lock-design.md` |
 
 ## Cross-Service Documentation
 
