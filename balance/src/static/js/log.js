@@ -5,6 +5,8 @@ const LogPage = {
   exerciseIntensity: 'medium',
 
   init() {
+    // Only initialize if log page elements exist
+    if (!document.getElementById('meditation-form')) return;
     this.bindEvents();
     this.loadWeekSummary();
   },

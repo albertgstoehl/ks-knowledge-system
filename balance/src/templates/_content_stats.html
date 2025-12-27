@@ -128,5 +128,6 @@ const Stats = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => Stats.init());
+// Run immediately - DOM already ready when htmx swaps content
+Stats.init();
 </script>

@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="/static/shared/utilities.css">
   <!-- Balance-specific styles -->
   <link rel="stylesheet" href="/static/css/style.css?v=4">
+  <!-- htmx for SPA navigation -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -18,10 +20,32 @@
 
   {{ ui.header("Balance", [("Timer", "/"), ("Log", "/log"), ("Stats", "/stats"), ("Settings", "/settings")], active=active_nav|default("Timer")|title) }}
 
-  {% block content %}{% endblock %}
+  <div id="main-content">
+    {% block content %}{% endblock %}
+  </div>
 
   {{ ui.bottom_nav([("Timer", "/"), ("Log", "/log"), ("Stats", "/stats"), ("Settings", "/settings")], active=active_nav|default("timer")|title) }}
 
-  {% block scripts %}{% endblock %}
+  <!-- Core page scripts - loaded once -->
+  <script src="/static/js/timer.js?v=5"></script>
+  <script src="/static/js/log.js?v=3"></script>
+
+  <script>
+    // Update active tab state and reinitialize page after htmx navigation
+    document.body.addEventListener('htmx:afterSettle', function() {
+      const path = window.location.pathname;
+      // Update header tabs
+      document.querySelectorAll('.tabs .tab').forEach(tab => {
+        tab.classList.toggle('tab--active', tab.getAttribute('href') === path);
+      });
+      // Update bottom nav
+      document.querySelectorAll('.bottom-nav__link').forEach(link => {
+        link.classList.toggle('bottom-nav__link--active', link.getAttribute('href') === path);
+      });
+      // Reinitialize page-specific JS
+      if (path === '/' && typeof Balance !== 'undefined') Balance.init();
+      if (path === '/log' && typeof LogPage !== 'undefined') LogPage.init();
+    });
+  </script>
 </body>
 </html>

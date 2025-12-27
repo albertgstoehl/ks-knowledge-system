@@ -32,6 +32,9 @@ const Balance = {
   el: {},
 
   async init() {
+    // Only initialize if timer page elements exist
+    if (!document.getElementById('page-home')) return;
+
     this.cacheElements();
     this.bindEvents();
     this.setupVisibilityHandler();

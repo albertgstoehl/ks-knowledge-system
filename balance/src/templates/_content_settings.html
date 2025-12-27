@@ -157,5 +157,6 @@ const Settings = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => Settings.init());
+// Run immediately - DOM already ready when htmx swaps content
+Settings.init();
 </script>
