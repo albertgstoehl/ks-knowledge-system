@@ -38,9 +38,13 @@ services:
 
   # Balance
   balance:
-    build: ./balance
+    build:
+      context: .
+      dockerfile: balance/Dockerfile
     container_name: balance
     restart: unless-stopped
+    ports:
+      - "8005:8000"
     volumes:
       - ./balance/data:/app/data
     environment:

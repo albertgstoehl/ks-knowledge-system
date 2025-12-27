@@ -4,28 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>{% block title %}Balance{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=3">
+  <!-- Shared component library -->
+  <link rel="stylesheet" href="/static/shared/variables.css">
+  <link rel="stylesheet" href="/static/shared/base.css">
+  <link rel="stylesheet" href="/static/shared/components.css">
+  <link rel="stylesheet" href="/static/shared/utilities.css">
+  <!-- Balance-specific styles -->
+  <link rel="stylesheet" href="/static/css/style.css?v=4">
   {% block head %}{% endblock %}
 </head>
 <body>
-  <header class="header-nav">
-    <h1>Balance</h1>
-    <nav class="tabs">
-      <a href="/" class="tab {% if active_nav == 'timer' %}active{% endif %}">Timer</a>
-      <a href="/log" class="tab {% if active_nav == 'log' %}active{% endif %}">Log</a>
-      <a href="/stats" class="tab {% if active_nav == 'stats' %}active{% endif %}">Stats</a>
-      <a href="/settings" class="tab {% if active_nav == 'settings' %}active{% endif %}">Settings</a>
-    </nav>
-  </header>
+  {% import "components.html" as ui %}
+
+  {{ ui.header("Balance", [("Timer", "/"), ("Log", "/log"), ("Stats", "/stats"), ("Settings", "/settings")], active=active_nav|default("Timer")|title) }}
 
   {% block content %}{% endblock %}
 
-  <nav class="bottom-nav">
-    <a href="/" class="bottom-nav-link {% if active_nav == 'timer' %}active{% endif %}">Timer</a>
-    <a href="/log" class="bottom-nav-link {% if active_nav == 'log' %}active{% endif %}">Log</a>
-    <a href="/stats" class="bottom-nav-link {% if active_nav == 'stats' %}active{% endif %}">Stats</a>
-    <a href="/settings" class="bottom-nav-link {% if active_nav == 'settings' %}active{% endif %}">Settings</a>
-  </nav>
+  {{ ui.bottom_nav([("Timer", "/"), ("Log", "/log"), ("Stats", "/stats"), ("Settings", "/settings")], active=active_nav|default("timer")|title) }}
 
   {% block scripts %}{% endblock %}
 </body>

@@ -1,31 +1,19 @@
+/* ==========================================================================
+   BALANCE - Service-specific styles
+   Extends shared component library
+   ========================================================================== */
+
+/* ==========================================================================
+   BALANCE-SPECIFIC VARIABLES
+   ========================================================================== */
+
 :root {
-  --color-bg: #fff;
-  --color-text: #000;
-  --color-muted: #666;
-  --color-border: #000;
-  --color-light-border: #ddd;
-  --color-hover: #f5f5f5;
-  --color-danger: #c00;
-  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-html, body {
-  height: 100%;
-}
-
-body {
-  font-family: var(--font-mono);
-  background: var(--color-bg);
-  color: var(--color-text);
-}
+/* ==========================================================================
+   THEME MODES
+   ========================================================================== */
 
 /* Dark mode for active session */
 body.dark-mode {
@@ -33,7 +21,7 @@ body.dark-mode {
   --color-text: #fff;
   --color-muted: #888;
   --color-border: #fff;
-  --color-light-border: #333;
+  --color-border-light: #333;
   --color-hover: #111;
 }
 
@@ -42,95 +30,28 @@ body.break-mode {
   --color-bg: #f5f5f5;
 }
 
-/* Header Navigation (Desktop) */
-.header-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg);
-  max-width: 1200px;
-  margin: 0 auto;
+/* Evening check-in mode */
+body.evening-mode {
+  --color-bg: #1a1a1a;
+  --color-text: #e0e0e0;
+  --color-muted: #888;
+  --color-border: #444;
+  --color-border-light: #333;
+  --color-hover: #2a2a2a;
 }
 
-.header-nav h1 {
-  font-size: 1.25rem;
-  font-weight: normal;
-}
+/* ==========================================================================
+   MOBILE RESPONSIVENESS
+   Hide header tabs on mobile, show bottom nav
+   ========================================================================== */
 
-.tabs {
-  display: flex;
-  gap: 1rem;
-}
-
-.tab {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--color-border);
-  text-decoration: none;
-  color: var(--color-text);
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.tab:hover {
-  background: var(--color-hover);
-}
-
-.tab.active {
-  background: var(--color-text);
-  color: var(--color-bg);
-}
-
-/* Mobile Bottom Navigation */
-.bottom-nav {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
-  padding-bottom: var(--safe-bottom);
-  z-index: 100;
-}
-
-.bottom-nav-link {
-  flex: 1;
-  padding: 1rem 0.5rem;
-  border: none;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-family: inherit;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-decoration: none;
-  color: var(--color-text);
-  text-align: center;
-  cursor: pointer;
-}
-
-.bottom-nav-link:last-child {
-  border-right: none;
-}
-
-.bottom-nav-link.active {
-  background: var(--color-text);
-  color: var(--color-bg);
-}
-
-/* Responsive: Mobile shows bottom nav, Desktop shows header tabs */
 @media (max-width: 768px) {
-  .header-nav {
+  .header {
     display: none;
   }
-  .bottom-nav {
-    display: flex;
-  }
+
   body {
-    padding-bottom: 60px;
+    padding-bottom: calc(60px + var(--safe-bottom));
   }
 }
 
@@ -138,7 +59,10 @@ body.break-mode {
   display: none !important;
 }
 
-/* Main content area */
+/* ==========================================================================
+   MAIN CONTENT AREA
+   ========================================================================== */
+
 .main {
   min-height: calc(100vh - 60px);
   display: flex;
@@ -162,14 +86,16 @@ body.break-mode {
   width: 100%;
 }
 
+/* ==========================================================================
+   PAGE SECTION HEADER (not nav header)
+   ========================================================================== */
 
-/* Header */
-.header {
+.page-header {
   text-align: center;
   margin-bottom: 3rem;
 }
 
-.header h1 {
+.page-header h1 {
   font-size: 1rem;
   font-weight: 500;
   letter-spacing: 0.2em;
@@ -177,28 +103,15 @@ body.break-mode {
   margin-bottom: 0.5rem;
 }
 
-.header .status {
+.page-header .status {
   font-size: 0.875rem;
   color: var(--color-muted);
 }
 
-/* Buttons */
-.btn {
-  padding: 1rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-family: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: all 0.1s;
-}
+/* ==========================================================================
+   BUTTON EXTENSIONS
+   ========================================================================== */
 
-.btn:hover {
-  background: var(--color-hover);
-}
-
-.btn.active,
 .btn-primary {
   background: var(--color-text);
   color: var(--color-bg);
@@ -212,13 +125,6 @@ body.break-mode {
 .btn-primary:active {
   box-shadow: none;
   transform: translate(0, 0);
-}
-
-.btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  box-shadow: none !important;
-  transform: none !important;
 }
 
 .btn-full {
@@ -245,39 +151,10 @@ body.break-mode {
   background: transparent;
 }
 
-/* Form elements */
-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  font-family: inherit;
-  font-size: 1rem;
-  background: var(--color-bg);
-  color: var(--color-text);
-  border-radius: 0;
-  -webkit-appearance: none;
-}
+/* ==========================================================================
+   TIMER DISPLAY
+   ========================================================================== */
 
-input:focus {
-  outline: 2px solid var(--color-border);
-  outline-offset: 2px;
-}
-
-input::placeholder {
-  color: var(--color-muted);
-}
-
-/* Labels */
-.label {
-  font-size: 0.75rem;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 0.5rem;
-  display: block;
-}
-
-/* Timer display */
 .timer-display {
   text-align: center;
   margin-bottom: 3rem;
@@ -297,7 +174,19 @@ input::placeholder {
   margin-top: 0.5rem;
 }
 
-/* Type selection */
+.timer-large {
+  font-size: 6rem;
+  font-weight: 200;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* ==========================================================================
+   TYPE SELECTION
+   ========================================================================== */
+
 .type-selection {
   display: flex;
   gap: 1rem;
@@ -306,11 +195,39 @@ input::placeholder {
 
 .type-btn {
   flex: 1;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.1s;
 }
 
-/* Intention group */
+.type-btn:hover {
+  background: var(--color-hover);
+}
+
+.type-btn.active {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+/* ==========================================================================
+   INTENTION GROUP
+   ========================================================================== */
+
 .intention-group {
   margin-bottom: 1.5rem;
+}
+
+.intention-group .label {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+  display: block;
 }
 
 .char-count {
@@ -320,7 +237,10 @@ input::placeholder {
   margin-top: 0.25rem;
 }
 
-/* Today progress */
+/* ==========================================================================
+   TODAY PROGRESS
+   ========================================================================== */
+
 .today-progress {
   margin-top: 3rem;
   padding-top: 2rem;
@@ -362,7 +282,10 @@ input::placeholder {
   background: var(--color-text);
 }
 
-/* Quick actions */
+/* ==========================================================================
+   QUICK ACTIONS
+   ========================================================================== */
+
 .quick-actions {
   margin-top: 2rem;
   display: flex;
@@ -387,7 +310,15 @@ input::placeholder {
   color: var(--color-text);
 }
 
-/* Active session styles */
+.quick-btn.selected {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+/* ==========================================================================
+   ACTIVE SESSION
+   ========================================================================== */
+
 .session-type-badge {
   display: inline-block;
   padding: 0.5rem 1rem;
@@ -404,7 +335,6 @@ input::placeholder {
   50% { opacity: 0.7; }
 }
 
-/* Progress ring */
 .progress-ring {
   margin: 2rem auto;
   position: relative;
@@ -422,7 +352,7 @@ input::placeholder {
 }
 
 .progress-ring .ring-bg {
-  stroke: var(--color-light-border);
+  stroke: var(--color-border-light);
 }
 
 .progress-ring .ring-progress {
@@ -431,19 +361,10 @@ input::placeholder {
   transition: stroke-dashoffset 1s linear;
 }
 
-.timer-large {
-  font-size: 6rem;
-  font-weight: 200;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
 .intention-box {
   margin: 2rem 0;
   padding: 1rem;
-  border: 1px solid var(--color-light-border);
+  border: 1px solid var(--color-border-light);
   text-align: center;
 }
 
@@ -471,7 +392,10 @@ input::placeholder {
   color: var(--color-text);
 }
 
-/* Session end styles */
+/* ==========================================================================
+   SESSION END
+   ========================================================================== */
+
 .checkmark {
   width: 60px;
   height: 60px;
@@ -532,7 +456,7 @@ input::placeholder {
 .session-stats {
   margin-top: 3rem;
   padding-top: 2rem;
-  border-top: 1px solid var(--color-light-border);
+  border-top: 1px solid var(--color-border-light);
   text-align: center;
 }
 
@@ -545,7 +469,10 @@ input::placeholder {
   color: var(--color-text);
 }
 
-/* Break styles */
+/* ==========================================================================
+   BREAK
+   ========================================================================== */
+
 .break-message {
   margin-bottom: 3rem;
   text-align: center;
@@ -602,14 +529,14 @@ input::placeholder {
 .suggestion-item {
   font-size: 1rem;
   padding: 1rem;
-  border: 1px solid var(--color-light-border);
+  border: 1px solid var(--color-border-light);
   background: #fff;
 }
 
 .progress-bar {
   width: 100%;
   height: 4px;
-  background: var(--color-light-border);
+  background: var(--color-border-light);
   margin-top: 3rem;
 }
 
@@ -626,12 +553,10 @@ input::placeholder {
   text-align: center;
 }
 
-/* Hidden */
-.hidden {
-  display: none !important;
-}
+/* ==========================================================================
+   PAGE VISIBILITY
+   ========================================================================== */
 
-/* Page containers */
 .page {
   display: none;
 }
@@ -640,9 +565,9 @@ input::placeholder {
   display: block;
 }
 
-/* =====================================================
-   LOG PAGE STYLES
-   ===================================================== */
+/* ==========================================================================
+   LOG PAGE
+   ========================================================================== */
 
 .log-tabs {
   display: flex;
@@ -682,10 +607,6 @@ input::placeholder {
   display: block;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
 .form-label {
   font-size: 0.75rem;
   color: var(--color-muted);
@@ -721,25 +642,6 @@ input::placeholder {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.75rem;
-}
-
-.quick-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-family: inherit;
-  font-size: 0.75rem;
-  cursor: pointer;
-  color: var(--color-text);
-}
-
-.quick-btn:hover {
-  background: var(--color-hover);
-}
-
-.quick-btn.selected {
-  background: var(--color-text);
-  color: var(--color-bg);
 }
 
 .type-options,
@@ -794,7 +696,7 @@ input::placeholder {
 
 .time-option {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--color-light-border);
+  border: 1px solid var(--color-border-light);
   background: var(--color-bg);
   font-family: inherit;
   font-size: 0.75rem;
@@ -815,7 +717,7 @@ input::placeholder {
 .week-summary {
   margin-top: 3rem;
   padding-top: 2rem;
-  border-top: 1px solid var(--color-light-border);
+  border-top: 1px solid var(--color-border-light);
 }
 
 .week-summary-title {
@@ -837,18 +739,9 @@ input::placeholder {
   color: var(--color-muted);
 }
 
-/* =====================================================
-   EVENING CHECK-IN STYLES
-   ===================================================== */
-
-body.evening-mode {
-  --color-bg: #1a1a1a;
-  --color-text: #e0e0e0;
-  --color-muted: #888;
-  --color-border: #444;
-  --color-light-border: #333;
-  --color-hover: #2a2a2a;
-}
+/* ==========================================================================
+   EVENING CHECK-IN
+   ========================================================================== */
 
 .feeling-options {
   display: flex;
@@ -1004,9 +897,9 @@ body.evening-mode {
   margin-top: 0.25rem;
 }
 
-/* =====================================================
-   SETTINGS PAGE STYLES
-   ===================================================== */
+/* ==========================================================================
+   SETTINGS
+   ========================================================================== */
 
 .settings-section {
   margin-bottom: 2.5rem;
@@ -1019,7 +912,7 @@ body.evening-mode {
   letter-spacing: 0.1em;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-light-border);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .setting-row {
@@ -1027,7 +920,7 @@ body.evening-mode {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0;
-  border-bottom: 1px solid var(--color-light-border);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .setting-row:last-child {
@@ -1072,9 +965,9 @@ body.evening-mode {
   color: var(--color-text);
 }
 
-/* =====================================================
-   STATS PAGE STYLES
-   ===================================================== */
+/* ==========================================================================
+   STATS
+   ========================================================================== */
 
 .stats-header {
   text-align: center;
@@ -1159,7 +1052,7 @@ body.evening-mode {
 }
 
 .compass-item {
-  border: 1px solid var(--color-light-border);
+  border: 1px solid var(--color-border-light);
   padding: 1rem;
   text-align: center;
 }
@@ -1181,9 +1074,9 @@ body.evening-mode {
   color: var(--color-muted);
 }
 
-/* =====================================================
+/* ==========================================================================
    RABBIT HOLE ALERT MODAL
-   ===================================================== */
+   ========================================================================== */
 
 .modal-overlay {
   position: fixed;
@@ -1275,15 +1168,16 @@ body.evening-mode {
   opacity: 0.7;
 }
 
-/* =====================================================
+/* ==========================================================================
    DESKTOP COMPACT LAYOUT
-   ===================================================== */
+   ========================================================================== */
+
 @media (min-width: 769px) {
   .container {
     max-width: 500px;
   }
 
-  .header {
+  .page-header {
     margin-bottom: 1.5rem;
   }
 
