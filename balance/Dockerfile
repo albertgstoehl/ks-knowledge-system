@@ -1,3 +1,4 @@
+# Build from project root: docker build -f balance/Dockerfile -t balance .
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -5,8 +6,8 @@ WORKDIR /app
 COPY balance/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY shared/ ./shared/
 COPY balance/src/ ./src/
+COPY shared/ ./shared/
 
 ENV DATABASE_URL=/app/data/balance.db
 

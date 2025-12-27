@@ -1,0 +1,14 @@
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+.git
+**/tests
+**/data
+**/*.db
+**/.env
+*.md
+docs/
+k8s/
+scripts/
+.github/
