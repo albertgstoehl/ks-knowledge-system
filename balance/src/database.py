@@ -25,7 +25,8 @@ async def init_db(db_url: str = None):
                 ended_at TIMESTAMP,
                 distractions TEXT CHECK (distractions IN ('none', 'some', 'many')),
                 did_the_thing BOOLEAN,
-                rabbit_hole BOOLEAN
+                rabbit_hole BOOLEAN,
+                claude_used BOOLEAN DEFAULT FALSE
             );
 
             -- Meditation
@@ -107,6 +108,13 @@ async def init_db(db_url: str = None):
             INSERT OR IGNORE INTO settings (id) VALUES (1);
             INSERT OR IGNORE INTO app_state (id) VALUES (1);
         """)
+
+        # Migration: add claude_used if missing (for existing DBs)
+        try:
+            await db.execute("ALTER TABLE sessions ADD COLUMN claude_used BOOLEAN DEFAULT FALSE")
+        except Exception:
+            pass  # Column already exists
+
         await db.commit()
 
 
