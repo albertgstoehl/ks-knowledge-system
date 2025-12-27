@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from ..database import get_db
 from ..models import (
     SessionStart, SessionEnd, Session,
-    BreakCheck, CanStart
+    BreakCheck, CanStart,
+    SessionActiveResponse, SessionInfo
 )
 
 router = APIRouter(prefix="/api", tags=["sessions"])
@@ -265,6 +266,53 @@ async def check_rabbit_hole():
         "consecutive_count": count,
         "threshold": settings["rabbit_hole_check"]
     }
+
+
+@router.get("/session/active")
+async def check_session_active() -> SessionActiveResponse:
+    """Check if Claude Code is allowed (active session, not on break).
+
+    Used by Claude Code hook to determine if it should proceed.
+    """
+    # Check if on break first
+    state = await get_app_state()
+    if state["break_until"]:
+        break_until = datetime.fromisoformat(state["break_until"])
+        now = datetime.now()
+        if now < break_until:
+            remaining = int((break_until - now).total_seconds())
+            return SessionActiveResponse(
+                allowed=False,
+                reason="on_break",
+                break_remaining=remaining
+            )
+        else:
+            # Break expired, clear it
+            async with get_db() as db:
+                await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
+                await db.commit()
+
+    # Check for active session
+    session = await get_current_session()
+    if not session:
+        return SessionActiveResponse(allowed=False, reason="no_session")
+
+    # Calculate remaining time
+    settings = await get_settings()
+    started_at = datetime.fromisoformat(session["started_at"])
+    session_duration = settings["session_duration"] * 60
+    end_time = started_at + timedelta(seconds=session_duration)
+    remaining = max(0, int((end_time - datetime.now()).total_seconds()))
+
+    return SessionActiveResponse(
+        allowed=True,
+        session=SessionInfo(
+            id=session["id"],
+            type=session["type"],
+            intention=session["intention"],
+            remaining_seconds=remaining
+        )
+    )
 
 
 @router.get("/status")

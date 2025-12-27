@@ -25,6 +25,11 @@ async def setup_test():
             await db.execute("DELETE FROM sessions")
             await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
             await db.commit()
+
+    # Set evening cutoff to 23:59 to allow tests to run any time
+    async with get_db() as db:
+        await db.execute("UPDATE settings SET evening_cutoff = '23:59' WHERE id = 1")
+        await db.commit()
     yield
 
 
@@ -95,3 +100,52 @@ async def test_break_check_on_break():
         data = response.json()
         assert data["on_break"] is True
         assert data["remaining_seconds"] > 0
+
+
+async def test_session_active_no_session():
+    """Test /api/session/active when no session is active."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/session/active")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["allowed"] is False
+        assert data["reason"] == "no_session"
+
+
+async def test_session_active_with_session():
+    """Test /api/session/active when a session is active."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Start a session
+        await client.post("/api/sessions/start", json={
+            "type": "expected",
+            "intention": "Test task"
+        })
+
+        response = await client.get("/api/session/active")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["allowed"] is True
+        assert data["session"]["type"] == "expected"
+        assert data["session"]["intention"] == "Test task"
+        assert data["session"]["remaining_seconds"] > 0
+
+
+async def test_session_active_on_break():
+    """Test /api/session/active when on break."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Start and end a session to trigger break
+        await client.post("/api/sessions/start", json={"type": "expected"})
+        await client.post("/api/sessions/end", json={
+            "distractions": "none",
+            "did_the_thing": True
+        })
+
+        response = await client.get("/api/session/active")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["allowed"] is False
+        assert data["reason"] == "on_break"
+        assert data["break_remaining"] > 0

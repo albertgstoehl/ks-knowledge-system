@@ -26,8 +26,8 @@ app.include_router(settings.router)
 # Static files and templates
 static_path = os.path.join(os.path.dirname(__file__), "static")
 templates_path = os.path.join(os.path.dirname(__file__), "templates")
-shared_css_path = os.path.join(os.path.dirname(__file__), "..", "shared", "css")
-shared_templates_path = os.path.join(os.path.dirname(__file__), "..", "shared", "templates")
+shared_css_path = os.path.join(os.path.dirname(__file__), "..", "..", "shared", "css")
+shared_templates_path = os.path.join(os.path.dirname(__file__), "..", "..", "shared", "templates")
 
 # Mount shared CSS first, then service-specific static
 app.mount("/static/shared", StaticFiles(directory=shared_css_path), name="shared")
