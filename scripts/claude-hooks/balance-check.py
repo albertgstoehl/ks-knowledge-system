@@ -41,6 +41,24 @@ def api_post(endpoint: str, data: dict) -> dict:
 
 def prompt_start_session() -> bool:
     """Prompt user to start a session. Returns True if session started."""
+    import sys
+
+    # Check if we have a TTY for interactive input
+    if not sys.stdin.isatty():
+        # Non-interactive mode - show helpful message
+        print("\n" + "=" * 45)
+        print("  NO ACTIVE SESSION")
+        print("=" * 45)
+        print()
+        print("  Start a session at:")
+        print(f"  {BALANCE_URL}")
+        print()
+        print("  Or run this in terminal:")
+        print("  python3 ~/.claude/hooks/balance-check.py")
+        print("=" * 45 + "\n")
+        return False
+
+    # Interactive mode
     print("\n" + "=" * 45)
     print("No active session.")
     print()
