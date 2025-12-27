@@ -1,0 +1,97 @@
+{# ==========================================================================
+   UNIFIED PAGE LAYOUT
+
+   {% import "_layout.html" as layout %}
+
+   {% call layout.page("Balance", [("Timer", "/"), ("Log", "/log")], "Timer") %}
+     <div>Page content here</div>
+   {% endcall %}
+
+   {% call layout.page("Kasten") %}
+     <div>No tabs - just title and content</div>
+   {% endcall %}
+   ========================================================================== #}
+{% macro page(title, tabs=[], active=none) %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{{ caller.title if caller.title else title }}</title>
+  <!-- Shared component library -->
+  <link rel="stylesheet" href="/static/shared/css/variables.css">
+  <link rel="stylesheet" href="/static/shared/css/base.css">
+  <link rel="stylesheet" href="/static/shared/css/components.css">
+  <link rel="stylesheet" href="/static/shared/css/utilities.css">
+  <!-- htmx for SPA navigation -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body{% if tabs %} class="has-bottom-nav"{% endif %}>
+  {% import "components.html" as ui %}
+
+  {# Header: always show title, tabs only on desktop when provided #}
+  <header class="header">
+    <h1 class="header__title">{{ title }}</h1>
+    {% if tabs %}
+    <nav class="tabs header__tabs">
+      {% for label, url in tabs %}
+      <a href="{{ url }}"
+         class="tab{% if label == active %} tab--active{% endif %}"
+         hx-get="{{ url }}"
+         hx-target="#main-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">{{ label }}</a>
+      {% endfor %}
+    </nav>
+    {% endif %}
+  </header>
+
+  {# Main content container #}
+  <main id="main-content" class="content-container">
+    {{ caller() }}
+  </main>
+
+  {# Bottom nav: only shown on mobile when tabs provided #}
+  {% if tabs %}
+  <nav class="bottom-nav">
+    <div class="bottom-nav__links">
+      {% for label, url in tabs %}
+      <a href="{{ url }}"
+         class="bottom-nav__link{% if label == active %} bottom-nav__link--active{% endif %}"
+         hx-get="{{ url }}"
+         hx-target="#main-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </nav>
+  {% endif %}
+
+  {# Shared JS utilities #}
+  <script src="/static/shared/js/components.js"></script>
+
+  {# htmx navigation handler #}
+  {% if tabs %}
+  <script>
+  document.body.addEventListener('htmx:afterSettle', function() {
+    var path = window.location.pathname;
+    var search = window.location.search;
+    var fullPath = path + search;
+
+    // Update header tabs
+    document.querySelectorAll('.header__tabs .tab').forEach(function(tab) {
+      var href = tab.getAttribute('href');
+      tab.classList.toggle('tab--active', href === path || href === fullPath);
+    });
+
+    // Update bottom nav
+    document.querySelectorAll('.bottom-nav__link').forEach(function(link) {
+      var href = link.getAttribute('href');
+      link.classList.toggle('bottom-nav__link--active', href === path || href === fullPath);
+    });
+  });
+  </script>
+  {% endif %}
+</body>
+</html>
+{% endmacro %}
