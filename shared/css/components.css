@@ -299,6 +299,8 @@
   /* Fill remaining vertical space */
   flex: 1;
   min-height: 0;
+  /* Allow scrolling for overflow content */
+  overflow-y: auto;
 }
 
 @media (max-width: 768px) {
