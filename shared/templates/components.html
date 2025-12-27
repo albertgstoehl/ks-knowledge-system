@@ -147,7 +147,7 @@
 
 
 {# ==========================================================================
-   BOTTOM NAV (mobile navigation)
+   BOTTOM NAV (mobile navigation with htmx)
 
    {{ ui.bottom_nav([("Timer", "/"), ("Log", "/log"), ("Stats", "/stats")], active="Timer") }}
    ========================================================================== #}
@@ -155,7 +155,12 @@
 <nav class="bottom-nav">
   <div class="bottom-nav__links">
     {% for label, url in items %}
-    <a href="{{ url }}" class="bottom-nav__link{% if label == active %} bottom-nav__link--active{% endif %}">{{ label }}</a>
+    <a href="{{ url }}"
+       class="bottom-nav__link{% if label == active %} bottom-nav__link--active{% endif %}"
+       hx-get="{{ url }}"
+       hx-target="#main-content"
+       hx-swap="innerHTML"
+       hx-push-url="true">{{ label }}</a>
     {% endfor %}
   </div>
 </nav>
@@ -245,4 +250,251 @@
    ========================================================================== #}
 {% macro label(text) %}
 <span class="label">{{ text }}</span>
+{% endmacro %}
+
+
+{# ==========================================================================
+   ACCORDION
+
+   {% call ui.accordion("Section Title", "section-id", count=5) %}
+     <div>Accordion content here</div>
+   {% endcall %}
+   ========================================================================== #}
+{% macro accordion(title, id, count=none, open=false) %}
+<div class="accordion" data-accordion-id="{{ id }}">
+  <div class="accordion__header" onclick="toggleAccordion('{{ id }}')">
+    <span class="accordion__toggle" id="toggle-{{ id }}">{{ '▼' if open else '▶' }}</span>
+    <span class="accordion__title">{{ title }}</span>
+    {% if count is not none %}
+    <span class="accordion__count">({{ count }})</span>
+    {% endif %}
+  </div>
+  <div class="accordion__content {{ 'accordion__content--open' if open else '' }}" id="content-{{ id }}">
+    {{ caller() }}
+  </div>
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   DROPDOWN
+
+   {% call ui.dropdown("Actions", "action-menu") %}
+     {{ ui.dropdown_item("Edit", onclick="edit()") }}
+     {{ ui.dropdown_item("Delete", onclick="delete()") }}
+   {% endcall %}
+   ========================================================================== #}
+{% macro dropdown(trigger_text, id) %}
+<div class="dropdown">
+  <button class="btn" onclick="toggleDropdown('{{ id }}')">{{ trigger_text }} ▾</button>
+  <div class="dropdown__menu" id="dropdown-{{ id }}">
+    {{ caller() }}
+  </div>
+  <div class="dropdown__backdrop" id="backdrop-{{ id }}" onclick="closeDropdown('{{ id }}')"></div>
+</div>
+{% endmacro %}
+
+{% macro dropdown_item(label, onclick=none, href=none) %}
+{% if href %}
+<a href="{{ href }}" class="dropdown__item">{{ label }}</a>
+{% else %}
+<button class="dropdown__item" onclick="{{ onclick }}">{{ label }}</button>
+{% endif %}
+{% endmacro %}
+
+
+{# ==========================================================================
+   VIDEO EMBED
+
+   {{ ui.video_embed("dQw4w9WgXcQ", start=30) }}
+   ========================================================================== #}
+{% macro video_embed(video_id, start=0, id="yt-player") %}
+<div class="video-embed">
+  <iframe id="{{ id }}"
+    src="https://www.youtube-nocookie.com/embed/{{ video_id }}?start={{ start }}&enablejsapi=1"
+    frameborder="0"
+    allowfullscreen
+    allow="autoplay; fullscreen"
+    class="video-embed__iframe">
+  </iframe>
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   ACTION PANEL
+
+   {% call ui.action_panel() %}
+     {% call ui.action_row() %}
+       {{ ui.button("Save", primary=true) }}
+       {{ ui.button("Cancel") }}
+     {% endcall %}
+   {% endcall %}
+   ========================================================================== #}
+{% macro action_panel(id="action-panel") %}
+<aside class="action-panel" id="{{ id }}">
+  {{ caller() }}
+</aside>
+{% endmacro %}
+
+{% macro action_row() %}
+<div class="action-panel__row">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   NAV BAR (back/forward navigation)
+
+   {{ ui.nav_bar() }}
+   {% call ui.nav_bar() %}
+     <span>Custom center content</span>
+   {% endcall %}
+   ========================================================================== #}
+{% macro nav_bar(center_content=none) %}
+<nav class="nav-bar">
+  <button class="nav-bar__btn" onclick="history.back()" title="Back">←</button>
+  {% if center_content %}
+  {{ center_content }}
+  {% elif caller %}
+  {{ caller() }}
+  {% endif %}
+  <button class="nav-bar__btn" onclick="history.forward()" title="Forward">→</button>
+</nav>
+{% endmacro %}
+
+
+{# ==========================================================================
+   SOURCE PANEL
+
+   {{ ui.source_panel(source) }}
+   ========================================================================== #}
+{% macro source_panel(source) %}
+{% if source %}
+<section class="source-panel" id="source-panel">
+  <div class="source-panel__header">
+    <div class="source-panel__info">
+      <span class="source-panel__label">Source:</span>
+      <span class="source-panel__title">{{ source.title or 'Untitled' }}</span>
+    </div>
+    <button class="source-panel__toggle" onclick="toggleSourcePanel()" id="source-toggle">[+]</button>
+  </div>
+  <div class="source-panel__meta">{{ source.domain }} · {{ source.archived_at.strftime('%b %d') if source.archived_at else '' }}</div>
+  <div class="source-panel__details" id="source-details" style="display: none;">
+    {% if source.description %}
+    <p class="source-panel__description">{{ source.description }}</p>
+    {% endif %}
+    <a href="{{ source.url }}" target="_blank" class="source-panel__link">Open original</a>
+  </div>
+</section>
+{% endif %}
+{% endmacro %}
+
+
+{# ==========================================================================
+   TOOLBAR
+
+   {% call ui.toolbar() %}
+     {{ ui.button("Add", sm=true) }}
+     {{ ui.toolbar_spacer() }}
+     {{ ui.toolbar_info("5 items") }}
+   {% endcall %}
+   ========================================================================== #}
+{% macro toolbar() %}
+<div class="toolbar">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro toolbar_spacer() %}
+<span class="toolbar__spacer"></span>
+{% endmacro %}
+
+{% macro toolbar_info(text) %}
+<span class="toolbar__info">{{ text }}</span>
+{% endmacro %}
+
+
+{# ==========================================================================
+   STATUS BAR
+
+   {{ ui.status_bar("Saved", hint="Ctrl+S") }}
+   ========================================================================== #}
+{% macro status_bar(status_text, hint=none, status_id="save-status") %}
+<div class="status-bar">
+  <span class="status-bar__text" id="{{ status_id }}">{{ status_text }}</span>
+  {% if hint %}
+  <span class="status-bar__hint">{{ hint }}</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   BADGE
+
+   {{ ui.badge("video") }}
+   ========================================================================== #}
+{% macro badge(type) %}
+<span class="badge">[{{ type | upper }}]</span>
+{% endmacro %}
+
+
+{# ==========================================================================
+   LAYOUT 2-COLUMN
+
+   {% call ui.layout_2col() %}
+     <div>Left column</div>
+     <div>Right column</div>
+   {% endcall %}
+
+   {% call ui.layout_2col(sidebar=true) %}
+     <div>Main content</div>
+     <div>Sidebar</div>
+   {% endcall %}
+   ========================================================================== #}
+{% macro layout_2col(sidebar=false) %}
+<div class="layout-2col {{ 'layout-2col--sidebar' if sidebar else '' }}">
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   CONVEYOR ITEM (bookmark-manager specific)
+
+   {% call ui.conveyor_item() %}
+     <h2 class="conveyor-item__title">Title</h2>
+     <div class="conveyor-item__meta">Meta info</div>
+     <p class="conveyor-item__description">Description</p>
+   {% endcall %}
+   ========================================================================== #}
+{% macro conveyor_item() %}
+<section class="conveyor-item">
+  {{ caller() }}
+</section>
+{% endmacro %}
+
+
+{# ==========================================================================
+   NEXT UP QUEUE (bookmark-manager specific)
+
+   {{ ui.next_up(items) }}
+   ========================================================================== #}
+{% macro next_up(items) %}
+<div class="next-up">
+  <div class="next-up__header">Next Up</div>
+  {% for item in items %}
+  <div class="next-up__item" data-id="{{ item.id }}">
+    {% if item.video_id %}<span class="badge">[VID]</span>{% endif %}
+    {% if item.pinned %}<span class="badge">[PIN]</span>{% endif %}
+    {% if item.is_thesis %}<span class="badge">[DOC]</span>{% endif %}
+    <span class="next-up__title">{{ item.title or 'Untitled' }}</span>
+    {% if item.expires_at %}
+    <span class="next-up__timer" data-expires="{{ item.expires_at.isoformat() }}Z">{{ item.expires_at | expiry }}</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
 {% endmacro %}
