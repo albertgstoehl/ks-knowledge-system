@@ -33,7 +33,8 @@ const Balance = {
     this.el.pageActive = document.getElementById('page-active');
     this.el.pageEnd = document.getElementById('page-end');
     this.el.pageBreak = document.getElementById('page-break');
-    this.el.nav = document.querySelector('.nav');
+    this.el.headerNav = document.querySelector('.header-nav');
+    this.el.bottomNav = document.querySelector('.bottom-nav');
 
     // Home page
     this.el.homeStatus = document.getElementById('home-status');
@@ -226,22 +227,26 @@ const Balance = {
     switch (page) {
       case 'home':
         this.el.pageHome.classList.add('active');
-        this.el.nav.classList.remove('hidden');
+        this.el.headerNav.classList.remove('hidden');
+        this.el.bottomNav.classList.remove('hidden');
         break;
       case 'active':
         this.el.pageActive.classList.add('active');
-        this.el.nav.classList.add('hidden');
+        this.el.headerNav.classList.add('hidden');
+        this.el.bottomNav.classList.add('hidden');
         document.body.classList.add('dark-mode');
         this.updateActiveUI();
         break;
       case 'end':
         this.el.pageEnd.classList.add('active');
-        this.el.nav.classList.add('hidden');
+        this.el.headerNav.classList.add('hidden');
+        this.el.bottomNav.classList.add('hidden');
         this.updateEndUI();
         break;
       case 'break':
         this.el.pageBreak.classList.add('active');
-        this.el.nav.classList.add('hidden');
+        this.el.headerNav.classList.add('hidden');
+        this.el.bottomNav.classList.add('hidden');
         document.body.classList.add('break-mode');
         break;
     }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from datetime import datetime, timedelta
 
 from ..database import get_db
@@ -189,6 +189,35 @@ async def check_break() -> BreakCheck:
 
     remaining = int((break_until - now).total_seconds())
     return BreakCheck(on_break=True, remaining_seconds=remaining)
+
+
+@router.get("/auth-check")
+async def auth_check():
+    """ForwardAuth endpoint for Traefik middleware.
+
+    Returns 200 if not on break (allow request).
+    Returns 302 redirect to balance break page if on break (block request).
+    """
+    state = await get_app_state()
+
+    if not state["break_until"]:
+        return Response(status_code=200)
+
+    break_until = datetime.fromisoformat(state["break_until"])
+    now = datetime.now()
+
+    if now >= break_until:
+        # Break is over, clear it
+        async with get_db() as db:
+            await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
+            await db.commit()
+        return Response(status_code=200)
+
+    # On break - redirect to balance break page
+    return Response(
+        status_code=302,
+        headers={"Location": "https://balance.gstoehl.dev/"}
+    )
 
 
 @router.get("/can-start")

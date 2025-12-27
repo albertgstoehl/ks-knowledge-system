@@ -89,4 +89,14 @@ Read this file first. Based on your task, read only the relevant documentation f
 - Hot reload in dev via uvicorn `--reload`
 - K8s uses local images (`imagePullPolicy: Never`)
 
-**Important:** When implementing changes to architecture, services, or infrastructure, update `KNOWLEDGE-SYSTEM-OVERVIEW.md` to keep it in sync with the actual system state.
+## Documentation Maintenance (IMPORTANT)
+
+**After ANY changes to the knowledge system, update these files:**
+
+| Change Type | Update |
+|-------------|--------|
+| Architecture, services, data flow | `KNOWLEDGE-SYSTEM-OVERVIEW.md` |
+| K8s manifests, deployments, network policies | `k8s/OPERATIONS.md` |
+| New endpoints or features | Both overview + relevant service docs |
+
+This is non-negotiable. Outdated documentation causes wasted time and errors in future sessions.

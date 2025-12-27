@@ -1,0 +1,12 @@
+# Traefik ForwardAuth Middleware for break enforcement
+# Blocks access to bookmark/canvas/kasten during breaks
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: balance-check
+  namespace: knowledge-system
+spec:
+  forwardAuth:
+    address: http://balance.knowledge-system.svc.cluster.local:8000/api/auth-check
+    # Don't pass auth headers to upstream services
+    authResponseHeaders: []

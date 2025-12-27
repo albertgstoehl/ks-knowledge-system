@@ -20,7 +20,13 @@ A personal knowledge management ecosystem running on K3s, consisting of intercon
 │                         TRAEFIK INGRESS (K3s)                               │
 │ ┌────────────────┬────────────────┬────────────────┬────────────────┐       │
 │ │bookmark.gstoehl│canvas.gstoehl  │kasten.gstoehl  │balance.gstoehl │       │
-│ └────────────────┴────────────────┴────────────────┴────────────────┘       │
+│ │  [ForwardAuth] │  [ForwardAuth] │  [ForwardAuth] │   (no auth)    │       │
+│ └───────┬────────┴───────┬────────┴───────┬────────┴────────────────┘       │
+│         └────────────────┼────────────────┘                                 │
+│                          ▼                                                  │
+│              ┌─────────────────────┐                                        │
+│              │  balance-check MW   │◀─── /api/auth-check (200 or 302)       │
+│              └─────────────────────┘                                        │
 └─────────────────────────────────────────────────────────────────────────────┘
           │                        │                        │              │
           ▼                        ▼                        ▼              ▼
@@ -265,7 +271,8 @@ CANVAS_URL      # Canvas endpoint
 |----------|---------|
 | `POST /api/sessions/start` | Start Pomodoro session |
 | `POST /api/sessions/end` | End session with feedback |
-| `GET /api/check` | Break status (for middleware) |
+| `GET /api/check` | Break status (JSON response) |
+| `GET /api/auth-check` | ForwardAuth endpoint (200 or 302 redirect) |
 | `POST /api/meditation` | Log meditation |
 | `POST /api/exercise` | Log exercise |
 | `POST /api/pulse` | Log daily mood + connection |

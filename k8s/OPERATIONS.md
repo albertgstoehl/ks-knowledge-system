@@ -24,6 +24,9 @@ kubectl exec -it deploy/bookmark-manager -n knowledge-system -- /bin/sh
 # View network policies
 kubectl get networkpolicy -n knowledge-system
 
+# View middlewares
+kubectl get middleware -n knowledge-system
+
 # Describe a pod (for debugging)
 kubectl describe pod -l app=bookmark-manager -n knowledge-system
 
@@ -34,11 +37,14 @@ kubectl get certificate -n knowledge-system
 ## Updating Images
 
 ```bash
-# Rebuild and reimport image
+# Rebuild and reimport image (example: bookmark-manager)
 cd /home/ags/knowledge-system/bookmark-manager
 docker build -t bookmark-manager:latest .
 docker save bookmark-manager:latest | sudo k3s ctr images import -
 kubectl rollout restart deploy/bookmark-manager -n knowledge-system
+
+# Same pattern for other services:
+# canvas, kasten, balance, telegram-bot
 ```
 
 ## Backup
@@ -58,6 +64,43 @@ kubectl cp knowledge-system/$(kubectl get pod -n knowledge-system -l app=balance
 
 ```bash
 kubectl apply -f /home/ags/knowledge-system/k8s/base/
+```
+
+## Break Enforcement (Balance → Knowledge System)
+
+Balance enforces breaks by blocking access to bookmark/canvas/kasten during breaks via Traefik ForwardAuth middleware.
+
+### How it works
+
+```
+User Request → Traefik → ForwardAuth (balance/api/auth-check)
+                              ↓
+                    On break? ──→ 302 redirect to balance.gstoehl.dev
+                    Not on break? ──→ 200, pass through to service
+```
+
+### Components
+
+| File | Purpose |
+|------|---------|
+| `middleware-balance-check.yaml` | Traefik Middleware CRD (uses FQDN: balance.knowledge-system.svc.cluster.local) |
+| `ingress.yaml` | Split ingress: balance (no middleware) + others (with middleware) |
+| `balance/src/routers/sessions.py` | `/api/auth-check` endpoint returns 200 or 302 |
+
+### Debugging break enforcement
+
+```bash
+# Check middleware exists
+kubectl get middleware balance-check -n knowledge-system
+
+# Check if balance is responding
+kubectl exec -it deploy/balance -n knowledge-system -- curl -s localhost:8000/api/check
+
+# Test auth-check endpoint directly
+kubectl exec -it deploy/balance -n knowledge-system -- curl -s -o /dev/null -w "%{http_code}" localhost:8000/api/auth-check
+
+# View Traefik logs for middleware issues
+kubectl logs -f -n kube-system -l app.kubernetes.io/name=traefik
 ```
 
 ## Rollback to Docker Compose
@@ -90,9 +133,33 @@ curl http://bookmark.gstoehl.dev/health
 | canvas | DNS + internal pods only |
 | kasten | DNS only |
 | balance | DNS only |
+| telegram-bot | DNS + bookmark-manager + Telegram API |
+
+## Ingress Configuration
+
+| Ingress | Hosts | Middleware |
+|---------|-------|------------|
+| balance-ingress | balance.gstoehl.dev | None |
+| knowledge-system-ingress | bookmark, canvas, kasten | balance-check (ForwardAuth) |
 
 ## File Locations
 
 - Manifests: `/home/ags/knowledge-system/k8s/base/`
 - Kubeconfig: `~/.kube/config`
 - Backups: `/home/ags/backups/k3s-migration-2025-12-21/`
+
+## Manifest Overview
+
+| File | Resources |
+|------|-----------|
+| `namespace.yaml` | Namespace: knowledge-system |
+| `clusterissuer.yaml` | Let's Encrypt cert-manager issuer |
+| `pvcs.yaml` | PVCs for all services |
+| `ingress.yaml` | Ingress for all domains (split: balance vs others) |
+| `middleware-balance-check.yaml` | Traefik ForwardAuth for break enforcement |
+| `bookmark-manager.yaml` | Deployment + Service |
+| `canvas.yaml` | Deployment + Service |
+| `kasten.yaml` | Deployment + Service |
+| `balance.yaml` | Deployment + Service |
+| `telegram-bot.yaml` | Deployment (no service, outbound only) |
+| `networkpolicy-*.yaml` | Zero-trust egress rules per service |
