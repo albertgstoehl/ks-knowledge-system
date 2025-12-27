@@ -209,3 +209,35 @@ async def test_quick_start_already_in_session():
         data = response.json()
         assert data["success"] is False
         assert data["reason"] == "session_active"
+
+
+async def test_mark_claude_used():
+    """Test marking a session as using Claude."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Start a session
+        await client.post("/api/sessions/start", json={
+            "type": "expected",
+            "intention": "Test"
+        })
+
+        # Mark as using Claude
+        response = await client.post("/api/session/mark-claude-used")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["marked"] is True
+
+        # Call again - should still succeed (idempotent)
+        response2 = await client.post("/api/session/mark-claude-used")
+        assert response2.status_code == 200
+        assert response2.json()["marked"] is True
+
+
+async def test_mark_claude_used_no_session():
+    """Test mark-claude-used fails when no session."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/api/session/mark-claude-used")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["marked"] is False

@@ -6,7 +6,8 @@ from ..models import (
     SessionStart, SessionEnd, Session,
     BreakCheck, CanStart,
     SessionActiveResponse, SessionInfo,
-    QuickStartRequest, QuickStartResponse
+    QuickStartRequest, QuickStartResponse,
+    MarkClaudeUsedResponse
 )
 
 router = APIRouter(prefix="/api", tags=["sessions"])
@@ -357,6 +358,26 @@ async def quick_start_session(data: QuickStartRequest) -> QuickStartResponse:
         await db.commit()
 
     return QuickStartResponse(success=True, session_id=session_id)
+
+
+@router.post("/session/mark-claude-used")
+async def mark_claude_used() -> MarkClaudeUsedResponse:
+    """Mark the current session as using Claude Code.
+
+    Called by hook when Claude proceeds. Idempotent.
+    """
+    session = await get_current_session()
+    if not session:
+        return MarkClaudeUsedResponse(marked=False)
+
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE sessions SET claude_used = TRUE WHERE id = ?",
+            (session["id"],)
+        )
+        await db.commit()
+
+    return MarkClaudeUsedResponse(marked=True)
 
 
 @router.get("/status")
