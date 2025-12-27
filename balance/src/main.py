@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 import os
 
 from .database import init_db
+from .routers import sessions, logging, settings
 
 
 @asynccontextmanager
@@ -16,6 +17,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Balance", lifespan=lifespan)
+
+# Register routers
+app.include_router(sessions.router)
+app.include_router(logging.router)
+app.include_router(settings.router)
 
 # Static files and templates
 static_path = os.path.join(os.path.dirname(__file__), "static")

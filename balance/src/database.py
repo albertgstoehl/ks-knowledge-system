@@ -2,12 +2,19 @@ import aiosqlite
 import os
 from contextlib import asynccontextmanager
 
+# Default database URL - can be overridden for testing
 DATABASE_URL = os.getenv("DATABASE_URL", "./data/balance.db")
 
 
-async def init_db():
+def get_database_url():
+    """Get current database URL (allows runtime override)."""
+    return DATABASE_URL
+
+
+async def init_db(db_url: str = None):
     """Initialize database with schema."""
-    async with aiosqlite.connect(DATABASE_URL) as db:
+    url = db_url or get_database_url()
+    async with aiosqlite.connect(url) as db:
         await db.executescript("""
             -- Sessions (Pomodoro)
             CREATE TABLE IF NOT EXISTS sessions (
@@ -104,9 +111,10 @@ async def init_db():
 
 
 @asynccontextmanager
-async def get_db():
+async def get_db(db_url: str = None):
     """Get database connection."""
-    db = await aiosqlite.connect(DATABASE_URL)
+    url = db_url or get_database_url()
+    db = await aiosqlite.connect(url)
     db.row_factory = aiosqlite.Row
     try:
         yield db
