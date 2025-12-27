@@ -43,34 +43,41 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 templates = Jinja2Templates(directory=[templates_path, shared_templates_path])
 
 
+def _template_for(request: Request, full: str, partial: str, context: dict):
+    """Return partial for htmx requests, full page otherwise."""
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(partial, {"request": request, **context})
+    return templates.TemplateResponse(full, {"request": request, **context})
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Main timer page."""
-    return templates.TemplateResponse("index.html", {"request": request, "active_nav": "timer"})
+    return _template_for(request, "index.html", "_content_index.html", {"active_nav": "timer"})
 
 
 @app.get("/log", response_class=HTMLResponse)
 async def log_page(request: Request):
     """Activity logging page."""
-    return templates.TemplateResponse("log.html", {"request": request, "active_nav": "log"})
+    return _template_for(request, "log.html", "_content_log.html", {"active_nav": "log"})
 
 
 @app.get("/stats", response_class=HTMLResponse)
 async def stats_page(request: Request):
     """Stats and life compass page."""
-    return templates.TemplateResponse("stats.html", {"request": request, "active_nav": "stats"})
+    return _template_for(request, "stats.html", "_content_stats.html", {"active_nav": "stats"})
 
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     """Settings page."""
-    return templates.TemplateResponse("settings.html", {"request": request, "active_nav": "settings"})
+    return _template_for(request, "settings.html", "_content_settings.html", {"active_nav": "settings"})
 
 
 @app.get("/evening", response_class=HTMLResponse)
 async def evening_page(request: Request):
     """Evening check-in page."""
-    return templates.TemplateResponse("evening.html", {"request": request, "active_nav": ""})
+    return _template_for(request, "evening.html", "_content_evening.html", {"active_nav": ""})
 
 
 @app.get("/health")

@@ -1,0 +1,138 @@
+<main class="main">
+  <!-- Timer Home Page -->
+  <div id="page-home" class="page active">
+    <div class="container">
+      <header class="page-header">
+        <h1>Balance</h1>
+        <p class="status" id="home-status">Ready to focus</p>
+      </header>
+
+      <div class="timer-display">
+        <div class="time" id="home-time">--:--</div>
+        <div class="time-label">pomodoro</div>
+      </div>
+
+      <div class="type-selection">
+        <button class="btn type-btn active" data-type="expected">Expected</button>
+        <button class="btn type-btn" data-type="personal">Personal</button>
+      </div>
+
+      <div class="intention-group">
+        <label class="label">What's the one thing?</label>
+        <input type="text" id="intention-input" placeholder="3 words max" maxlength="30">
+        <div class="char-count"><span id="char-count">0</span>/30</div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="start-btn">Start Session</button>
+
+      <div class="today-progress">
+        <div class="progress-label">Today</div>
+        <div class="progress-row">
+          <span class="progress-type">Expected</span>
+          <div class="progress-dots" id="expected-dots"></div>
+        </div>
+        <div class="progress-row">
+          <span class="progress-type">Personal</span>
+          <div class="progress-dots" id="personal-dots"></div>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <button class="quick-btn" id="quick-meditation">+ Meditation</button>
+        <button class="quick-btn" id="quick-exercise">+ Exercise</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Session Page -->
+  <div id="page-active" class="page">
+    <div class="container" style="text-align: center;">
+      <div class="session-type-badge" id="active-type">Expected</div>
+
+      <div class="progress-ring">
+        <svg width="200" height="200">
+          <circle class="ring-bg" cx="100" cy="100" r="90"/>
+          <circle class="ring-progress" id="progress-circle" cx="100" cy="100" r="90"
+                  stroke-dasharray="565.48" stroke-dashoffset="0"/>
+        </svg>
+      </div>
+
+      <div class="timer-large" id="active-time">--:--</div>
+
+      <div class="intention-box">
+        <div class="intention-label">Focus on</div>
+        <div class="intention-text" id="active-intention">-</div>
+      </div>
+
+      <div class="session-counter">
+        Session <span id="session-num">1</span> of <span id="session-cap">10</span> today
+      </div>
+
+      <button class="btn btn-ghost" id="abandon-btn" style="margin-top: 3rem;">Abandon session</button>
+    </div>
+  </div>
+
+  <!-- Session End Page -->
+  <div id="page-end" class="page">
+    <div class="container">
+      <header class="page-header">
+        <div class="checkmark">+1</div>
+        <h1>Session complete</h1>
+        <p class="intention" id="end-intention">"-"</p>
+      </header>
+
+      <div class="question-group">
+        <label class="question-label">Distractions?</label>
+        <div class="options" id="distraction-options">
+          <button class="option-btn" data-value="none">None</button>
+          <button class="option-btn" data-value="some">Some</button>
+          <button class="option-btn" data-value="many">Many</button>
+        </div>
+      </div>
+
+      <div class="question-group">
+        <label class="question-label">Did you do the thing?</label>
+        <div class="binary-options" id="did-thing-options">
+          <button class="btn binary-btn" data-value="yes">Yes</button>
+          <button class="btn binary-btn" data-value="no">No</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="continue-btn" disabled>Continue to break</button>
+
+      <div class="session-stats">
+        <p>Today: <span id="end-expected">0 Expected</span> · <span id="end-personal">0 Personal</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Break Page -->
+  <div id="page-break" class="page">
+    <div class="container">
+      <div class="break-message">
+        <h1>Time to step away</h1>
+        <p>Your brain needs a moment.<br>The knowledge system is locked.</p>
+      </div>
+
+      <div class="break-timer" id="break-time">--:--</div>
+
+      <div class="suggestions">
+        <div class="suggestions-title">Consider</div>
+        <ul class="suggestion-list">
+          <li class="suggestion-item">Look out a window</li>
+          <li class="suggestion-item">Get water</li>
+          <li class="suggestion-item">Stretch</li>
+        </ul>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-bar-fill" id="break-progress"></div>
+      </div>
+
+      <div class="blocked-notice">
+        bookmark, canvas, kasten are blocked until break ends
+      </div>
+    </div>
+  </div>
+</main>
+<script src="/static/js/timer.js?v=3"></script>
