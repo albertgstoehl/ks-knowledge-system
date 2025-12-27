@@ -162,6 +162,7 @@ body.break-mode {
   width: 100%;
 }
 
+
 /* Header */
 .header {
   text-align: center;
@@ -1272,4 +1273,42 @@ body.evening-mode {
 .modal-option .desc {
   font-size: 0.75rem;
   opacity: 0.7;
+}
+
+/* =====================================================
+   DESKTOP COMPACT LAYOUT
+   ===================================================== */
+@media (min-width: 769px) {
+  .container {
+    max-width: 500px;
+  }
+
+  .header {
+    margin-bottom: 1.5rem;
+  }
+
+  .timer-display {
+    margin-bottom: 1.5rem;
+  }
+
+  .timer-display .time {
+    font-size: 4rem;
+  }
+
+  .type-selection {
+    margin-bottom: 1rem;
+  }
+
+  .intention-group {
+    margin-bottom: 1rem;
+  }
+
+  .today-progress {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+  }
+
+  .quick-actions {
+    margin-top: 1rem;
+  }
 }
