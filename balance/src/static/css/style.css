@@ -42,27 +42,68 @@ body.break-mode {
   --color-bg: #f5f5f5;
 }
 
-/* Navigation */
-.nav {
+/* Header Navigation (Desktop) */
+.header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-nav h1 {
+  font-size: 1.25rem;
+  font-weight: normal;
+}
+
+.tabs {
+  display: flex;
+  gap: 1rem;
+}
+
+.tab {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab:hover {
+  background: var(--color-hover);
+}
+
+.tab.active {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+/* Mobile Bottom Navigation */
+.bottom-nav {
+  display: none;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg);
   padding-bottom: var(--safe-bottom);
   z-index: 100;
 }
 
-.nav-btn {
+.bottom-nav-link {
   flex: 1;
   padding: 1rem 0.5rem;
   border: none;
   border-right: 1px solid var(--color-border);
   background: var(--color-bg);
   font-family: inherit;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   text-decoration: none;
@@ -71,28 +112,49 @@ body.break-mode {
   cursor: pointer;
 }
 
-.nav-btn:last-child {
+.bottom-nav-link:last-child {
   border-right: none;
 }
 
-.nav-btn.active {
+.bottom-nav-link.active {
   background: var(--color-text);
   color: var(--color-bg);
 }
 
-.nav.hidden {
-  display: none;
+/* Responsive: Mobile shows bottom nav, Desktop shows header tabs */
+@media (max-width: 768px) {
+  .header-nav {
+    display: none;
+  }
+  .bottom-nav {
+    display: flex;
+  }
+  body {
+    padding-bottom: 60px;
+  }
+}
+
+.bottom-nav.hidden {
+  display: none !important;
 }
 
 /* Main content area */
 .main {
-  min-height: 100vh;
+  min-height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  padding-bottom: calc(70px + var(--safe-bottom));
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .main {
+    min-height: 100vh;
+    padding-bottom: calc(70px + var(--safe-bottom));
+  }
 }
 
 .container {

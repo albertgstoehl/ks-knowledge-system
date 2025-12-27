@@ -8,13 +8,23 @@
   {% block head %}{% endblock %}
 </head>
 <body>
+  <header class="header-nav">
+    <h1>Balance</h1>
+    <nav class="tabs">
+      <a href="/" class="tab {% if active_nav == 'timer' %}active{% endif %}">Timer</a>
+      <a href="/log" class="tab {% if active_nav == 'log' %}active{% endif %}">Log</a>
+      <a href="/stats" class="tab {% if active_nav == 'stats' %}active{% endif %}">Stats</a>
+      <a href="/settings" class="tab {% if active_nav == 'settings' %}active{% endif %}">Settings</a>
+    </nav>
+  </header>
+
   {% block content %}{% endblock %}
 
-  <nav class="nav">
-    <a href="/" class="nav-btn {% if active_nav == 'timer' %}active{% endif %}">Timer</a>
-    <a href="/log" class="nav-btn {% if active_nav == 'log' %}active{% endif %}">Log</a>
-    <a href="/stats" class="nav-btn {% if active_nav == 'stats' %}active{% endif %}">Stats</a>
-    <a href="/settings" class="nav-btn {% if active_nav == 'settings' %}active{% endif %}">Settings</a>
+  <nav class="bottom-nav">
+    <a href="/" class="bottom-nav-link {% if active_nav == 'timer' %}active{% endif %}">Timer</a>
+    <a href="/log" class="bottom-nav-link {% if active_nav == 'log' %}active{% endif %}">Log</a>
+    <a href="/stats" class="bottom-nav-link {% if active_nav == 'stats' %}active{% endif %}">Stats</a>
+    <a href="/settings" class="bottom-nav-link {% if active_nav == 'settings' %}active{% endif %}">Settings</a>
   </nav>
 
   {% block scripts %}{% endblock %}
