@@ -28,6 +28,10 @@ body {
   /* Flex layout for full-height content */
   display: flex;
   flex-direction: column;
+  /* Prevent body scroll - content-container handles scrolling */
+  overflow: hidden;
+  /* Top padding for breathing room */
+  padding-top: var(--space-md);
 }
 
 /* Container */

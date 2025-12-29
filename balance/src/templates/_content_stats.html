@@ -1,8 +1,7 @@
-<main class="main">
-  <div class="container">
-    <header class="page-header">
-      <h1>Stats</h1>
-    </header>
+<div class="container">
+  <header class="page-header">
+    <h1>Stats</h1>
+  </header>
 
     <div class="period-selector">
       <button class="period-btn active" data-period="week">Week</button>
@@ -61,10 +60,10 @@
     <div class="north-star-section" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--color-border);">
       <div class="compass-title">North Star</div>
       <p id="north-star" style="font-size: 0.875rem; line-height: 1.6; color: var(--color-muted); text-align: center;">-</p>
-    </div>
   </div>
-</main>
+</div>
 <script>
+(function() {
 const Stats = {
   period: 'week',
 
@@ -130,4 +129,5 @@ const Stats = {
 
 // Run immediately - DOM already ready when htmx swaps content
 Stats.init();
+})();
 </script>

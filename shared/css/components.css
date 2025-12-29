@@ -229,14 +229,11 @@
 
 .bottom-nav {
   display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  /* NO position: fixed - let it flow in flexbox layout */
+  flex-shrink: 0;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg);
   padding-bottom: var(--safe-bottom);
-  z-index: 100;
 }
 
 .bottom-nav__links {
@@ -282,11 +279,6 @@
   .header__tabs {
     display: none;
   }
-
-  /* Add padding for bottom nav */
-  body.has-bottom-nav {
-    padding-bottom: calc(56px + var(--safe-bottom));
-  }
 }
 
 /* ==========================================================================
@@ -295,7 +287,7 @@
 
 .content-container {
   padding: var(--space-lg);
-  margin-bottom: var(--space-lg);
+  /* No margin needed - bottom-nav is in flexbox flow */
   /* Fill remaining vertical space */
   flex: 1;
   min-height: 0;
@@ -306,12 +298,8 @@
 @media (max-width: 768px) {
   .content-container {
     padding: var(--space-md);
+    /* No extra padding needed - bottom-nav is in flexbox flow, not fixed */
     margin-bottom: 0;
-  }
-
-  /* Add padding for bottom nav */
-  body.has-bottom-nav .content-container {
-    margin-bottom: calc(56px + var(--space-md));
   }
 }
 
