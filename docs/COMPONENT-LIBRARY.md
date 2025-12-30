@@ -4,15 +4,19 @@ Shared UI components for all knowledge-system services.
 
 ## Quick Start
 
-### 1. Import CSS in base template
+### 1. Import CSS and JS in base template
 
 ```html
 <head>
-  <link rel="stylesheet" href="/static/shared/variables.css">
-  <link rel="stylesheet" href="/static/shared/base.css">
-  <link rel="stylesheet" href="/static/shared/components.css">
-  <link rel="stylesheet" href="/static/shared/utilities.css">
+  <link rel="stylesheet" href="/static/shared/css/variables.css">
+  <link rel="stylesheet" href="/static/shared/css/base.css">
+  <link rel="stylesheet" href="/static/shared/css/components.css">
+  <link rel="stylesheet" href="/static/shared/css/utilities.css">
 </head>
+<body>
+  <!-- content -->
+  <script src="/static/shared/js/components.js"></script>
+</body>
 ```
 
 ### 2. Import macros in template
@@ -204,6 +208,126 @@ For custom markup, use these classes directly:
 | Empty State | `.empty-state`, `.empty-state__title`, `.empty-state__message` |
 | Form | `.form-group`, `.form-group__label`, `.form-group__help` |
 | Label | `.label` |
+| View Header | `.view-header`, `.view-header__title`, `.view-header__count` |
+| Detail Panel | `.detail-panel`, `.detail-panel__header`, `.detail-panel__title`, `.detail-panel__meta`, `.detail-panel__content`, `.detail-panel__actions`, `.detail-panel__empty` |
+| Layout | `.layout--list-detail`, `.layout-2col`, `.layout-2col--sidebar` |
+| Next Up | `.next-up`, `.next-up__header`, `.next-up__item`, `.next-up__title`, `.next-up__timer` |
+| Option Buttons | `.btn--option`, `.button-group`, `.button-group--vertical` |
+| Timer | `.timer`, `.timer__value`, `.timer__label` |
+| Setting Row | `.setting-row`, `.setting-row__label`, `.setting-row__value`, `.setting-row__input`, `.setting-row__unit` |
+| Action Panel | `.action-panel`, `.action-panel__btn`, `.action-panel__btn--primary`, `.action-panel__btn--danger` |
+
+---
+
+## Layout Components
+
+### View Header
+
+Section header with title and optional count.
+
+```html
+<div class="view-header">
+  <span class="view-header__title">INBOX (27)</span>
+  <span class="view-header__count">3 unread</span>
+</div>
+```
+
+### Detail Panel
+
+Panel showing selected item details.
+
+```html
+<div class="detail-panel">
+  <div class="detail-panel__header">
+    <div class="detail-panel__title">Title</div>
+    <div class="detail-panel__meta">Meta info</div>
+  </div>
+  <div class="detail-panel__content">Content here</div>
+  <div class="detail-panel__actions">
+    <button class="btn btn--primary">Action</button>
+  </div>
+</div>
+
+<!-- Empty state -->
+<div class="detail-panel">
+  <div class="detail-panel__empty">Select an item</div>
+</div>
+```
+
+### List-Detail Layout
+
+Two-column layout with list and detail panel.
+
+```html
+<div class="layout--list-detail">
+  <div class="list">...</div>
+  <div class="detail-panel">...</div>
+</div>
+```
+
+### Next Up
+
+Preview list of upcoming items.
+
+```html
+<div class="next-up">
+  <div class="next-up__header">Next Up</div>
+  <div class="next-up__item">
+    <span class="next-up__title">Item title</span>
+    <span class="next-up__timer">2h ago</span>
+  </div>
+</div>
+```
+
+---
+
+## Interactive Components
+
+### Option Buttons
+
+Toggle/multi-choice buttons.
+
+```html
+<div class="button-group">
+  <button class="btn--option selected">Option A</button>
+  <button class="btn--option">Option B</button>
+</div>
+
+<div class="button-group--vertical">
+  <button class="btn--option">15 min</button>
+  <button class="btn--option selected">30 min</button>
+</div>
+```
+
+### Timer
+
+Large timer display.
+
+```html
+<div class="timer">
+  <div class="timer__value">25:00</div>
+  <div class="timer__label">Focus Time</div>
+</div>
+```
+
+### Setting Row
+
+Key-value pairs for settings.
+
+```html
+<div class="setting-row">
+  <span class="setting-row__label">Duration</span>
+  <span class="setting-row__value">25 min</span>
+</div>
+
+<div class="setting-row">
+  <span class="setting-row__label">Goal</span>
+  <div>
+    <input type="number" class="setting-row__input" value="4">
+    <span class="setting-row__unit">sessions</span>
+  </div>
+</div>
+```
 
 ---
 
@@ -297,6 +421,21 @@ Apply dark mode with `data-theme="dark"` attribute:
 
 ---
 
+## JavaScript Utilities
+
+The shared library includes `js/components.js` with utility functions for interactive components:
+
+| Function | Purpose |
+|----------|---------|
+| `toggleAccordion(id)` | Expand/collapse accordion content |
+| `toggleDropdown(id)` | Open/close dropdown menu |
+| `closeDropdown(id)` | Close specific dropdown |
+| `toggleSourcePanel()` | Show/hide source details panel |
+
+Dropdowns auto-close when clicking outside.
+
+---
+
 ## Service Integration
 
 ### Dockerfile
@@ -312,8 +451,8 @@ COPY src/ ./src/
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Mount shared CSS
-app.mount("/static/shared", StaticFiles(directory="shared/css"), name="shared")
+# Mount entire shared directory (contains css/, js/, templates/)
+app.mount("/static/shared", StaticFiles(directory="shared"), name="shared")
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
 
 # Include shared templates in search path
@@ -329,14 +468,15 @@ templates = Jinja2Templates(directory=["src/templates", "shared/templates"])
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{% endblock %}</title>
-  <link rel="stylesheet" href="/static/shared/variables.css">
-  <link rel="stylesheet" href="/static/shared/base.css">
-  <link rel="stylesheet" href="/static/shared/components.css">
-  <link rel="stylesheet" href="/static/shared/utilities.css">
+  <link rel="stylesheet" href="/static/shared/css/variables.css">
+  <link rel="stylesheet" href="/static/shared/css/base.css">
+  <link rel="stylesheet" href="/static/shared/css/components.css">
+  <link rel="stylesheet" href="/static/shared/css/utilities.css">
 </head>
 <body>
   {% import "components.html" as ui %}
   {% block content %}{% endblock %}
+  <script src="/static/shared/js/components.js"></script>
 </body>
 </html>
 ```
