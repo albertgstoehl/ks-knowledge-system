@@ -1039,3 +1039,23 @@
     min-height: 48px;
   }
 }
+
+/* ==========================================================================
+   LIST-DETAIL LAYOUT
+   Two-column layout with list on left, detail panel on right
+   ========================================================================== */
+
+.layout--list-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  min-height: 70vh;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .layout--list-detail {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
