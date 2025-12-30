@@ -940,3 +940,27 @@
 .timer--normal {
   color: var(--color-muted);
 }
+
+/* ==========================================================================
+   VIEW HEADER
+   Section header with title and count (e.g., "INBOX (27)")
+   ========================================================================== */
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.view-header__title {
+  font-size: 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.view-header__count {
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
