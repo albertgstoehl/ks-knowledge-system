@@ -1144,3 +1144,33 @@
     min-height: auto;
   }
 }
+
+/* ==========================================================================
+   TIMER DISPLAY
+   Large timer for countdowns and time display
+   ========================================================================== */
+
+.timer {
+  text-align: center;
+}
+
+.timer__value {
+  font-size: 6rem;
+  font-weight: 300;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: var(--space-sm);
+}
+
+@media (min-width: 769px) {
+  .timer__value {
+    font-size: 8rem;
+  }
+}
