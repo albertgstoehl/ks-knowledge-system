@@ -285,17 +285,17 @@ const Balance = {
   togglePriorityDropdown() {
     const dropdown = this.el.priorityDropdown;
     const backdrop = document.getElementById('backdrop-priority');
-    if (dropdown.classList.contains('open')) {
-      dropdown.classList.remove('open');
+    if (dropdown.classList.contains('dropdown__menu--open')) {
+      dropdown.classList.remove('dropdown__menu--open');
       backdrop.classList.remove('active');
     } else {
-      dropdown.classList.add('open');
+      dropdown.classList.add('dropdown__menu--open');
       backdrop.classList.add('active');
     }
   },
 
   closePriorityDropdown() {
-    this.el.priorityDropdown?.classList.remove('open');
+    this.el.priorityDropdown?.classList.remove('dropdown__menu--open');
     document.getElementById('backdrop-priority')?.classList.remove('active');
   },
 
