@@ -76,6 +76,7 @@ See `docs/COMPONENT-LIBRARY.md` for full API reference.
 | Balance design (rhythm tracker) | `docs/plans/2025-12-27-balance-app-design.md` |
 | Implementation plan | `docs/plans/2025-12-27-balance-implementation-plan.md` |
 | Claude Code integration | `docs/plans/2025-12-27-claude-balance-lock-design.md` |
+| Session flow (timer-complete, rabbit hole) | `docs/plans/2025-01-01-balance-session-flow-improvements.md` |
 | Priority drift detection | `docs/plans/2026-01-01-priority-drift-detection-plan.md` |
 | Session effectiveness analysis | `docs/plans/2026-01-01-transcript-analysis-design.md` |
 
