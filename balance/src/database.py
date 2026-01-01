@@ -21,12 +21,14 @@ async def init_db(db_url: str = None):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 type TEXT NOT NULL CHECK (type IN ('expected', 'personal')),
                 intention TEXT,
+                priority_id INTEGER,
                 started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 ended_at TIMESTAMP,
                 distractions TEXT CHECK (distractions IN ('none', 'some', 'many')),
                 did_the_thing BOOLEAN,
                 rabbit_hole BOOLEAN,
-                claude_used BOOLEAN DEFAULT FALSE
+                claude_used BOOLEAN DEFAULT FALSE,
+                FOREIGN KEY (priority_id) REFERENCES priorities(id)
             );
 
             -- Meditation
@@ -121,6 +123,12 @@ async def init_db(db_url: str = None):
         # Migration: add claude_used if missing (for existing DBs)
         try:
             await db.execute("ALTER TABLE sessions ADD COLUMN claude_used BOOLEAN DEFAULT FALSE")
+        except Exception:
+            pass  # Column already exists
+
+        # Migration: add priority_id if missing (for existing DBs)
+        try:
+            await db.execute("ALTER TABLE sessions ADD COLUMN priority_id INTEGER")
         except Exception:
             pass  # Column already exists
 

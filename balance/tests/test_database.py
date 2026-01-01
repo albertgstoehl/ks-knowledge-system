@@ -36,3 +36,13 @@ async def test_priorities_table_schema(test_db):
         assert "rank" in column_names
         assert "created_at" in column_names
         assert "archived_at" in column_names
+
+
+@pytest.mark.asyncio
+async def test_sessions_has_priority_id_column(test_db):
+    """Test that sessions table has priority_id column for linking to priorities."""
+    async with get_db(test_db) as db:
+        cursor = await db.execute("PRAGMA table_info(sessions)")
+        columns = await cursor.fetchall()
+        column_names = [col[1] for col in columns]
+        assert "priority_id" in column_names
