@@ -88,11 +88,112 @@
 </div>
 <script>
 (function() {
+const PriorityManager = {
+  priorities: [],
+
+  async init() {
+    await this.load();
+    this.render();
+  },
+
+  async load() {
+    const response = await fetch('/api/priorities');
+    this.priorities = await response.json();
+  },
+
+  render() {
+    const list = document.getElementById('priority-list');
+    const addBtn = document.getElementById('add-priority-btn');
+    const limitMsg = document.getElementById('priority-limit-msg');
+
+    if (this.priorities.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-state__message">No priorities yet</div></div>';
+    } else {
+      list.innerHTML = this.priorities.map((p, i) => `
+        <div class="priority-list__item" data-id="${p.id}">
+          <span class="priority-list__rank">${p.rank}</span>
+          <span class="priority-list__name">${p.name}</span>
+          <span class="priority-list__meta">${p.session_count} sessions</span>
+          <span class="priority-list__arrows">
+            <button type="button" class="priority-list__arrow" onclick="PriorityManager.move(${p.id}, 'up')" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+            <button type="button" class="priority-list__arrow" onclick="PriorityManager.move(${p.id}, 'down')" ${i === this.priorities.length - 1 ? 'disabled' : ''}>&#9660;</button>
+          </span>
+        </div>
+      `).join('');
+    }
+
+    // Hide add button if at max
+    if (this.priorities.length >= 4) {
+      addBtn.style.display = 'none';
+      limitMsg.style.display = 'block';
+    } else {
+      addBtn.style.display = 'block';
+      limitMsg.style.display = this.priorities.length >= 3 ? 'block' : 'none';
+    }
+  },
+
+  async move(id, direction) {
+    const index = this.priorities.findIndex(p => p.id === id);
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+
+    if (newIndex < 0 || newIndex >= this.priorities.length) return;
+
+    // Swap in local array
+    [this.priorities[index], this.priorities[newIndex]] =
+    [this.priorities[newIndex], this.priorities[index]];
+
+    // Update ranks
+    const order = this.priorities.map(p => p.id);
+    await fetch('/api/priorities/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order })
+    });
+
+    await this.load();
+    this.render();
+  },
+
+  async add(name) {
+    await fetch('/api/priorities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    await this.load();
+    this.render();
+  },
+
+  showAddForm() {
+    document.getElementById('add-priority-form').style.display = 'block';
+    document.getElementById('add-priority-btn').style.display = 'none';
+    document.getElementById('new-priority-name').focus();
+  },
+
+  hideAddForm() {
+    document.getElementById('add-priority-form').style.display = 'none';
+    document.getElementById('add-priority-btn').style.display = 'block';
+    document.getElementById('new-priority-name').value = '';
+  },
+
+  async save() {
+    const name = document.getElementById('new-priority-name').value.trim();
+    if (name) {
+      await this.add(name);
+      this.hideAddForm();
+    }
+  }
+};
+
+// Make PriorityManager globally accessible for onclick handlers
+window.PriorityManager = PriorityManager;
+
 const Settings = {
   init() {
     this.loadSettings();
     this.loadState();
     this.bindEvents();
+    PriorityManager.init();
   },
 
   bindEvents() {
