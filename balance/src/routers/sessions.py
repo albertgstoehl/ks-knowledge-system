@@ -63,6 +63,39 @@ async def get_today_session_count():
         return row["count"]
 
 
+async def get_cycle_position_smart() -> int:
+    """Get cycle position, resetting if naturally rested."""
+    settings = await get_settings()
+    long_break_minutes = settings["long_break"]
+
+    async with get_db() as db:
+        # Get last completed session
+        cursor = await db.execute(
+            """SELECT ended_at FROM sessions
+               WHERE ended_at IS NOT NULL
+               ORDER BY ended_at DESC LIMIT 1"""
+        )
+        row = await cursor.fetchone()
+
+        if row and row[0]:
+            last_ended = datetime.fromisoformat(row[0])
+            time_since = datetime.now() - last_ended
+
+            # If rested longer than long break, reset cycle
+            if time_since > timedelta(minutes=long_break_minutes):
+                return 0
+
+        # Count today's completed sessions for cycle position
+        today = datetime.now().date().isoformat()
+        cursor = await db.execute(
+            """SELECT COUNT(*) FROM sessions
+               WHERE date(ended_at) = ? AND ended_at IS NOT NULL""",
+            (today,)
+        )
+        count = (await cursor.fetchone())[0]
+        return count % 4
+
+
 async def get_consecutive_personal_count():
     """Get consecutive personal sessions (for rabbit hole detection)."""
     async with get_db() as db:
@@ -84,11 +117,17 @@ async def get_consecutive_personal_count():
 
 @router.post("/sessions/start")
 async def start_session(data: SessionStart):
-    """Start a new Pomodoro session."""
-    # Check if already in session
-    current = await get_current_session()
-    if current:
-        raise HTTPException(400, "Session already in progress")
+    """Start a new focus session."""
+    # Check for pending questionnaire (session with no ended_at)
+    async with get_db() as db:
+        cursor = await db.execute(
+            """SELECT id FROM sessions
+               WHERE ended_at IS NULL
+               ORDER BY started_at DESC LIMIT 1"""
+        )
+        pending = await cursor.fetchone()
+        if pending:
+            raise HTTPException(400, "Complete questionnaire for previous session first")
 
     # Check if can start (evening cutoff, hard max)
     can_start = await check_can_start()
@@ -118,35 +157,77 @@ async def start_session(data: SessionStart):
 
 @router.post("/sessions/end")
 async def end_session(data: SessionEnd):
-    """End the current session and start break."""
-    current = await get_current_session()
-    if not current:
-        raise HTTPException(400, "No active session")
-
-    settings = await get_settings()
-
-    # Determine break length (long break every 4th session)
-    today_count = await get_today_session_count()
-    is_long_break = (today_count + 1) % 4 == 0
-    break_duration = settings["long_break"] if is_long_break else settings["short_break"]
-
+    """Submit questionnaire for completed session. Break already started via timer-complete."""
     async with get_db() as db:
+        cursor = await db.execute(
+            "SELECT id, type FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
+        )
+        current = await cursor.fetchone()
+
+        if not current:
+            raise HTTPException(400, "No active session to end")
+
+        session_id = current[0]
+
+        # Update session with questionnaire answers
         await db.execute(
             """UPDATE sessions
                SET ended_at = ?, distractions = ?, did_the_thing = ?, rabbit_hole = ?
                WHERE id = ?""",
             (datetime.now().isoformat(), data.distractions,
-             data.did_the_thing, data.rabbit_hole, current["id"])
+             data.did_the_thing, data.rabbit_hole, session_id)
+        )
+
+        # If rabbit_hole acknowledged, extend break to long break
+        if data.rabbit_hole:
+            settings = await get_settings()
+            new_break_until = datetime.now() + timedelta(minutes=settings["long_break"])
+            await db.execute(
+                "UPDATE app_state SET break_until = ? WHERE id = 1",
+                (new_break_until.isoformat(),)
+            )
+
+        await db.commit()
+
+    return {"status": "ok", "session_id": session_id}
+
+
+@router.post("/sessions/timer-complete")
+async def timer_complete():
+    """Called when session timer hits 0. Starts break immediately."""
+    # Get current session
+    async with get_db() as db:
+        cursor = await db.execute(
+            "SELECT id, type FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
+        )
+        current = await cursor.fetchone()
+
+        if not current:
+            raise HTTPException(400, "No active session")
+
+    settings = await get_settings()
+    cycle_position = await get_cycle_position_smart()
+
+    # Every 4th session (position 3) gets long break
+    is_long_break = (cycle_position == 3)
+    break_duration = settings["long_break"] if is_long_break else settings["short_break"]
+
+    # Set break_until immediately
+    break_until = datetime.now() + timedelta(minutes=break_duration)
+
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE app_state SET break_until = ? WHERE id = 1",
+            (break_until.isoformat(),)
         )
         await db.commit()
 
-        cursor = await db.execute("SELECT * FROM sessions WHERE id = ?", (current["id"],))
-        row = await cursor.fetchone()
-
-    # Set break
-    await set_break(break_duration)
-
-    return dict(row)
+    return {
+        "break_duration": break_duration,
+        "cycle_position": cycle_position,
+        "is_long_break": is_long_break,
+        "break_until": break_until.isoformat()
+    }
 
 
 @router.post("/sessions/abandon")
@@ -393,6 +474,34 @@ async def get_full_status():
     # Check break status
     state = await get_app_state()
     settings = await get_settings()
+
+    # Check for session needing questionnaire (timer done but no ended_at)
+    async with get_db() as db:
+        cursor = await db.execute(
+            """SELECT id, type, intention, started_at FROM sessions
+               WHERE ended_at IS NULL
+               ORDER BY started_at DESC LIMIT 1"""
+        )
+        pending_session = await cursor.fetchone()
+
+    # If on break AND have pending questionnaire, return session_ended mode
+    if state["break_until"] and pending_session:
+        break_until = datetime.fromisoformat(state["break_until"])
+        if now < break_until:
+            remaining = int((break_until - now).total_seconds())
+            return {
+                "mode": "session_ended",
+                "remaining_seconds": remaining,
+                "end_timestamp": break_until.timestamp(),
+                "server_timestamp": server_timestamp,
+                "total_duration": settings["short_break"] * 60,
+                "session": {
+                    "id": pending_session[0],
+                    "type": pending_session[1],
+                    "intention": pending_session[2],
+                },
+                "questionnaire_pending": True
+            }
 
     if state["break_until"]:
         break_until = datetime.fromisoformat(state["break_until"])

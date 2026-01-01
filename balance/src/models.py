@@ -78,6 +78,13 @@ class AppState(BaseModel):
 
 
 # API responses
+class TimerCompleteResponse(BaseModel):
+    break_duration: int
+    cycle_position: int
+    is_long_break: bool
+    break_until: datetime
+
+
 class BreakCheck(BaseModel):
     on_break: bool
     remaining_seconds: int = 0
