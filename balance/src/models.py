@@ -141,3 +141,40 @@ class QuickStartResponse(BaseModel):
 
 class MarkClaudeUsedResponse(BaseModel):
     marked: bool
+
+
+# Session Analysis models (transcript analysis)
+class SessionAnalysis(BaseModel):
+    id: int
+    session_id: int
+    analyzed_at: str
+    projects_used: list[str]
+    prompt_count: int
+    intention_alignment: str  # aligned|pivoted|drifted
+    alignment_detail: str
+    scope_behavior: str  # focused|expanded|rabbit_hole
+    scope_detail: Optional[str] = None
+    project_switches: int
+    tool_appropriate_count: int
+    tool_questionable_count: int
+    tool_questionable_examples: list[str]
+    red_flags: list[str]
+    one_line_summary: str
+    severity: str  # none|minor|notable|significant
+
+
+class SessionAnalysisCreate(BaseModel):
+    intention_alignment: str
+    alignment_detail: str
+    scope_behavior: str
+    scope_detail: Optional[str] = None
+    project_switches: int
+    tool_appropriate_count: int
+    tool_questionable_count: int
+    tool_questionable_examples: list[str]
+    red_flags: list[str]
+    one_line_summary: str
+    severity: str
+    projects_used: list[str]
+    prompt_count: int
+    raw_response: Optional[str] = None
