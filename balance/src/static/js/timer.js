@@ -267,6 +267,12 @@ const Balance = {
       const response = await fetch('/api/priorities');
       this.priorities = await response.json();
       this.renderPriorityDropdown();
+
+      // Show priority section if Expected is already selected
+      if (this.sessionType === 'expected' && this.priorities.length > 0 && this.el.prioritySection) {
+        this.el.prioritySection.style.display = 'block';
+        this.updateStartButton();
+      }
     } catch (err) {
       console.error('Failed to load priorities:', err);
     }
