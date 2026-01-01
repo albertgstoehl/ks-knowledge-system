@@ -83,6 +83,15 @@ async def init_db(db_url: str = None):
                 followed BOOLEAN
             );
 
+            -- Priorities (for Expected sessions)
+            CREATE TABLE IF NOT EXISTS priorities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                rank INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                archived_at TEXT
+            );
+
             -- Settings
             CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
