@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import os
 
 from .database import init_db
-from .routers import sessions, logging, settings
+from .routers import sessions, logging, settings, priorities
 
 
 @asynccontextmanager
@@ -22,6 +22,7 @@ app = FastAPI(title="Balance", lifespan=lifespan)
 app.include_router(sessions.router)
 app.include_router(logging.router)
 app.include_router(settings.router)
+app.include_router(priorities.router)
 
 # Static files and templates
 static_path = os.path.join(os.path.dirname(__file__), "static")
@@ -78,6 +79,12 @@ async def settings_page(request: Request):
 async def evening_page(request: Request):
     """Evening check-in page."""
     return _template_for(request, "evening.html", "_content_evening.html", {"active_nav": ""})
+
+
+@app.get("/mockup", response_class=HTMLResponse)
+async def mockup_page(request: Request):
+    """UI mockup for design iteration."""
+    return templates.TemplateResponse("mockup.html", {"request": request})
 
 
 @app.get("/health")
