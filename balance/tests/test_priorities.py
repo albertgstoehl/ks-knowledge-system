@@ -136,3 +136,30 @@ async def test_create_priority_auto_ranks():
         await client.post("/api/priorities", json={"name": "First"})
         response = await client.post("/api/priorities", json={"name": "Second"})
         assert response.json()["rank"] == 2
+
+
+async def test_reorder_priorities():
+    """Test reordering priorities."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create three priorities
+        r1 = await client.post("/api/priorities", json={"name": "First"})
+        r2 = await client.post("/api/priorities", json={"name": "Second"})
+        r3 = await client.post("/api/priorities", json={"name": "Third"})
+
+        id1, id2, id3 = r1.json()["id"], r2.json()["id"], r3.json()["id"]
+
+        # Reorder: Third, First, Second
+        response = await client.put(
+            "/api/priorities/reorder",
+            json={"order": [id3, id1, id2]}
+        )
+        assert response.status_code == 200
+
+        # Verify new order
+        list_response = await client.get("/api/priorities")
+        priorities = list_response.json()
+        assert priorities[0]["name"] == "Third"
+        assert priorities[0]["rank"] == 1
+        assert priorities[1]["name"] == "First"
+        assert priorities[2]["name"] == "Second"

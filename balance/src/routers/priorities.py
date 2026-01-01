@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter
 
 from ..database import get_db
-from ..models import Priority, PriorityCreate
+from ..models import Priority, PriorityCreate, PriorityReorder
 
 router = APIRouter(prefix="/api", tags=["priorities"])
 
@@ -59,3 +59,16 @@ async def create_priority(data: PriorityCreate) -> Priority:
             rank=next_rank,
             session_count=0
         )
+
+
+@router.put("/priorities/reorder")
+async def reorder_priorities(data: PriorityReorder):
+    """Reorder priorities by updating their ranks."""
+    async with get_db() as db:
+        for rank, priority_id in enumerate(data.order, start=1):
+            await db.execute(
+                "UPDATE priorities SET rank = ? WHERE id = ?",
+                (rank, priority_id)
+            )
+        await db.commit()
+    return {"status": "ok"}
