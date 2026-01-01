@@ -26,6 +26,22 @@ class Session(BaseModel):
     rabbit_hole: Optional[bool]
 
 
+# Priority models
+class Priority(BaseModel):
+    id: int
+    name: str
+    rank: int
+    session_count: int = 0
+
+
+class PriorityCreate(BaseModel):
+    name: str
+
+
+class PriorityReorder(BaseModel):
+    order: list[int]  # List of priority IDs in new order
+
+
 # Meditation models
 class MeditationLog(BaseModel):
     duration_minutes: int
