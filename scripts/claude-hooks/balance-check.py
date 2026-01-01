@@ -92,7 +92,7 @@ def prompt_start_session() -> bool:
     # Get intention
     print()
     try:
-        intention = input("Intention (3 words): ").strip()
+        intention = input("Intention: ").strip()
     except (EOFError, KeyboardInterrupt):
         print()
         return False
