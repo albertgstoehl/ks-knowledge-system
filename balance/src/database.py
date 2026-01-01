@@ -94,6 +94,33 @@ async def init_db(db_url: str = None):
                 archived_at TEXT
             );
 
+            -- Session Analyses (Claude Code transcript analysis)
+            CREATE TABLE IF NOT EXISTS session_analyses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL REFERENCES sessions(id),
+                analyzed_at TEXT NOT NULL,
+
+                -- What happened
+                projects_used TEXT,
+                prompt_count INTEGER,
+
+                -- Analysis results
+                intention_alignment TEXT,
+                alignment_detail TEXT,
+                scope_behavior TEXT,
+                scope_detail TEXT,
+                project_switches INTEGER,
+                tool_appropriate_count INTEGER,
+                tool_questionable_count INTEGER,
+                tool_questionable_examples TEXT,
+                red_flags TEXT,
+                one_line_summary TEXT,
+                severity TEXT,
+
+                -- Raw reference
+                raw_response TEXT
+            );
+
             -- Settings
             CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY CHECK (id = 1),

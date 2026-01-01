@@ -46,3 +46,15 @@ async def test_sessions_has_priority_id_column(test_db):
         columns = await cursor.fetchall()
         column_names = [col[1] for col in columns]
         assert "priority_id" in column_names
+
+
+@pytest.mark.asyncio
+async def test_session_analyses_table_exists(test_db):
+    """Test that session_analyses table is created during init_db."""
+    async with get_db(test_db) as db:
+        cursor = await db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='session_analyses'"
+        )
+        result = await cursor.fetchone()
+        assert result is not None
+        assert result[0] == "session_analyses"
