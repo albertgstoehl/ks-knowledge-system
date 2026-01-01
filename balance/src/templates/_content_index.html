@@ -13,6 +13,20 @@
         <button class="btn btn--option" data-type="personal">Personal</button>
       </div>
 
+      <div id="priority-section" style="display: none;">
+        <label class="label">Priority</label>
+        <div class="dropdown dropdown--full">
+          <button type="button" class="btn" id="priority-trigger" onclick="Balance.togglePriorityDropdown()">
+            <span id="priority-label">Select priority...</span>
+            <span>▾</span>
+          </button>
+          <div class="dropdown__menu" id="dropdown-priority">
+            <!-- Populated by JS -->
+          </div>
+          <div class="dropdown__backdrop" id="backdrop-priority" onclick="Balance.closePriorityDropdown()"></div>
+        </div>
+      </div>
+
       <div class="intention-group">
         <label class="label">What's the one thing?</label>
         <input type="text" id="intention-input" placeholder="3 words max" maxlength="30">

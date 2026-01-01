@@ -17,6 +17,10 @@ const Balance = {
   intention: '',
   tickInterval: null,
 
+  // Priority state
+  priorities: [],
+  selectedPriorityId: null,
+
   // Session data from server
   currentSession: null,
 
@@ -90,6 +94,12 @@ const Balance = {
     // Break page
     this.el.breakTime = document.getElementById('break-time');
     this.el.breakProgress = document.getElementById('break-progress');
+
+    // Priority dropdown
+    this.el.prioritySection = document.getElementById('priority-section');
+    this.el.priorityTrigger = document.getElementById('priority-trigger');
+    this.el.priorityLabel = document.getElementById('priority-label');
+    this.el.priorityDropdown = document.getElementById('dropdown-priority');
   },
 
   bindEvents() {
@@ -99,6 +109,19 @@ const Balance = {
         this.el.typeBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.sessionType = btn.dataset.type;
+
+        // Show/hide priority section
+        if (this.sessionType === 'expected' && this.priorities.length > 0) {
+          this.el.prioritySection.style.display = 'block';
+          // Reset priority selection
+          this.selectedPriorityId = null;
+          this.el.priorityLabel.textContent = 'Select priority...';
+          this.el.priorityTrigger.classList.remove('selected');
+        } else {
+          this.el.prioritySection.style.display = 'none';
+          this.selectedPriorityId = null;
+        }
+        this.updateStartButton();
       });
     });
 
@@ -219,6 +242,9 @@ const Balance = {
       // Load settings for dailyCap
       await this.loadSettings();
 
+      // Load priorities
+      await this.loadPriorities();
+
     } catch (err) {
       console.error('Failed to sync with server:', err);
     }
@@ -233,6 +259,59 @@ const Balance = {
       }
     } catch (err) {
       console.error('Failed to load settings:', err);
+    }
+  },
+
+  async loadPriorities() {
+    try {
+      const response = await fetch('/api/priorities');
+      this.priorities = await response.json();
+      this.renderPriorityDropdown();
+    } catch (err) {
+      console.error('Failed to load priorities:', err);
+    }
+  },
+
+  renderPriorityDropdown() {
+    if (!this.el.priorityDropdown) return;
+    this.el.priorityDropdown.innerHTML = this.priorities.map(p => `
+      <button type="button" class="dropdown__item dropdown__item--with-meta" onclick="Balance.selectPriority(${p.id}, '${p.name.replace(/'/g, "\\'")}')">
+        <span>${p.name}</span>
+        <span class="dropdown__item-meta">#${p.rank}</span>
+      </button>
+    `).join('');
+  },
+
+  togglePriorityDropdown() {
+    const dropdown = this.el.priorityDropdown;
+    const backdrop = document.getElementById('backdrop-priority');
+    if (dropdown.classList.contains('open')) {
+      dropdown.classList.remove('open');
+      backdrop.classList.remove('active');
+    } else {
+      dropdown.classList.add('open');
+      backdrop.classList.add('active');
+    }
+  },
+
+  closePriorityDropdown() {
+    this.el.priorityDropdown?.classList.remove('open');
+    document.getElementById('backdrop-priority')?.classList.remove('active');
+  },
+
+  selectPriority(id, name) {
+    this.selectedPriorityId = id;
+    this.el.priorityLabel.textContent = name;
+    this.el.priorityTrigger.classList.add('selected');
+    this.closePriorityDropdown();
+    this.updateStartButton();
+  },
+
+  updateStartButton() {
+    if (this.sessionType === 'expected' && this.priorities.length > 0) {
+      this.el.startBtn.disabled = !this.selectedPriorityId;
+    } else {
+      this.el.startBtn.disabled = false;
     }
   },
 
@@ -425,7 +504,8 @@ const Balance = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: this.sessionType,
-          intention: this.intention || null
+          intention: this.intention || null,
+          priority_id: this.sessionType === 'expected' ? this.selectedPriorityId : null
         })
       });
 
