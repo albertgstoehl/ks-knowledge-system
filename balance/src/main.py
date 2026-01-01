@@ -81,10 +81,12 @@ async def evening_page(request: Request):
     return _template_for(request, "evening.html", "_content_evening.html", {"active_nav": ""})
 
 
-@app.get("/mockup", response_class=HTMLResponse)
-async def mockup_page(request: Request):
-    """UI mockup for design iteration."""
-    return templates.TemplateResponse("mockup.html", {"request": request})
+# Dev-only mockup route (set DEV_MODE=true to enable)
+if os.getenv("DEV_MODE") == "true":
+    @app.get("/mockup", response_class=HTMLResponse)
+    async def mockup_page(request: Request):
+        """UI mockup for design iteration (dev only)."""
+        return templates.TemplateResponse("mockup.html", {"request": request})
 
 
 @app.get("/health")
