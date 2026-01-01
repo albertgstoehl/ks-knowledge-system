@@ -264,3 +264,14 @@ async def test_start_session_with_priority():
         })
         assert response.status_code == 200
         assert response.json()["priority_id"] == priority_id
+
+
+async def test_stats_drift():
+    """Test drift stats endpoint."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/stats/drift")
+        assert response.status_code == 200
+        data = response.json()
+        assert "biggest_drift" in data
+        assert "breakdown" in data

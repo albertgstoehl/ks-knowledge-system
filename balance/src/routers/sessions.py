@@ -566,3 +566,70 @@ async def get_full_status():
         "server_timestamp": server_timestamp,
         "total_duration": settings["session_duration"] * 60,
     }
+
+
+@router.get("/stats/drift")
+async def get_drift_stats():
+    """Get priority drift statistics for the current week."""
+    async with get_db() as db:
+        # Get priorities
+        cursor = await db.execute("""
+            SELECT id, name, rank FROM priorities
+            WHERE archived_at IS NULL ORDER BY rank
+        """)
+        priorities = await cursor.fetchall()
+
+        if len(priorities) < 2:
+            return {"biggest_drift": None, "breakdown": [], "weeks_drifting": 0}
+
+        # Get session counts per priority (this week)
+        week_start = (datetime.now() - timedelta(days=datetime.now().weekday())).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ).isoformat()
+
+        cursor = await db.execute("""
+            SELECT priority_id, COUNT(*) as count
+            FROM sessions
+            WHERE type = 'expected'
+              AND priority_id IS NOT NULL
+              AND started_at >= ?
+            GROUP BY priority_id
+        """, (week_start,))
+        counts = {row[0]: row[1] for row in await cursor.fetchall()}
+
+        total = sum(counts.values()) or 1
+
+        # Build breakdown
+        breakdown = []
+        for p_id, p_name, p_rank in priorities:
+            count = counts.get(p_id, 0)
+            pct = round(count / total * 100) if total > 0 else 0
+            breakdown.append({
+                "id": p_id,
+                "name": p_name,
+                "rank": p_rank,
+                "session_count": count,
+                "pct": pct
+            })
+
+        # Find biggest drift (#1 priority should have most sessions)
+        biggest_drift = None
+        if breakdown:
+            by_rank = sorted(breakdown, key=lambda x: x["rank"])
+            by_pct = sorted(breakdown, key=lambda x: x["pct"], reverse=True)
+
+            if by_rank[0]["id"] != by_pct[0]["id"]:
+                biggest_drift = {
+                    "priority": by_rank[0]["name"],
+                    "rank": by_rank[0]["rank"],
+                    "pct": by_rank[0]["pct"],
+                    "instead": by_pct[0]["name"],
+                    "instead_rank": by_pct[0]["rank"],
+                    "instead_pct": by_pct[0]["pct"]
+                }
+
+        return {
+            "biggest_drift": biggest_drift,
+            "breakdown": breakdown,
+            "weeks_drifting": 0  # TODO: track consecutive weeks
+        }
