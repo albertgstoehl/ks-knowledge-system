@@ -1,9 +1,25 @@
 <div class="container">
-  <header class="page-header">
-    <h1>Settings</h1>
-  </header>
-
     <form id="settings-form">
+      <div class="settings-section">
+        <div class="settings-title">Priorities</div>
+        <p class="text-muted text-sm mb-md">Use arrows to reorder. Expected sessions must be tagged to a priority.</p>
+
+        <div class="priority-list" id="priority-list">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="mt-md" id="add-priority-form" style="display: none;">
+          <input type="text" class="input" id="new-priority-name" placeholder="Priority name" maxlength="30">
+          <div class="button-group mt-sm">
+            <button type="button" class="btn btn--primary" onclick="PriorityManager.save()">Add</button>
+            <button type="button" class="btn" onclick="PriorityManager.hideAddForm()">Cancel</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn--full mt-md" id="add-priority-btn" onclick="PriorityManager.showAddForm()">+ Add Priority</button>
+        <p class="text-muted text-xs mt-sm" id="priority-limit-msg" style="display: none;">Max 4 priorities</p>
+      </div>
+
       <div class="settings-section">
         <div class="settings-title">Timer</div>
         <div class="setting-row">
@@ -65,7 +81,7 @@
         <textarea class="north-star-input" id="north-star" placeholder="What matters most to you?"></textarea>
       </div>
 
-      <button type="submit" class="btn btn-primary btn-full">Save Settings</button>
+      <button type="submit" class="btn btn--primary btn--full">Save Settings</button>
     </form>
 
   <div id="save-status" style="text-align: center; margin-top: 1rem; font-size: 0.875rem; color: var(--color-muted);"></div>
