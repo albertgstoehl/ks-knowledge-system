@@ -22,6 +22,7 @@ async def setup_test():
 
     # Clean up data from previous tests
     async with get_db() as db:
+        await db.execute("DELETE FROM session_analyses")
         await db.execute("DELETE FROM sessions")
         await db.execute("DELETE FROM priorities")
         await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
@@ -275,3 +276,64 @@ async def test_stats_drift():
         data = response.json()
         assert "biggest_drift" in data
         assert "breakdown" in data
+
+
+async def test_get_unanalyzed_sessions():
+    """Test getting sessions that need analysis."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/sessions/unanalyzed")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+
+async def test_store_session_analysis():
+    """Test storing analysis results for a session."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create a session first
+        await client.post("/api/sessions/start", json={
+            "type": "expected",
+            "intention": "Test intention"
+        })
+        # Mark it as using claude and end it
+        await client.post("/api/session/mark-claude-used")
+        await client.post("/api/sessions/timer-complete")
+        await client.post("/api/sessions/end", json={
+            "distractions": "none",
+            "did_the_thing": True
+        })
+
+        # Get the session ID
+        sessions = await client.get("/api/sessions/unanalyzed")
+        session_id = sessions.json()[0]["id"]
+
+        # Store analysis
+        response = await client.post(f"/api/sessions/{session_id}/analysis", json={
+            "intention_alignment": "aligned",
+            "alignment_detail": "Work matched intention",
+            "scope_behavior": "focused",
+            "scope_detail": None,
+            "project_switches": 0,
+            "tool_appropriate_count": 5,
+            "tool_questionable_count": 1,
+            "tool_questionable_examples": ["prompt 3: simple file read"],
+            "red_flags": [],
+            "one_line_summary": "Focused session on intended task",
+            "severity": "none",
+            "projects_used": ["knowledge-system"],
+            "prompt_count": 6
+        })
+        assert response.status_code == 200
+        assert response.json()["id"] is not None
+
+
+async def test_get_effectiveness_stats():
+    """Test getting effectiveness statistics."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/stats/effectiveness")
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_analyzed" in data
+        assert "alignment_breakdown" in data

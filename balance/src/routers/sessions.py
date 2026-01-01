@@ -2,12 +2,15 @@ from fastapi import APIRouter, HTTPException, Response
 from datetime import datetime, timedelta
 
 from ..database import get_db
+import json
+
 from ..models import (
     SessionStart, SessionEnd, Session,
     BreakCheck, CanStart,
     SessionActiveResponse, SessionInfo,
     QuickStartRequest, QuickStartResponse,
-    MarkClaudeUsedResponse
+    MarkClaudeUsedResponse,
+    SessionAnalysisCreate
 )
 
 router = APIRouter(prefix="/api", tags=["sessions"])
@@ -632,4 +635,123 @@ async def get_drift_stats():
             "biggest_drift": biggest_drift,
             "breakdown": breakdown,
             "weeks_drifting": 0  # TODO: track consecutive weeks
+        }
+
+
+@router.get("/sessions/unanalyzed")
+async def get_unanalyzed_sessions():
+    """Get sessions with claude_used=true that haven't been analyzed."""
+    async with get_db() as db:
+        cursor = await db.execute("""
+            SELECT s.id, s.type, s.intention, s.priority_id,
+                   s.started_at, s.ended_at,
+                   p.name as priority_name, p.rank as priority_rank
+            FROM sessions s
+            LEFT JOIN priorities p ON s.priority_id = p.id
+            LEFT JOIN session_analyses sa ON s.id = sa.session_id
+            WHERE s.claude_used = 1
+              AND s.ended_at IS NOT NULL
+              AND sa.id IS NULL
+            ORDER BY s.started_at DESC
+        """)
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+@router.post("/sessions/{session_id}/analysis")
+async def store_session_analysis(session_id: int, data: SessionAnalysisCreate):
+    """Store analysis results for a session."""
+    async with get_db() as db:
+        now = datetime.now().isoformat()
+        cursor = await db.execute(
+            """INSERT INTO session_analyses (
+                session_id, analyzed_at, projects_used, prompt_count,
+                intention_alignment, alignment_detail, scope_behavior,
+                scope_detail, project_switches, tool_appropriate_count,
+                tool_questionable_count, tool_questionable_examples,
+                red_flags, one_line_summary, severity, raw_response
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                session_id, now,
+                json.dumps(data.projects_used), data.prompt_count,
+                data.intention_alignment, data.alignment_detail,
+                data.scope_behavior, data.scope_detail, data.project_switches,
+                data.tool_appropriate_count, data.tool_questionable_count,
+                json.dumps(data.tool_questionable_examples),
+                json.dumps(data.red_flags), data.one_line_summary,
+                data.severity, data.raw_response
+            )
+        )
+        await db.commit()
+        return {"id": cursor.lastrowid, "session_id": session_id}
+
+
+@router.get("/stats/effectiveness")
+async def get_effectiveness_stats():
+    """Get aggregated effectiveness stats."""
+    async with get_db() as db:
+        # Get today's analyses
+        today_start = datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ).isoformat()
+
+        cursor = await db.execute("""
+            SELECT intention_alignment, scope_behavior, red_flags,
+                   tool_questionable_count, one_line_summary, session_id
+            FROM session_analyses
+            WHERE analyzed_at >= ?
+            ORDER BY analyzed_at DESC
+        """, (today_start,))
+        rows = await cursor.fetchall()
+
+        if not rows:
+            return {
+                "total_analyzed": 0,
+                "alignment_breakdown": {},
+                "scope_breakdown": {},
+                "avg_questionable_prompts": 0,
+                "common_red_flags": [],
+                "recent_summaries": []
+            }
+
+        # Count alignments
+        alignment_counts = {}
+        scope_counts = {}
+        total_questionable = 0
+        all_flags = []
+        summaries = []
+
+        for row in rows:
+            alignment = row[0]
+            scope = row[1]
+            flags = json.loads(row[2]) if row[2] else []
+            questionable = row[3] or 0
+            summary = row[4]
+            session_id = row[5]
+
+            alignment_counts[alignment] = alignment_counts.get(alignment, 0) + 1
+            scope_counts[scope] = scope_counts.get(scope, 0) + 1
+            total_questionable += questionable
+            all_flags.extend(flags)
+            if summary:
+                summaries.append({"session_id": session_id, "summary": summary})
+
+        # Count flag occurrences
+        flag_counts = {}
+        for flag in all_flags:
+            flag_counts[flag] = flag_counts.get(flag, 0) + 1
+
+        common_flags = sorted(
+            [{"flag": k, "count": v} for k, v in flag_counts.items()],
+            key=lambda x: x["count"],
+            reverse=True
+        )[:5]
+
+        return {
+            "total_analyzed": len(rows),
+            "alignment_breakdown": alignment_counts,
+            "scope_breakdown": scope_counts,
+            "avg_questionable_prompts": round(total_questionable / len(rows), 1),
+            "common_red_flags": common_flags,
+            "recent_summaries": summaries[:3]
         }
