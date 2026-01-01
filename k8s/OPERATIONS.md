@@ -142,6 +142,54 @@ curl http://bookmark.gstoehl.dev/health
 | balance-ingress | balance.gstoehl.dev | None |
 | knowledge-system-ingress | bookmark, canvas, kasten | balance-check (ForwardAuth) |
 
+## CronJobs
+
+### Canvas Daily Wipe
+
+Clears the canvas draft at midnight (Europe/Zurich) to enforce intentional note-taking.
+
+```bash
+# Check CronJob status
+kubectl get cronjob -n knowledge-system
+
+# View recent job history
+kubectl get jobs -n knowledge-system | grep canvas-daily-wipe
+
+# Manual trigger (for testing)
+kubectl create job --from=cronjob/canvas-daily-wipe manual-wipe -n knowledge-system
+```
+
+### Balance Session Analysis
+
+Runs daily at 22:00 to analyze Claude Code usage during Balance sessions. This is a **host-level cron job** (not K8s CronJob) because it needs access to `~/.claude/projects/` JSONL files.
+
+**Location:** Server crontab (`crontab -e`)
+**Script:** `scripts/balance-analysis/analyze_sessions.py`
+**Log:** `/var/log/balance-analysis.log`
+
+**Setup (one-time):**
+```bash
+# Add to crontab
+crontab -e
+
+# Add this line:
+0 22 * * * cd /home/ags/knowledge-system && /usr/bin/python3 scripts/balance-analysis/analyze_sessions.py >> /var/log/balance-analysis.log 2>&1
+
+# Create log file
+sudo touch /var/log/balance-analysis.log
+sudo chown ags:ags /var/log/balance-analysis.log
+```
+
+**Manual run:**
+```bash
+cd ~/knowledge-system && python3 scripts/balance-analysis/analyze_sessions.py
+```
+
+**Check logs:**
+```bash
+tail -f /var/log/balance-analysis.log
+```
+
 ## File Locations
 
 - Manifests: `/home/ags/knowledge-system/k8s/base/`
@@ -152,14 +200,15 @@ curl http://bookmark.gstoehl.dev/health
 
 | File | Resources |
 |------|-----------|
-| `namespace.yaml` | Namespace: knowledge-system |
-| `clusterissuer.yaml` | Let's Encrypt cert-manager issuer |
-| `pvcs.yaml` | PVCs for all services |
-| `ingress.yaml` | Ingress for all domains (split: balance vs others) |
-| `middleware-balance-check.yaml` | Traefik ForwardAuth for break enforcement |
-| `bookmark-manager.yaml` | Deployment + Service |
-| `canvas.yaml` | Deployment + Service |
-| `kasten.yaml` | Deployment + Service |
-| `balance.yaml` | Deployment + Service |
-| `telegram-bot.yaml` | Deployment (no service, outbound only) |
-| `networkpolicy-*.yaml` | Zero-trust egress rules per service |
+| `base/namespace.yaml` | Namespace: knowledge-system |
+| `base/clusterissuer.yaml` | Let's Encrypt cert-manager issuer |
+| `base/pvcs.yaml` | PVCs for all services |
+| `base/ingress.yaml` | Ingress for all domains (split: balance vs others) |
+| `base/middleware-balance-check.yaml` | Traefik ForwardAuth for break enforcement |
+| `base/bookmark-manager.yaml` | Deployment + Service |
+| `base/canvas.yaml` | Deployment + Service |
+| `base/kasten.yaml` | Deployment + Service |
+| `base/balance.yaml` | Deployment + Service |
+| `base/telegram-bot.yaml` | Deployment (no service, outbound only) |
+| `base/networkpolicy-*.yaml` | Zero-trust egress rules per service |
+| `canvas-daily-wipe.yaml` | CronJob for nightly draft wipe (midnight Zurich) |
