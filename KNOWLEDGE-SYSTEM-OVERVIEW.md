@@ -260,26 +260,34 @@ CANVAS_URL      # Canvas endpoint
 
 **Key Features:**
 - **Focus Sessions:** 25-min Pomodoro with expected/personal types and 3-word intentions
+- **Priority Tracking:** Tag expected sessions with ranked priorities (Thesis, Work, etc.)
+- **Drift Detection:** Stats alert when actual work doesn't match stated priorities
 - **Break Enforcement:** Hard lockout during breaks, no skip button
 - **Activity Logging:** Track meditation, exercise, and daily mood (heavy/okay/light)
 - **Life Compass:** Six-dimension alignment view oriented around user's north star
 - **Spiral Protection:** Auto-shifts to check-in mode after 3+ days absence
-- **Pattern Detection:** Weekly analysis discovers personal correlations
+- **Session Effectiveness:** Transcript analysis detects scope creep and intention drift
 
 **API Endpoints:**
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/sessions/start` | Start Pomodoro session |
+| `POST /api/sessions/start` | Start Pomodoro session (with priority_id) |
 | `POST /api/sessions/end` | End session with feedback |
 | `GET /api/check` | Break status (JSON response) |
 | `GET /api/auth-check` | ForwardAuth endpoint (200 or 302 redirect) |
+| `GET /api/priorities` | List ranked priorities |
+| `POST /api/priorities` | Create priority |
+| `PUT /api/priorities/reorder` | Reorder priorities |
+| `GET /api/stats/drift` | Get drift detection data |
 | `POST /api/meditation` | Log meditation |
 | `POST /api/exercise` | Log exercise |
 | `POST /api/pulse` | Log daily mood + connection |
 | `GET /api/settings` | Get/update limits |
 
 **Data Model:**
-- `Sessions` - Pomodoro tracking with type, intention, distractions
+- `Sessions` - Pomodoro tracking with type, intention, priority_id, distractions
+- `Priorities` - Ranked priorities for expected sessions (name, rank)
+- `SessionAnalyses` - Transcript analysis results (alignment, scope, red flags)
 - `Meditation` - Duration, time of day
 - `Exercise` - Type, duration, intensity
 - `DailyPulse` - Mood (heavy/okay/light), connection logged

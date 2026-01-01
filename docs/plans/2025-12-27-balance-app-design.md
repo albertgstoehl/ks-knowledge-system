@@ -14,6 +14,7 @@ This app is not about maximizing output. It's a mirror that helps you see if you
 - **Metrics serve the goal** — High focus + no connection = drifting away
 - **Simple inputs, rich insights** — Few taps, but meaningful correlations
 - **Hard constraints where needed** — Breaks are enforced, not suggested
+- **Sometimes the best feature is the one you don't build** — Restraint over complexity
 
 ---
 
@@ -36,11 +37,20 @@ Sessions
 ├── id
 ├── type: 'expected' | 'personal'
 ├── intention: string (3 words max)
+├── priority_id: int | null (FK to Priorities, for expected sessions)
 ├── started_at: timestamp
 ├── ended_at: timestamp | null
 ├── distractions: 'none' | 'some' | 'many'
 ├── did_the_thing: boolean
-└── rabbit_hole: boolean | null
+├── rabbit_hole: boolean | null
+└── claude_used: boolean (for transcript analysis)
+
+Priorities
+├── id
+├── name: string
+├── rank: int (1 = highest priority)
+├── created_at: timestamp
+└── archived_at: timestamp | null
 
 Meditation
 ├── id
@@ -67,6 +77,16 @@ DailyPulse
 ### Tracking Tables
 
 ```
+SessionAnalyses (transcript analysis results)
+├── id
+├── session_id: FK to Sessions
+├── analyzed_at: timestamp
+├── intention_alignment: 'aligned' | 'pivoted' | 'drifted'
+├── scope_behavior: 'focused' | 'expanded' | 'rabbit_hole'
+├── red_flags: JSON array
+├── one_line_summary: string
+└── severity: 'none' | 'minor' | 'notable' | 'significant'
+
 NudgeEvents
 ├── id
 ├── timestamp
@@ -183,6 +203,18 @@ Limit changes are tracked. Analytics shows: "When daily cap was 8, mood averaged
 1. You're about to hurt yourself (overwork alerts, break enforcement)
 2. You ask (open analytics)
 3. Once a week (Sunday afternoon, pull-only digest)
+
+### Priority Drift Detection
+
+Stats page shows a single drift alert when behavior doesn't match stated priorities:
+
+**Priority drift** (when priorities are imbalanced):
+> **Thesis** is priority #1 but got **20%** of sessions. **Work** (#2) got **80%**.
+
+**Personal drift** (when Personal > Expected):
+> **Expected** got only **35%** of sessions. **Personal** got **65%**.
+
+Hierarchy: Personal drift shown first (bigger issue), then priority drift.
 
 ### Weekly Digest (Pull-Only)
 
