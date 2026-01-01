@@ -76,26 +76,22 @@ body.evening-mode {
 }
 
 /* ==========================================================================
-   BUTTON EXTENSIONS
+   BUTTON EXTENSIONS (extends shared .btn--)
    ========================================================================== */
 
-.btn-primary {
-  background: var(--color-text);
-  color: var(--color-bg);
-}
-
-.btn-primary:hover {
+/* Primary button hover enhancement */
+.btn--primary:hover {
   box-shadow: 4px 4px 0 var(--color-border);
   transform: translate(-2px, -2px);
 }
 
-.btn-primary:active {
+.btn--primary:active {
   box-shadow: none;
   transform: translate(0, 0);
 }
 
-.btn-full {
-  width: 100%;
+/* Full-width button styling */
+.btn--full {
   padding: 1.25rem;
   border-width: 2px;
   font-size: 1rem;
@@ -104,94 +100,35 @@ body.evening-mode {
   text-transform: uppercase;
 }
 
-.btn-ghost {
-  background: transparent;
-  border: none;
-  color: var(--color-muted);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 0.75rem 1rem;
-  min-height: 44px;  /* Touch target */
-  cursor: pointer;
-}
-
-.btn-ghost:hover {
-  color: var(--color-text);
-  background: transparent;
-}
-
-.btn-ghost:active {
-  color: var(--color-text);
-  background: var(--color-surface);
-}
-
 /* ==========================================================================
-   TIMER DISPLAY
+   TIMER EXTENSIONS (extends shared .timer)
    ========================================================================== */
 
-.timer-display {
-  text-align: center;
+/* Timer container spacing */
+.timer {
   margin-bottom: 2rem;
 }
 
-.timer-display .time {
-  font-size: 6rem;
-  font-weight: 200;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-@media (min-width: 400px) {
-  .timer-display .time {
-    font-size: 8rem;
-  }
-}
-
-.timer-display .time-label {
-  font-size: 0.875rem;
-  color: var(--color-muted);
-  margin-top: 0.5rem;
-}
-
+/* Active session timer - larger display */
 .timer-large {
   font-size: 6rem;
   font-weight: 200;
   letter-spacing: -0.02em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
 /* ==========================================================================
-   TYPE SELECTION
+   BUTTON GROUP EXTENSIONS (extends shared .button-group)
    ========================================================================== */
 
+/* Type selection spacing */
 .type-selection {
-  display: flex;
-  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
-.type-btn {
+.type-selection .btn--option {
   flex: 1;
   padding: 1rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-family: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.1s;
-}
-
-.type-btn:hover {
-  background: var(--color-hover);
-}
-
-.type-btn.active {
-  background: var(--color-text);
-  color: var(--color-bg);
 }
 
 /* ==========================================================================
@@ -377,6 +314,27 @@ body.evening-mode {
    SESSION END
    ========================================================================== */
 
+/* Break countdown on end screen */
+.break-countdown {
+  text-align: center;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: var(--color-surface, #f5f5f5);
+  border: 1px solid var(--color-border);
+}
+
+.break-countdown .break-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  margin-bottom: 0.25rem;
+}
+
+.break-countdown .timer__value {
+  font-size: 2rem;
+}
+
 .checkmark {
   width: 60px;
   height: 60px;
@@ -399,37 +357,13 @@ body.evening-mode {
   display: block;
 }
 
-.options {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.option-btn {
+/* Options use shared .button-group */
+.options .btn--option {
   flex: 1;
   padding: 1rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-family: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.1s;
 }
 
-.option-btn:hover {
-  background: var(--color-hover);
-}
-
-.option-btn.selected {
-  background: var(--color-text);
-  color: var(--color-bg);
-}
-
-.binary-options {
-  display: flex;
-  gap: 1rem;
-}
-
-.binary-btn {
+.binary-options .btn--option {
   flex: 1;
   padding: 1.25rem;
 }
@@ -472,13 +406,10 @@ body.evening-mode {
   line-height: 1.6;
 }
 
+/* Break timer uses shared .timer__value with animation */
 .break-timer {
   font-size: 5rem;
-  font-weight: 200;
-  letter-spacing: -0.02em;
   margin-bottom: 3rem;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
   animation: breathe 4s ease-in-out infinite;
 }
 
@@ -514,17 +445,10 @@ body.evening-mode {
   background: #fff;
 }
 
+/* Progress bar extends shared .progress */
 .progress-bar {
-  width: 100%;
-  height: 4px;
-  background: var(--color-border-light);
   margin-top: 3rem;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background: var(--color-text);
-  transition: width 1s linear;
+  border: none;
 }
 
 .blocked-notice {
@@ -550,34 +474,22 @@ body.evening-mode {
    LOG PAGE
    ========================================================================== */
 
+/* Log tabs extend shared .button-group */
 .log-tabs {
-  display: flex;
   border: 1px solid var(--color-border);
   margin-bottom: 2rem;
+  gap: 0;
 }
 
-.log-tab {
+.log-tabs .btn--option {
   flex: 1;
   padding: 1rem;
   border: none;
   border-right: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-family: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
 }
 
-.log-tab:last-child {
+.log-tabs .btn--option:last-child {
   border-right: none;
-}
-
-.log-tab:hover {
-  background: var(--color-hover);
-}
-
-.log-tab.active {
-  background: var(--color-text);
-  color: var(--color-bg);
 }
 
 .log-form {
@@ -619,41 +531,19 @@ body.evening-mode {
   color: var(--color-muted);
 }
 
+/* Quick durations extend shared .button-group */
 .quick-durations {
-  display: flex;
-  gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
-.type-options,
-.intensity-options {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.type-option-btn,
-.intensity-btn {
+/* Type/intensity options extend shared .button-group */
+.type-options .btn--option,
+.intensity-options .btn--option {
   flex: 1;
   padding: 1rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-family: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-  color: var(--color-text);
 }
 
-.type-option-btn:hover,
-.intensity-btn:hover {
-  background: var(--color-hover);
-}
-
-.type-option-btn.selected,
-.intensity-btn.selected {
-  background: var(--color-text);
-  color: var(--color-bg);
-}
-
+/* Time override */
 .time-override {
   margin-top: 1rem;
 }
@@ -668,31 +558,15 @@ body.evening-mode {
 .time-override-options {
   display: none;
   margin-top: 0.75rem;
-  gap: 0.5rem;
 }
 
 .time-override-options.visible {
   display: flex;
 }
 
-.time-option {
+.time-override-options .btn--option {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--color-border-light);
-  background: var(--color-bg);
-  font-family: inherit;
   font-size: 0.75rem;
-  cursor: pointer;
-  color: var(--color-muted);
-}
-
-.time-option:hover {
-  border-color: var(--color-text);
-  color: var(--color-text);
-}
-
-.time-option.selected {
-  background: var(--color-text);
-  color: var(--color-bg);
 }
 
 .week-summary {
@@ -724,36 +598,17 @@ body.evening-mode {
    EVENING CHECK-IN
    ========================================================================== */
 
-.feeling-options {
-  display: flex;
-  gap: 1rem;
+/* Feeling buttons extend shared .btn--option with vertical layout */
+.feeling-options .btn--option {
+  flex: 1;
 }
 
 .feeling-btn {
-  flex: 1;
   padding: 1.5rem 1rem;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-family: inherit;
-  font-size: 1rem;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: all 0.15s;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-}
-
-.feeling-btn:hover {
-  background: var(--color-hover);
-  border-color: var(--color-text);
-}
-
-.feeling-btn.selected {
-  background: var(--color-text);
-  color: var(--color-bg);
-  border-color: var(--color-text);
 }
 
 .feeling-btn .indicator {
@@ -767,31 +622,10 @@ body.evening-mode {
   background: var(--color-bg);
 }
 
-.connection-options {
-  display: flex;
-  gap: 1rem;
-}
-
-.connection-btn {
+/* Connection options extend shared .button-group */
+.connection-options .btn--option {
   flex: 1;
   padding: 1.25rem;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-family: inherit;
-  font-size: 1rem;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.connection-btn:hover {
-  background: var(--color-hover);
-  border-color: var(--color-text);
-}
-
-.connection-btn.selected {
-  background: var(--color-text);
-  color: var(--color-bg);
 }
 
 .who-selector {
@@ -812,32 +646,15 @@ body.evening-mode {
   text-align: center;
 }
 
+/* Who options extend shared .button-group */
 .who-options {
-  display: flex;
-  gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: center;
 }
 
-.who-btn {
+.who-options .btn--option {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-family: inherit;
   font-size: 0.75rem;
-  color: var(--color-muted);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.who-btn:hover {
-  color: var(--color-text);
-  border-color: var(--color-text);
-}
-
-.who-btn.selected {
-  background: var(--color-text);
-  color: var(--color-bg);
 }
 
 .day-summary {
@@ -896,22 +713,7 @@ body.evening-mode {
   border-bottom: 1px solid var(--color-border-light);
 }
 
-.setting-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.setting-row:last-child {
-  border-bottom: none;
-}
-
-.setting-label {
-  font-size: 0.875rem;
-}
-
+/* Settings use shared .setting-row component */
 .setting-value {
   display: flex;
   align-items: center;
@@ -955,33 +757,25 @@ body.evening-mode {
   margin-bottom: 2rem;
 }
 
+/* Period selector extends shared .button-group */
 .period-selector {
-  display: flex;
   border: 1px solid var(--color-border);
   margin-bottom: 2rem;
+  gap: 0;
 }
 
-.period-btn {
+.period-selector .btn--option {
   flex: 1;
   padding: 0.75rem;
   border: none;
   border-right: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-family: inherit;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  cursor: pointer;
-  color: var(--color-text);
 }
 
-.period-btn:last-child {
+.period-selector .btn--option:last-child {
   border-right: none;
-}
-
-.period-btn.active {
-  background: var(--color-text);
-  color: var(--color-bg);
 }
 
 .stats-grid {

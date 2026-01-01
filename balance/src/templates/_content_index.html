@@ -3,14 +3,14 @@
     <div class="container">
       <p class="status" id="home-status">Ready to focus</p>
 
-      <div class="timer-display">
-        <div class="time" id="home-time">--:--</div>
-        <div class="time-label">pomodoro</div>
+      <div class="timer">
+        <div class="timer__value" id="home-time">--:--</div>
+        <div class="timer__label">pomodoro</div>
       </div>
 
-      <div class="type-selection">
-        <button class="btn type-btn active" data-type="expected">Expected</button>
-        <button class="btn type-btn" data-type="personal">Personal</button>
+      <div class="button-group type-selection">
+        <button class="btn btn--option active" data-type="expected">Expected</button>
+        <button class="btn btn--option" data-type="personal">Personal</button>
       </div>
 
       <div class="intention-group">
@@ -19,7 +19,7 @@
         <div class="char-count"><span id="char-count">0</span>/30</div>
       </div>
 
-      <button class="btn btn-primary btn-full" id="start-btn">Start Session</button>
+      <button class="btn btn--primary btn--full" id="start-btn">Start Session</button>
 
       <div class="today-progress">
         <div class="progress-label">Today</div>
@@ -48,7 +48,7 @@
         </svg>
       </div>
 
-      <div class="timer-large" id="active-time">--:--</div>
+      <div class="timer__value timer-large" id="active-time">--:--</div>
 
       <div class="intention-box">
         <div class="intention-label">Focus on</div>
@@ -59,13 +59,18 @@
         Session <span id="session-num">1</span> of <span id="session-cap">10</span> today
       </div>
 
-      <button class="btn btn-ghost" id="abandon-btn" style="margin-top: 3rem;">Abandon session</button>
+      <button class="btn btn--ghost" id="abandon-btn" style="margin-top: 3rem;">Abandon session</button>
     </div>
   </div>
 
   <!-- Session End Page -->
   <div id="page-end" class="page">
     <div class="container">
+      <div class="break-countdown" id="end-break-countdown">
+        <div class="break-label">Break time</div>
+        <div class="timer__value" id="end-break-time">--:--</div>
+      </div>
+
       <header class="page-header">
         <div class="checkmark">+1</div>
         <h1>Session complete</h1>
@@ -74,22 +79,30 @@
 
       <div class="question-group">
         <label class="question-label">Distractions?</label>
-        <div class="options" id="distraction-options">
-          <button class="option-btn" data-value="none">None</button>
-          <button class="option-btn" data-value="some">Some</button>
-          <button class="option-btn" data-value="many">Many</button>
+        <div class="button-group options" id="distraction-options">
+          <button class="btn btn--option" data-value="none">None</button>
+          <button class="btn btn--option" data-value="some">Some</button>
+          <button class="btn btn--option" data-value="many">Many</button>
         </div>
       </div>
 
       <div class="question-group">
         <label class="question-label">Did you do the thing?</label>
-        <div class="binary-options" id="did-thing-options">
-          <button class="btn binary-btn" data-value="yes">Yes</button>
-          <button class="btn binary-btn" data-value="no">No</button>
+        <div class="button-group binary-options" id="did-thing-options">
+          <button class="btn btn--option" data-value="yes">Yes</button>
+          <button class="btn btn--option" data-value="no">No</button>
         </div>
       </div>
 
-      <button class="btn btn-primary btn-full" id="continue-btn" disabled>Continue to break</button>
+      <div class="question-group rabbit-hole-group" id="rabbit-hole-group" style="display: none;">
+        <label class="question-label">3 personal sessions in a row. Still on track?</label>
+        <div class="button-group binary-options" id="rabbit-hole-options">
+          <button class="btn btn--option" data-value="no">Still on track</button>
+          <button class="btn btn--option" data-value="yes">Rabbit hole, take a break</button>
+        </div>
+      </div>
+
+      <button class="btn btn--primary btn--full" id="continue-btn" disabled>Continue to break</button>
 
       <div class="session-stats">
         <p>Today: <span id="end-expected">0 Expected</span> · <span id="end-personal">0 Personal</span></p>
@@ -105,7 +118,7 @@
         <p>Your brain needs a moment.<br>The knowledge system is locked.</p>
       </div>
 
-      <div class="break-timer" id="break-time">--:--</div>
+      <div class="timer__value break-timer" id="break-time">--:--</div>
 
       <div class="suggestions">
         <div class="suggestions-title">Consider</div>
@@ -116,8 +129,8 @@
         </ul>
       </div>
 
-      <div class="progress-bar">
-        <div class="progress-bar-fill" id="break-progress"></div>
+      <div class="progress progress-bar">
+        <div class="progress__fill" id="break-progress"></div>
       </div>
 
       <div class="blocked-notice">

@@ -24,6 +24,11 @@ const Balance = {
   selectedDistractions: null,
   selectedDidThing: null,
 
+  // Rabbit hole state
+  showRabbitHolePrompt: false,
+  consecutivePersonalCount: 0,
+  selectedRabbitHole: null,
+
   // Today's stats
   todaySessions: { expected: 0, personal: 0 },
   dailyCap: 10,
@@ -55,7 +60,7 @@ const Balance = {
     // Home page
     this.el.homeStatus = document.getElementById('home-status');
     this.el.homeTime = document.getElementById('home-time');
-    this.el.typeBtns = document.querySelectorAll('.type-btn');
+    this.el.typeBtns = document.querySelectorAll('.type-selection .btn--option');
     this.el.intentionInput = document.getElementById('intention-input');
     this.el.charCount = document.getElementById('char-count');
     this.el.startBtn = document.getElementById('start-btn');
@@ -75,9 +80,12 @@ const Balance = {
     this.el.endIntention = document.getElementById('end-intention');
     this.el.distractionOptions = document.getElementById('distraction-options');
     this.el.didThingOptions = document.getElementById('did-thing-options');
+    this.el.rabbitHoleGroup = document.getElementById('rabbit-hole-group');
+    this.el.rabbitHoleOptions = document.getElementById('rabbit-hole-options');
     this.el.continueBtn = document.getElementById('continue-btn');
     this.el.endExpected = document.getElementById('end-expected');
     this.el.endPersonal = document.getElementById('end-personal');
+    this.el.endBreakTime = document.getElementById('end-break-time');
 
     // Break page
     this.el.breakTime = document.getElementById('break-time');
@@ -107,9 +115,9 @@ const Balance = {
     this.el.abandonBtn.addEventListener('click', () => this.abandonSession());
 
     // Distraction options
-    this.el.distractionOptions.querySelectorAll('.option-btn').forEach(btn => {
+    this.el.distractionOptions.querySelectorAll('.btn--option').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.el.distractionOptions.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+        this.el.distractionOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.selectedDistractions = btn.dataset.value;
         this.checkEndComplete();
@@ -117,11 +125,21 @@ const Balance = {
     });
 
     // Did the thing options
-    this.el.didThingOptions.querySelectorAll('.binary-btn').forEach(btn => {
+    this.el.didThingOptions.querySelectorAll('.btn--option').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.el.didThingOptions.querySelectorAll('.binary-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        this.el.didThingOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
         this.selectedDidThing = btn.dataset.value === 'yes';
+        this.checkEndComplete();
+      });
+    });
+
+    // Rabbit hole options
+    this.el.rabbitHoleOptions?.querySelectorAll('.btn--option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.el.rabbitHoleOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        this.selectedRabbitHole = btn.dataset.value === 'yes';
         this.checkEndComplete();
       });
     });
@@ -304,12 +322,24 @@ const Balance = {
     this.selectedDistractions = null;
     this.selectedDidThing = null;
     this.el.continueBtn.disabled = true;
-    this.el.distractionOptions.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-    this.el.didThingOptions.querySelectorAll('.binary-btn').forEach(b => b.classList.remove('active'));
+    this.el.distractionOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+    this.el.didThingOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+
+    // Show rabbit hole prompt if needed
+    if (this.showRabbitHolePrompt && this.el.rabbitHoleGroup) {
+      this.el.rabbitHoleGroup.style.display = 'block';
+      this.selectedRabbitHole = null;
+      this.el.rabbitHoleOptions?.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+    } else if (this.el.rabbitHoleGroup) {
+      this.el.rabbitHoleGroup.style.display = 'none';
+      this.selectedRabbitHole = false; // Not needed, auto-pass
+    }
   },
 
   checkEndComplete() {
-    this.el.continueBtn.disabled = !(this.selectedDistractions && this.selectedDidThing !== null);
+    const baseComplete = this.selectedDistractions && this.selectedDidThing !== null;
+    const rabbitHoleComplete = !this.showRabbitHolePrompt || this.selectedRabbitHole !== null;
+    this.el.continueBtn.disabled = !(baseComplete && rabbitHoleComplete);
   },
 
   // Calculate remaining seconds using server-adjusted time
@@ -338,11 +368,22 @@ const Balance = {
         const offset = circumference * (1 - progress);
         this.el.progressCircle.style.strokeDashoffset = offset;
 
-        // Timer complete - go to end page
+        // Timer complete - call timer-complete endpoint
         if (remaining <= 0) {
           this.stopTick();
-          this.showPage('end');
-          this.updateEndUI();
+          this.timerComplete();
+        }
+      } else if (this.currentPage === 'end') {
+        // Update break countdown on end screen
+        if (this.el.endBreakTime) {
+          this.el.endBreakTime.textContent = this.formatTime(remaining);
+        }
+
+        // When break ends on end screen, show "Break complete"
+        if (remaining <= 0) {
+          if (this.el.endBreakTime) {
+            this.el.endBreakTime.textContent = 'Break complete';
+          }
         }
       } else if (this.currentPage === 'break') {
         // Update break timer
@@ -422,7 +463,8 @@ const Balance = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           distractions: this.selectedDistractions,
-          did_the_thing: this.selectedDidThing
+          did_the_thing: this.selectedDidThing,
+          rabbit_hole: this.selectedRabbitHole || false
         })
       });
 
@@ -444,6 +486,51 @@ const Balance = {
 
     } catch (err) {
       console.error('Failed to end session:', err);
+    }
+  },
+
+  async timerComplete() {
+    try {
+      const response = await fetch('/api/sessions/timer-complete', {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        console.error('Failed to complete timer');
+        return;
+      }
+
+      const data = await response.json();
+
+      // Update break timing
+      this.endTimestamp = new Date(data.break_until).getTime() / 1000;
+      this.totalDuration = data.break_duration * 60;
+
+      // Check for rabbit hole if personal session
+      if (this.sessionType === 'personal') {
+        await this.checkRabbitHole();
+      }
+
+      // Show end page (questionnaire) with break running
+      this.showPage('end');
+      this.updateEndUI();
+      this.startTick(); // Continue ticking for break countdown
+
+    } catch (err) {
+      console.error('Timer complete error:', err);
+    }
+  },
+
+  async checkRabbitHole() {
+    try {
+      const response = await fetch('/api/sessions/rabbit-hole-check');
+      const data = await response.json();
+
+      this.showRabbitHolePrompt = data.should_alert;
+      this.consecutivePersonalCount = data.consecutive_count;
+    } catch (err) {
+      console.error('Rabbit hole check error:', err);
+      this.showRabbitHolePrompt = false;
     }
   },
 
