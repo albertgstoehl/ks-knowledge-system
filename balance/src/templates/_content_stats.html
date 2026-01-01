@@ -5,6 +5,15 @@
       <div class="drift-alert__context" id="drift-context"></div>
     </div>
 
+    <div id="effectiveness-section" style="display: none; margin-bottom: 1.5rem;">
+      <div class="stats-card" style="border: 1px solid var(--color-border); padding: 1rem;">
+        <div style="font-weight: 600; margin-bottom: 0.75rem;">Session effectiveness (today)</div>
+        <div id="effectiveness-summary"></div>
+        <div id="effectiveness-flags" style="margin-top: 0.75rem;"></div>
+        <div id="effectiveness-quotes" style="margin-top: 0.75rem;"></div>
+      </div>
+    </div>
+
     <div class="button-group period-selector">
       <button class="btn btn--option active" data-period="week">Week</button>
       <button class="btn btn--option" data-period="month">Month</button>
@@ -64,6 +73,16 @@
       <p id="north-star" style="font-size: 0.875rem; line-height: 1.6; color: var(--color-muted); text-align: center;">-</p>
   </div>
 </div>
+<style>
+.badge { display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.75rem; border-radius: 2px; }
+.badge--success { background: #d4edda; color: #155724; }
+.badge--warning { background: #fff3cd; color: #856404; }
+.badge--error { background: #f8d7da; color: #721c24; }
+.tag { display: inline-block; padding: 0.25rem 0.5rem; border: 1px solid var(--color-border); font-size: 0.75rem; margin-right: 0.25rem; margin-bottom: 0.25rem; }
+.quote { padding-left: 1rem; border-left: 2px solid var(--color-border); }
+.quote__text { font-style: italic; font-size: 0.875rem; }
+.quote__source { font-size: 0.75rem; color: var(--color-muted); margin-top: 0.25rem; }
+</style>
 <script>
 (function() {
 const Stats = {
@@ -74,6 +93,7 @@ const Stats = {
     this.loadStats();
     this.loadNorthStar();
     this.loadDrift();
+    this.loadEffectiveness();
   },
 
   bindEvents() {
@@ -152,6 +172,63 @@ const Stats = {
       }
     } catch (err) {
       console.error('Failed to load drift:', err);
+    }
+  },
+
+  async loadEffectiveness() {
+    try {
+      const data = await fetch('/api/stats/effectiveness').then(r => r.json());
+      const section = document.getElementById('effectiveness-section');
+
+      if (data.total_analyzed === 0) {
+        section.style.display = 'none';
+        return;
+      }
+
+      section.style.display = 'block';
+
+      // Summary
+      const summary = document.getElementById('effectiveness-summary');
+      const aligned = data.alignment_breakdown.aligned || 0;
+      const drifted = data.alignment_breakdown.drifted || 0;
+      const pivoted = data.alignment_breakdown.pivoted || 0;
+
+      summary.innerHTML = `
+        <div style="font-size: 1.25rem;">${data.total_analyzed} sessions analyzed</div>
+        <div style="margin-top: 0.5rem;">
+          <span class="badge badge--success">${aligned} aligned</span>
+          <span class="badge badge--warning">${pivoted} pivoted</span>
+          <span class="badge badge--error">${drifted} drifted</span>
+        </div>
+      `;
+
+      // Red flags
+      const flags = document.getElementById('effectiveness-flags');
+      if (data.common_red_flags.length > 0) {
+        flags.innerHTML = `
+          <div style="font-size: 0.75rem; color: var(--color-muted);">Red flags:</div>
+          <div style="margin-top: 0.25rem;">
+            ${data.common_red_flags.map(f =>
+              `<span class="tag">${f.flag} (${f.count})</span>`
+            ).join(' ')}
+          </div>
+        `;
+      } else {
+        flags.innerHTML = '';
+      }
+
+      // Quotes
+      const quotes = document.getElementById('effectiveness-quotes');
+      if (data.recent_summaries.length > 0) {
+        quotes.innerHTML = data.recent_summaries.map(s => `
+          <div class="quote" style="margin-top: 0.5rem;">
+            <div class="quote__text">"${s.summary}"</div>
+            <div class="quote__source">Session #${s.session_id}</div>
+          </div>
+        `).join('');
+      }
+    } catch (err) {
+      console.error('Failed to load effectiveness:', err);
     }
   }
 };
