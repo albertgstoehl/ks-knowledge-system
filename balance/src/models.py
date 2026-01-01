@@ -7,6 +7,7 @@ from typing import Optional, Literal
 class SessionStart(BaseModel):
     type: Literal["expected", "personal"]
     intention: Optional[str] = None
+    priority_id: Optional[int] = None
 
 
 class SessionEnd(BaseModel):

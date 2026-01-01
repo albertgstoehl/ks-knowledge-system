@@ -143,9 +143,9 @@ async def start_session(data: SessionStart):
 
     async with get_db() as db:
         cursor = await db.execute(
-            """INSERT INTO sessions (type, intention, started_at)
-               VALUES (?, ?, ?)""",
-            (data.type, data.intention, datetime.now().isoformat())
+            """INSERT INTO sessions (type, intention, priority_id, started_at)
+               VALUES (?, ?, ?, ?)""",
+            (data.type, data.intention, data.priority_id, datetime.now().isoformat())
         )
         session_id = cursor.lastrowid
         await db.commit()

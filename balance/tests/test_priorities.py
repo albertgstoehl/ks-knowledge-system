@@ -24,6 +24,7 @@ async def setup_test():
     async with get_db() as db:
         await db.execute("DELETE FROM sessions")
         await db.execute("DELETE FROM priorities")
+        await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
         await db.commit()
     yield
 

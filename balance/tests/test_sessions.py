@@ -19,15 +19,13 @@ async def setup_test():
     if not _db_initialized:
         await init_db()
         _db_initialized = True
-    else:
-        # Clean up from previous test
-        async with get_db() as db:
-            await db.execute("DELETE FROM sessions")
-            await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
-            await db.commit()
 
-    # Set evening cutoff to 23:59 to allow tests to run any time
+    # Clean up data from previous tests
     async with get_db() as db:
+        await db.execute("DELETE FROM sessions")
+        await db.execute("DELETE FROM priorities")
+        await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
+        # Set evening cutoff to 23:59 to allow tests to run any time
         await db.execute("UPDATE settings SET evening_cutoff = '23:59' WHERE id = 1")
         await db.commit()
     yield
@@ -248,3 +246,21 @@ async def test_mark_claude_used_no_session():
         assert response.status_code == 200
         data = response.json()
         assert data["marked"] is False
+
+
+async def test_start_session_with_priority():
+    """Test starting a session with a priority."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create a priority first
+        priority_resp = await client.post("/api/priorities", json={"name": "Thesis"})
+        priority_id = priority_resp.json()["id"]
+
+        # Start session with priority
+        response = await client.post("/api/sessions/start", json={
+            "type": "expected",
+            "intention": "Write chapter 1",
+            "priority_id": priority_id
+        })
+        assert response.status_code == 200
+        assert response.json()["priority_id"] == priority_id
