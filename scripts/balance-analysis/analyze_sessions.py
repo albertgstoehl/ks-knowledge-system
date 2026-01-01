@@ -97,9 +97,17 @@ def analyze_with_claude(prompt: str) -> dict:
         raise Exception(f"Claude CLI failed: {result.stderr}")
 
     response = json.loads(result.stdout)
-    if response.get("type") == "result" and response.get("subtype") == "success":
+    if response.get("type") == "result":
+        result_text = response.get("result", "")
+
+        # Strip markdown code blocks if present
+        if "```json" in result_text:
+            result_text = result_text.split("```json")[1].split("```")[0]
+        elif "```" in result_text:
+            result_text = result_text.split("```")[1].split("```")[0]
+
         # Parse the inner JSON from Claude's response
-        return json.loads(response["result"])
+        return json.loads(result_text.strip())
     else:
         raise Exception(f"Analysis failed: {response}")
 

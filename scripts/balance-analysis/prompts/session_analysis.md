@@ -51,7 +51,7 @@ Flag prompts that were likely faster without Claude:
 
 Return exactly this JSON structure:
 
-{
+{{
   "intention_alignment": "aligned|pivoted|drifted",
   "alignment_detail": "one sentence explanation",
   "scope_behavior": "focused|expanded|rabbit_hole",
@@ -64,6 +64,6 @@ Return exactly this JSON structure:
   "red_flags": ["flag_name"],
   "one_line_summary": "what actually happened in one sentence",
   "severity": "none|minor|notable|significant"
-}
+}}
 
 No suggestions. Just observations.

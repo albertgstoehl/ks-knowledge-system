@@ -72,8 +72,28 @@ def extract_messages_in_timewindow(
                     msg_type = msg.get("type")
 
                     if msg_type == "user":
-                        # User message
-                        content = msg.get("message", {}).get("content", "")
+                        # User message - extract text from content
+                        raw_content = msg.get("message", {}).get("content", "")
+
+                        # Handle both string and list content formats
+                        if isinstance(raw_content, str):
+                            content = raw_content
+                        elif isinstance(raw_content, list):
+                            # Extract text from content blocks
+                            text_parts = []
+                            for item in raw_content:
+                                if isinstance(item, dict):
+                                    if item.get("type") == "text":
+                                        text_parts.append(item.get("text", ""))
+                                    # Skip tool_result blocks
+                            content = " ".join(text_parts)
+                        else:
+                            content = str(raw_content)
+
+                        # Skip system/hook messages
+                        if content.startswith("Caveat:") or not content.strip():
+                            continue
+
                         messages.append({
                             "timestamp": ts_str,
                             "project": project_name,
