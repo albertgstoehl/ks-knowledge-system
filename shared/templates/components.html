@@ -503,3 +503,52 @@
   {% endfor %}
 </div>
 {% endmacro %}
+
+
+{# ==========================================================================
+   PRIORITY LIST
+   Reorderable list with up/down arrow buttons
+
+   {{ ui.priority_list(priorities, id="priority-list") }}
+
+   Where priorities = [{"id": 1, "name": "Thesis", "meta": "2 sessions"}, ...]
+   ========================================================================== #}
+{% macro priority_list(items, id="priority-list") %}
+<div class="priority-list" id="{{ id }}">
+  {% for item in items %}
+  <div class="priority-list__item" data-id="{{ item.id }}">
+    <span class="priority-list__rank">{{ loop.index }}</span>
+    <span class="priority-list__name">{{ item.name }}</span>
+    {% if item.meta %}
+    <span class="priority-list__meta">{{ item.meta }}</span>
+    {% endif %}
+    <span class="priority-list__arrows">
+      <button class="priority-list__arrow" data-dir="up" onclick="movePriority(this, 'up')" {{ 'disabled' if loop.first }}>&#9650;</button>
+      <button class="priority-list__arrow" data-dir="down" onclick="movePriority(this, 'down')" {{ 'disabled' if loop.last }}>&#9660;</button>
+    </span>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+
+{# ==========================================================================
+   DRIFT ALERT
+   Insight card showing priority misalignment
+   ========================================================================== #}
+{% macro drift_alert(priority, rank, pct, instead, instead_rank, instead_pct, weeks=0) %}
+<div class="drift-alert">
+  <div class="drift-alert__header">Biggest drift</div>
+  <div class="drift-alert__main">
+    <strong>{{ priority }}</strong> is priority #{{ rank }} but got
+    <span class="drift-alert__stat">{{ pct }}%</span> of sessions.
+    <strong>{{ instead }}</strong> (#{{ instead_rank }}) got
+    <span class="drift-alert__stat">{{ instead_pct }}%</span>.
+  </div>
+  {% if weeks > 1 %}
+  <div class="drift-alert__context">
+    This is week {{ weeks }} of {{ priority }} being deprioritized.
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

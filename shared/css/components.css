@@ -91,6 +91,7 @@
 }
 
 .btn--option.selected,
+.btn--option.active,
 .btn--option[aria-pressed="true"] {
   background: var(--color-text);
   color: var(--color-bg);
@@ -1214,4 +1215,123 @@
   font-size: var(--font-size-xs);
   color: var(--color-muted);
   margin-left: var(--space-xs);
+}
+
+/* ==========================================================================
+   PRIORITY LIST
+   Reorderable list of priorities with drag handles
+   ========================================================================== */
+
+.priority-list {
+  border: 1px solid var(--color-border);
+}
+
+.priority-list__item {
+  display: flex;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border-light);
+  gap: var(--space-md);
+  background: var(--color-bg);
+}
+
+.priority-list__item:last-child {
+  border-bottom: none;
+}
+
+.priority-list__rank {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.priority-list__name {
+  flex: 1;
+}
+
+.priority-list__meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+}
+
+.priority-list__arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.priority-list__arrow {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+.priority-list__arrow:hover {
+  color: var(--color-muted);
+}
+
+.priority-list__arrow:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+/* Dropdown item with meta (for priority selection) */
+.dropdown__item--with-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dropdown__item-meta {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ==========================================================================
+   DRIFT ALERT
+   Insight card showing priority misalignment
+   ========================================================================== */
+
+.drift-alert {
+  border: 2px solid var(--color-border);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.drift-alert__header {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.drift-alert__main {
+  font-size: var(--font-size-lg);
+  line-height: 1.5;
+}
+
+.drift-alert__context {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  padding-top: var(--space-md);
+  margin-top: var(--space-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.drift-alert__stat {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  margin: 0 var(--space-xs);
+  font-variant-numeric: tabular-nums;
 }

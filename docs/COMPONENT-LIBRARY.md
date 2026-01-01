@@ -216,6 +216,9 @@ For custom markup, use these classes directly:
 | Timer | `.timer`, `.timer__value`, `.timer__label` |
 | Setting Row | `.setting-row`, `.setting-row__label`, `.setting-row__value`, `.setting-row__input`, `.setting-row__unit` |
 | Action Panel | `.action-panel`, `.action-panel__btn`, `.action-panel__btn--primary`, `.action-panel__btn--danger` |
+| Priority List | `.priority-list`, `.priority-list__item`, `.priority-list__rank`, `.priority-list__name`, `.priority-list__meta`, `.priority-list__arrows`, `.priority-list__arrow` |
+| Dropdown (extended) | `.dropdown__item--with-meta`, `.dropdown__item-meta` |
+| Drift Alert | `.drift-alert`, `.drift-alert__header`, `.drift-alert__main`, `.drift-alert__context`, `.drift-alert__stat` |
 
 ---
 
@@ -329,6 +332,54 @@ Key-value pairs for settings.
 </div>
 ```
 
+### Priority List
+
+Reorderable list with up/down arrow buttons.
+
+```html
+{{ ui.priority_list(priorities, id="priority-list") }}
+```
+
+Where `priorities` is a list of dicts: `[{"id": 1, "name": "Thesis", "meta": "2 sessions"}, ...]`
+
+**Manual HTML:**
+
+```html
+<div class="priority-list" id="priority-list">
+  <div class="priority-list__item" data-id="1">
+    <span class="priority-list__rank">1</span>
+    <span class="priority-list__name">Thesis</span>
+    <span class="priority-list__meta">2 sessions</span>
+    <span class="priority-list__arrows">
+      <button class="priority-list__arrow" data-dir="up" onclick="movePriority(this, 'up')" disabled>&#9650;</button>
+      <button class="priority-list__arrow" data-dir="down" onclick="movePriority(this, 'down')">&#9660;</button>
+    </span>
+  </div>
+</div>
+```
+
+The `movePriority(btn, direction)` function handles reordering and updates rank numbers automatically.
+
+### Dropdown with Meta
+
+Extended dropdown items showing secondary info (like rank).
+
+```html
+<div class="dropdown dropdown--full">
+  <button class="btn" onclick="toggleDropdown('my-dropdown')">
+    Select...
+    <span>▾</span>
+  </button>
+  <div class="dropdown__menu" id="dropdown-my-dropdown">
+    <button class="dropdown__item dropdown__item--with-meta" onclick="...">
+      <span>Option Name</span>
+      <span class="dropdown__item-meta">#1</span>
+    </button>
+  </div>
+  <div class="dropdown__backdrop" id="backdrop-my-dropdown" onclick="closeDropdown('my-dropdown')"></div>
+</div>
+```
+
 ---
 
 ## Design Tokens
@@ -431,6 +482,7 @@ The shared library includes `js/components.js` with utility functions for intera
 | `toggleDropdown(id)` | Open/close dropdown menu |
 | `closeDropdown(id)` | Close specific dropdown |
 | `toggleSourcePanel()` | Show/hide source details panel |
+| `movePriority(btn, direction)` | Move priority item up/down, updates ranks automatically |
 
 Dropdowns auto-close when clicking outside.
 
