@@ -163,3 +163,55 @@ async def test_reorder_priorities():
         assert priorities[0]["rank"] == 1
         assert priorities[1]["name"] == "First"
         assert priorities[2]["name"] == "Second"
+
+
+async def test_delete_priority():
+    """Test deleting a priority with no sessions."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create priority
+        create_resp = await client.post("/api/priorities", json={"name": "ToDelete"})
+        priority_id = create_resp.json()["id"]
+
+        # Delete it
+        response = await client.delete(f"/api/priorities/{priority_id}")
+        assert response.status_code == 200
+
+        # Verify it's gone
+        list_resp = await client.get("/api/priorities")
+        assert len(list_resp.json()) == 0
+
+
+async def test_delete_priority_with_sessions_archives():
+    """Test that deleting a priority with sessions archives it instead."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create priority
+        create_resp = await client.post("/api/priorities", json={"name": "HasSessions"})
+        priority_id = create_resp.json()["id"]
+
+        # Add a session to this priority
+        async with get_db() as db:
+            await db.execute(
+                "INSERT INTO sessions (type, priority_id, started_at) VALUES (?, ?, ?)",
+                ("expected", priority_id, "2025-01-01T10:00:00")
+            )
+            await db.commit()
+
+        # Delete it (should archive)
+        response = await client.delete(f"/api/priorities/{priority_id}")
+        assert response.status_code == 200
+
+        # Verify it's not in the list (archived)
+        list_resp = await client.get("/api/priorities")
+        assert len(list_resp.json()) == 0
+
+        # Verify it still exists in DB but is archived
+        async with get_db() as db:
+            cursor = await db.execute(
+                "SELECT archived_at FROM priorities WHERE id = ?",
+                (priority_id,)
+            )
+            row = await cursor.fetchone()
+            assert row is not None
+            assert row[0] is not None  # archived_at should be set

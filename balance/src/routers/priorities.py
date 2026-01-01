@@ -72,3 +72,28 @@ async def reorder_priorities(data: PriorityReorder):
             )
         await db.commit()
     return {"status": "ok"}
+
+
+@router.delete("/priorities/{priority_id}")
+async def delete_priority(priority_id: int):
+    """Delete a priority. Archives if it has sessions, otherwise hard deletes."""
+    async with get_db() as db:
+        # Check if priority has sessions
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM sessions WHERE priority_id = ?",
+            (priority_id,)
+        )
+        count = (await cursor.fetchone())[0]
+
+        if count > 0:
+            # Archive instead of delete
+            await db.execute(
+                "UPDATE priorities SET archived_at = ? WHERE id = ?",
+                (datetime.now().isoformat(), priority_id)
+            )
+        else:
+            # Actually delete
+            await db.execute("DELETE FROM priorities WHERE id = ?", (priority_id,))
+
+        await db.commit()
+    return {"status": "ok"}
