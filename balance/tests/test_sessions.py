@@ -50,7 +50,7 @@ async def test_start_session():
 
 
 async def test_end_session():
-    """Test ending a session."""
+    """Test ending a session (questionnaire submission)."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         # Start session first
@@ -59,17 +59,21 @@ async def test_end_session():
             "intention": "Research"
         })
         assert start_response.status_code == 200
+        session_id = start_response.json()["id"]
 
-        # End it
+        # Call timer-complete to start break (simulates timer ending)
+        timer_response = await client.post("/api/sessions/timer-complete")
+        assert timer_response.status_code == 200
+
+        # Submit questionnaire
         response = await client.post("/api/sessions/end", json={
             "distractions": "none",
             "did_the_thing": True
         })
         assert response.status_code == 200
         data = response.json()
-        assert data["ended_at"] is not None
-        assert data["distractions"] == "none"
-        assert data["did_the_thing"] == 1  # SQLite returns 1 for True
+        assert data["status"] == "ok"
+        assert data["session_id"] == session_id
 
 
 async def test_break_check_not_on_break():
@@ -87,8 +91,9 @@ async def test_break_check_on_break():
     """Test break check when on break."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # Start and end a session to trigger break
+        # Start a session and call timer-complete to trigger break
         await client.post("/api/sessions/start", json={"type": "expected"})
+        await client.post("/api/sessions/timer-complete")
         await client.post("/api/sessions/end", json={
             "distractions": "none",
             "did_the_thing": True
@@ -136,8 +141,9 @@ async def test_session_active_on_break():
     """Test /api/session/active when on break."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # Start and end a session to trigger break
+        # Start a session and call timer-complete to trigger break
         await client.post("/api/sessions/start", json={"type": "expected"})
+        await client.post("/api/sessions/timer-complete")
         await client.post("/api/sessions/end", json={
             "distractions": "none",
             "did_the_thing": True
@@ -174,8 +180,9 @@ async def test_quick_start_on_break():
     """Test quick-start fails when on break."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # Create a break
+        # Create a break via timer-complete
         await client.post("/api/sessions/start", json={"type": "expected"})
+        await client.post("/api/sessions/timer-complete")
         await client.post("/api/sessions/end", json={
             "distractions": "none",
             "did_the_thing": True
