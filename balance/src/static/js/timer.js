@@ -195,11 +195,19 @@ const Balance = {
           break;
 
         case 'session_ended':
+          // Break is running, questionnaire pending
           this.currentSession = status.session;
           this.sessionType = status.session.type;
           this.intention = status.session.intention || '';
+
+          // Check rabbit hole for personal sessions
+          if (this.sessionType === 'personal') {
+            await this.checkRabbitHole();
+          }
+
           this.showPage('end');
           this.updateEndUI();
+          this.startTick(); // Continue ticking for break countdown
           break;
 
         case 'break':
