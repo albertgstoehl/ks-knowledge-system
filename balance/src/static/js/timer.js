@@ -115,7 +115,7 @@ const Balance = {
           this.el.prioritySection.style.display = 'block';
           // Reset priority selection
           this.selectedPriorityId = null;
-          this.el.priorityLabel.textContent = 'Select priority...';
+          this.el.priorityLabel.textContent = 'Select...';
           this.el.priorityTrigger.classList.remove('selected');
         } else {
           this.el.prioritySection.style.display = 'none';

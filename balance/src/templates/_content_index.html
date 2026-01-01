@@ -13,12 +13,12 @@
         <button class="btn btn--option" data-type="personal">Personal</button>
       </div>
 
-      <div id="priority-section" style="display: none;">
-        <label class="label">Priority</label>
+      <div id="priority-section" class="priority-section" style="display: none;">
         <div class="dropdown dropdown--full">
-          <button type="button" class="btn" id="priority-trigger" onclick="Balance.togglePriorityDropdown()">
-            <span id="priority-label">Select priority...</span>
-            <span>▾</span>
+          <button type="button" class="priority-trigger" id="priority-trigger" onclick="Balance.togglePriorityDropdown()">
+            <span class="priority-trigger__label">Priority</span>
+            <span class="priority-trigger__value" id="priority-label">Select...</span>
+            <span class="priority-trigger__arrow">▾</span>
           </button>
           <div class="dropdown__menu" id="dropdown-priority">
             <!-- Populated by JS -->
