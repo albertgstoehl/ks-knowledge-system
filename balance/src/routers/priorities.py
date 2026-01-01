@@ -1,7 +1,9 @@
+from datetime import datetime
+
 from fastapi import APIRouter
 
 from ..database import get_db
-from ..models import Priority
+from ..models import Priority, PriorityCreate
 
 router = APIRouter(prefix="/api", tags=["priorities"])
 
@@ -29,3 +31,31 @@ async def list_priorities() -> list[Priority]:
             )
             for row in rows
         ]
+
+
+@router.post("/priorities")
+async def create_priority(data: PriorityCreate) -> Priority:
+    """Create a new priority with auto-calculated rank."""
+    async with get_db() as db:
+        # Get next rank
+        cursor = await db.execute(
+            "SELECT MAX(rank) FROM priorities WHERE archived_at IS NULL"
+        )
+        row = await cursor.fetchone()
+        next_rank = (row[0] or 0) + 1
+
+        # Insert priority
+        cursor = await db.execute(
+            """INSERT INTO priorities (name, rank, created_at)
+               VALUES (?, ?, ?)""",
+            (data.name, next_rank, datetime.now().isoformat())
+        )
+        await db.commit()
+        priority_id = cursor.lastrowid
+
+        return Priority(
+            id=priority_id,
+            name=data.name,
+            rank=next_rank,
+            session_count=0
+        )

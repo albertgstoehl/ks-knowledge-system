@@ -115,3 +115,24 @@ async def test_list_priorities_with_session_count():
         assert len(data) == 1
         assert data[0]["name"] == "Work"
         assert data[0]["session_count"] == 2
+
+
+async def test_create_priority():
+    """Test creating a new priority."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/api/priorities", json={"name": "Thesis"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Thesis"
+        assert data["rank"] == 1
+        assert data["id"] is not None
+
+
+async def test_create_priority_auto_ranks():
+    """Test that priorities auto-increment ranks."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post("/api/priorities", json={"name": "First"})
+        response = await client.post("/api/priorities", json={"name": "Second"})
+        assert response.json()["rank"] == 2
