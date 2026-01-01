@@ -1,11 +1,46 @@
-<div class="container">
-  <header class="page-header">
-    <h1>Stats</h1>
-  </header>
+<style>
+.drift-alert {
+  border: 2px solid var(--color-border);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+.drift-alert__header {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  margin-bottom: 0.5rem;
+}
+.drift-alert__main {
+  font-size: var(--font-size-lg);
+  line-height: 1.5;
+}
+.drift-alert__context {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--color-border-light);
+}
+.drift-alert__stat {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--color-border);
+  margin: 0 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+</style>
 
-    <div class="period-selector">
-      <button class="period-btn active" data-period="week">Week</button>
-      <button class="period-btn" data-period="month">Month</button>
+<div class="container">
+    <div id="drift-alert" class="drift-alert" style="display: none;">
+      <div class="drift-alert__header">Biggest drift</div>
+      <div class="drift-alert__main" id="drift-main"></div>
+      <div class="drift-alert__context" id="drift-context"></div>
+    </div>
+
+    <div class="button-group period-selector">
+      <button class="btn btn--option active" data-period="week">Week</button>
+      <button class="btn btn--option" data-period="month">Month</button>
     </div>
 
     <div class="stats-grid">
@@ -71,12 +106,13 @@ const Stats = {
     this.bindEvents();
     this.loadStats();
     this.loadNorthStar();
+    this.loadDrift();
   },
 
   bindEvents() {
-    document.querySelectorAll('.period-btn').forEach(btn => {
+    document.querySelectorAll('.period-selector .btn--option').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.period-selector .btn--option').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.period = btn.dataset.period;
         this.loadStats();
@@ -123,6 +159,32 @@ const Stats = {
       document.getElementById('north-star').textContent = state.north_star || 'Not set';
     } catch (err) {
       console.error('Failed to load north star:', err);
+    }
+  },
+
+  async loadDrift() {
+    try {
+      const data = await fetch('/api/stats/drift').then(r => r.json());
+
+      const alert = document.getElementById('drift-alert');
+      if (data.biggest_drift) {
+        const d = data.biggest_drift;
+        document.getElementById('drift-main').innerHTML = `
+          <strong>${d.priority}</strong> is priority #${d.rank} but got
+          <span class="drift-alert__stat">${d.pct}%</span> of sessions.
+          <strong>${d.instead}</strong> (#${d.instead_rank}) got
+          <span class="drift-alert__stat">${d.instead_pct}%</span>.
+        `;
+        document.getElementById('drift-context').textContent =
+          data.weeks_drifting > 1
+            ? `This is week ${data.weeks_drifting} of ${d.priority} being deprioritized.`
+            : '';
+        alert.style.display = 'block';
+      } else {
+        alert.style.display = 'none';
+      }
+    } catch (err) {
+      console.error('Failed to load drift:', err);
     }
   }
 };
