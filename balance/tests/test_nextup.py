@@ -79,3 +79,26 @@ async def test_delete_nextup():
         # Verify it's gone
         list_resp = await client.get("/api/nextup")
         assert list_resp.json()["count"] == 0
+
+
+async def test_update_nextup():
+    """Test updating a next_up item."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create item
+        create_resp = await client.post("/api/nextup", json={"text": "Original"})
+        item_id = create_resp.json()["id"]
+
+        # Update it
+        response = await client.put(
+            f"/api/nextup/{item_id}",
+            json={"text": "Updated", "due_date": "2026-01-15"}
+        )
+        assert response.status_code == 200
+        assert response.json()["text"] == "Updated"
+
+        # Verify in list
+        list_resp = await client.get("/api/nextup")
+        items = list_resp.json()["items"]
+        assert items[0]["text"] == "Updated"
+        assert items[0]["due_date"] == "2026-01-15"
