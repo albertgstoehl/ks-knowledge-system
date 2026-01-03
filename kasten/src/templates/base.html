@@ -1,0 +1,60 @@
+<!-- kasten/src/templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Kasten{% endblock %}</title>
+    <!-- Shared component library -->
+    <link rel="stylesheet" href="/static/shared/css/variables.css?v=2">
+    <link rel="stylesheet" href="/static/shared/css/base.css?v=2">
+    <link rel="stylesheet" href="/static/shared/css/components.css?v=3">
+    <link rel="stylesheet" href="/static/shared/css/utilities.css?v=2">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Service-specific styles -->
+    <style>
+        /* Layout constraint - uses shared base.css for fonts, colors, etc. */
+        body { max-width: 800px; margin: 0 auto; }
+
+        .note-content {
+            line-height: 1.6;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--color-border);
+            margin-bottom: 1rem;
+            white-space: pre-wrap;
+        }
+        .note-content a { color: var(--color-text); text-decoration: underline; }
+
+        /* Entry list extends shared .list component */
+        .entry-list { list-style: none; border: none; }
+        .entry-list .list__item { border: 1px solid var(--color-border); margin-bottom: var(--space-sm); }
+        .entry-list .list__item a { text-decoration: none; display: block; }
+        .entry-list .list__item-id { color: var(--color-muted); font-size: var(--font-size-sm); display: block; }
+
+        .graph-container {
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+        }
+        .graph-container svg { max-width: 100%; }
+
+        {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    {% import "components.html" as ui %}
+
+    <header class="header">
+        <h1 class="header__title"><a href="/" style="text-decoration:none">Kasten</a></h1>
+    </header>
+
+    <main id="main-content" class="content-container">
+    {% block content %}{% endblock %}
+    </main>
+
+    <!-- Shared JS utilities -->
+    <script src="/static/shared/js/components.js"></script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

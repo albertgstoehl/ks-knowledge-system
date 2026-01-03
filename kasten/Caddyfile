@@ -1,0 +1,3 @@
+kasten.gstoehl.dev {
+    reverse_proxy kasten:8000
+}
