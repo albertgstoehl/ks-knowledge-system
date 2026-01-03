@@ -22,6 +22,9 @@ async def setup_test():
         await db.execute("DELETE FROM next_up")
         await db.execute("DELETE FROM sessions")
         await db.execute("DELETE FROM priorities")
+        await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
+        # Set evening cutoff to 23:59 to allow tests to run any time
+        await db.execute("UPDATE settings SET evening_cutoff = '23:59' WHERE id = 1")
         await db.commit()
     yield
 
