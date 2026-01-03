@@ -58,3 +58,19 @@ async def test_session_analyses_table_exists(test_db):
         result = await cursor.fetchone()
         assert result is not None
         assert result[0] == "session_analyses"
+
+
+@pytest.mark.asyncio
+async def test_youtube_session_type_allowed(test_db):
+    """YouTube should be a valid session type."""
+    async with get_db(test_db) as db:
+        await db.execute(
+            "INSERT INTO sessions (type, intention, duration_minutes) VALUES (?, ?, ?)",
+            ("youtube", "exploring music production", 30)
+        )
+        await db.commit()
+
+        cursor = await db.execute("SELECT type, duration_minutes FROM sessions WHERE type = 'youtube'")
+        row = await cursor.fetchone()
+        assert row["type"] == "youtube"
+        assert row["duration_minutes"] == 30

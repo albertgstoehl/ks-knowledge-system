@@ -19,7 +19,7 @@ async def init_db(db_url: str = None):
             -- Sessions (Pomodoro)
             CREATE TABLE IF NOT EXISTS sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                type TEXT NOT NULL CHECK (type IN ('expected', 'personal')),
+                type TEXT NOT NULL CHECK (type IN ('expected', 'personal', 'youtube')),
                 intention TEXT,
                 priority_id INTEGER,
                 started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -28,6 +28,7 @@ async def init_db(db_url: str = None):
                 did_the_thing BOOLEAN,
                 rabbit_hole BOOLEAN,
                 claude_used BOOLEAN DEFAULT FALSE,
+                duration_minutes INTEGER,
                 FOREIGN KEY (priority_id) REFERENCES priorities(id)
             );
 
@@ -175,6 +176,48 @@ async def init_db(db_url: str = None):
             await db.execute("ALTER TABLE sessions ADD COLUMN next_up_id INTEGER REFERENCES next_up(id)")
         except Exception:
             pass  # Column already exists
+
+        # Migration: add duration_minutes column for youtube sessions
+        try:
+            await db.execute("ALTER TABLE sessions ADD COLUMN duration_minutes INTEGER")
+        except Exception:
+            pass  # Column already exists
+
+        # Migration: allow youtube session type (recreate table with new CHECK)
+        # Check if youtube is already allowed
+        try:
+            await db.execute("INSERT INTO sessions (type, intention) VALUES ('youtube', 'test')")
+            await db.execute("DELETE FROM sessions WHERE intention = 'test' AND type = 'youtube'")
+            await db.commit()
+        except Exception:
+            # Need to migrate - youtube not allowed yet
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS sessions_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type TEXT NOT NULL CHECK (type IN ('expected', 'personal', 'youtube')),
+                    intention TEXT,
+                    priority_id INTEGER,
+                    next_up_id INTEGER,
+                    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    ended_at TIMESTAMP,
+                    distractions TEXT CHECK (distractions IN ('none', 'some', 'many')),
+                    did_the_thing BOOLEAN,
+                    rabbit_hole BOOLEAN,
+                    claude_used BOOLEAN DEFAULT FALSE,
+                    duration_minutes INTEGER,
+                    FOREIGN KEY (priority_id) REFERENCES priorities(id),
+                    FOREIGN KEY (next_up_id) REFERENCES next_up(id)
+                )
+            """)
+            await db.execute("""
+                INSERT INTO sessions_new
+                SELECT id, type, intention, priority_id, next_up_id, started_at, ended_at,
+                       distractions, did_the_thing, rabbit_hole, claude_used, duration_minutes
+                FROM sessions
+            """)
+            await db.execute("DROP TABLE sessions")
+            await db.execute("ALTER TABLE sessions_new RENAME TO sessions")
+            await db.commit()
 
         await db.commit()
 
