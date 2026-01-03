@@ -1,0 +1,56 @@
+<div class="add-feed-box">
+    <input type="text"
+           id="feed-url-input"
+           placeholder="Paste RSS feed URL..."
+           autocomplete="off">
+    <button id="add-feed-btn" class="btn btn-primary">Add</button>
+</div>
+
+<div class="layout">
+    <section class="feed-list" id="feed-list">
+        {% if feeds %}
+            {% for feed in feeds %}
+            <div class="feed-section" data-feed-id="{{ feed.id }}">
+                <div class="feed-header" onclick="toggleFeed({{ feed.id }})">
+                    <span class="feed-toggle">&#9660;</span>
+                    <span class="feed-title">{{ feed.title or feed.url | domain }}</span>
+                    <span class="feed-count">({{ feed.feed_items | length }})</span>
+                    <button class="feed-menu-btn" onclick="event.stopPropagation(); showFeedMenu({{ feed.id }}, '{{ (feed.title or '') | e }}')">...</button>
+                </div>
+                <div class="feed-items" id="feed-items-{{ feed.id }}">
+                    {% for item in feed.feed_items %}
+                    <div class="feed-item"
+                         data-item-id="{{ item.id }}"
+                         data-feed-id="{{ feed.id }}"
+                         data-url="{{ item.url }}"
+                         data-title="{{ item.title or 'Untitled' }}"
+                         data-description="{{ item.description or '' }}">
+                        <div class="feed-item-title">{{ item.title or 'Untitled' }}</div>
+                        <div class="feed-item-meta">
+                            {% if item.published_at %}
+                                {{ item.published_at.strftime('%b %d, %H:%M') }}
+                            {% else %}
+                                {{ item.fetched_at.strftime('%b %d, %H:%M') }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not feed.feed_items %}
+                    <div class="empty-state">No items</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                No feeds yet. Add an RSS feed URL above.
+            </div>
+        {% endif %}
+    </section>
+
+    <aside class="detail-panel" id="detail-panel">
+        <div class="empty-state">Select an item to view details</div>
+    </aside>
+</div>
+
+{% include "_scripts_feeds.html" %}

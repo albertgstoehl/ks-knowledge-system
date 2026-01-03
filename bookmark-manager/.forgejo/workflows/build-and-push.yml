@@ -1,0 +1,42 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest-fml128
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Tags
+        id: tags
+        run: |
+          echo "TAGS=$(echo "git.fml128.ch/${{ github.repository}}" | tr '[A-Z]' '[a-z]')" >> "${GITHUB_OUTPUT}"
+
+      - name: Login to Forgejo Container Registry
+        run: echo "${{ secrets.PACKET_TOKEN }}" | podman login git.fml128.ch -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Build Docker image
+        id: build-image
+        uses: https://github.com/redhat-actions/buildah-build@v2
+        with:
+          context: .
+          containerfiles: |
+            ./Dockerfile
+          tags: |
+            ${{ steps.tags.outputs.TAGS }}:latest
+            ${{ steps.tags.outputs.TAGS }}:${{ github.sha }}
+
+      - name: Push to registry
+        id: push-to-registry
+        uses: https://github.com/redhat-actions/push-to-registry@v2
+        with:
+          tags: ${{ steps.build-image.outputs.tags }}

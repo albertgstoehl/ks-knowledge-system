@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}Bookmarks{% endblock %}</title>
+    <!-- Shared component library -->
+    <link rel="stylesheet" href="/static/shared/css/variables.css?v=2">
+    <link rel="stylesheet" href="/static/shared/css/base.css?v=2">
+    <link rel="stylesheet" href="/static/shared/css/components.css?v=3">
+    <link rel="stylesheet" href="/static/shared/css/utilities.css?v=2">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Service-specific styles -->
+    <style>
+        /* Layout constraint - uses shared base.css for fonts, colors, etc. */
+        body { max-width: 1200px; margin: 0 auto; }
+
+        /* Header and Tabs use shared components.css */
+
+        /* Search */
+        .search-box {
+            margin-bottom: 1rem;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #000;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        .search-box input:focus { outline: 2px solid #000; outline-offset: 2px; }
+
+        /* Layout - uses shared .layout--list-detail, .list, .list__item */
+        /* Mobile overrides for detail panel */
+        @media (max-width: 768px) {
+            .layout--list-detail .list {
+                border: none;
+                border-top: 1px solid #000;
+            }
+        }
+
+        /* Legacy icon margins */
+        .pin-icon, .thesis-icon { margin-right: 0.25rem; }
+
+        /* Labels [VID] [DOC] [PIN] */
+        .label {
+            color: #666;
+            font-weight: 400;
+            font-size: 0.75rem;
+        }
+
+        /* Filter Icons */
+        .filter-icons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .filter-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #000;
+            background: #fff;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+        .filter-icon:hover { background: #f5f5f5; }
+        .filter-icon.active { background: #000; filter: invert(1); }
+
+        /* Progress Bar */
+        .progress-bar-container { margin-top: 1rem; }
+        .progress-bar {
+            height: 4px;
+            background: #eee;
+            border: 1px solid #000;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: #000;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            font-size: 0.75rem;
+            color: #666;
+            text-align: right;
+            margin-top: 0.25rem;
+        }
+
+        /* Conveyor Belt Layout */
+        .conveyor-layout {
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 1rem;
+            min-height: 60vh;
+        }
+        @media (max-width: 768px) {
+            .conveyor-layout { grid-template-columns: 1fr; }
+        }
+        .current-item {
+            border: 1px solid #000;
+            padding: 1.5rem;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .current-item-title {
+            font-size: 1.25rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .current-item-domain {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        .current-item-description {
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-height: 12rem;
+            overflow: hidden;
+            position: relative;
+        }
+        .current-item-description.expanded {
+            max-height: none;
+        }
+        .current-item-description.overflow:not(.expanded)::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3rem;
+            background: linear-gradient(transparent, #fff);
+        }
+        .read-more-btn {
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+        .read-more-btn:hover {
+            color: #000;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 */
+            margin-bottom: 0.5rem;
+        }
+        .video-embed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 1px solid #000;
+        }
+        .video-status {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        /* Next Up - uses shared .next-up component */
+        /* Desktop action panel: bordered container with stacked buttons */
+        .action-panel {
+            border: 1px solid #000;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-self: start;
+        }
+        .action-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .action-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .action-btn {
+            padding: 0.75rem 1rem;
+            border: 1px solid #000;
+            background: #fff;
+            font-family: inherit;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .action-btn:hover { background: #f5f5f5; }
+        .action-btn-primary { background: #000; color: #fff; }
+        .action-btn-primary:hover { background: #333; }
+        .action-danger { border-color: #c00; color: #c00; }
+        .action-danger:hover { background: #fee; }
+
+        /* Move menu dropdown */
+        .move-menu-container {
+            position: relative;
+        }
+        .move-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #000;
+            z-index: 10;
+        }
+        .move-menu.visible {
+            display: block;
+        }
+        .move-menu button {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            background: #fff;
+            font-family: inherit;
+            font-size: 0.875rem;
+            text-align: left;
+            cursor: pointer;
+        }
+        .move-menu button:hover {
+            background: #f5f5f5;
+        }
+        .move-menu button + button {
+            border-top: 1px solid #eee;
+        }
+
+        @media (max-width: 768px) {
+            .action-panel {
+                position: fixed;
+                bottom: 56px;
+                left: 0;
+                right: 0;
+                background: #fff;
+                border: none;
+                border-top: 2px solid #000;
+                padding: 0.5rem;
+                z-index: 99;
+            }
+            /* Stacked layout: primary button full width, then row of secondary */
+            .action-panel .action-bar {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .action-panel .action-btn {
+                min-height: 48px;
+                padding: 0.75rem;
+                font-size: 0.875rem;
+            }
+            /* Primary button: full width at top */
+            .action-panel .action-btn-primary {
+                width: 100%;
+                order: -1;
+            }
+            /* Secondary buttons: row */
+            .action-panel .action-row {
+                display: flex;
+                flex-direction: row;
+                gap: 0.5rem;
+            }
+            .action-panel .action-row > * {
+                flex: 1;
+            }
+            .action-panel .move-menu-container {
+                flex: 1;
+            }
+            .action-panel .move-menu-container .action-btn {
+                width: 100%;
+            }
+            /* Move menu as bottom sheet */
+            .action-panel .move-menu {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin-bottom: 0;
+                border: none;
+                border-top: 2px solid #000;
+                z-index: 200;
+            }
+            .action-panel .move-menu button {
+                min-height: 56px;
+                font-size: 1rem;
+                border-bottom: 1px solid #eee;
+            }
+            .action-panel .move-menu button:last-child {
+                border-bottom: none;
+            }
+            /* Backdrop for move menu */
+            .move-menu-backdrop {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 199;
+            }
+            .move-menu-backdrop.visible {
+                display: block;
+            }
+            .conveyor-layout {
+                padding-bottom: 130px;
+            }
+        }
+
+        /* Archive Void Layout */
+        .archive-void {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 50vh;
+            text-align: center;
+        }
+        .archive-void-message {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        .recently-archived {
+            border: 1px solid #000;
+            width: 100%;
+            max-width: 400px;
+        }
+        .recently-archived-header {
+            padding: 0.75rem;
+            background: #f5f5f5;
+            font-size: 0.625rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid #000;
+        }
+        .recently-archived-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .recently-archived-item:last-child { border-bottom: none; }
+        .recently-archived-item:hover { background: #f5f5f5; }
+        .recently-archived-time {
+            color: #999;
+            font-size: 0.75rem;
+        }
+
+        /* View Header - uses shared .view-header component */
+
+        /* Archive Search Bar */
+        .archive-search-bar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .archive-search-bar input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #000;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        .archive-search-bar input:focus {
+            outline: 2px solid #000;
+            outline-offset: 2px;
+        }
+        .clear-btn {
+            padding: 0.75rem 1rem;
+            border: 1px solid #000;
+            background: #fff;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .clear-btn:hover { background: #f5f5f5; }
+
+        /* Detail Panel - uses shared .detail-panel component */
+        /* Service-specific detail content styles */
+        .detail-title { font-size: 1.25rem; margin-bottom: 0.5rem; }
+        .detail-domain { color: #666; margin-bottom: 1rem; }
+        .detail-description {
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            white-space: pre-wrap;
+        }
+        .detail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        @media (max-width: 768px) {
+            .detail-actions {
+                flex-direction: column;
+            }
+            .detail-actions .btn {
+                width: 100%;
+                min-height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #000;
+            background: #fff;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s ease;
+        }
+        .btn:hover { background: #f5f5f5; }
+        .btn-primary { background: #000; color: #fff; }
+        .btn-primary:hover { background: #333; }
+        .btn-danger { border-color: #c00; color: #c00; }
+        .btn-danger:hover { background: #fee; }
+
+        /* Empty state */
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            .empty-state {
+                padding: 1rem;
+            }
+        }
+
+        /* Mobile back button */
+        .back-btn {
+            display: none;
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 768px) {
+            .back-btn { display: inline-block; }
+        }
+
+        /* Mobile bottom navigation uses shared components.css */
+        @media (max-width: 768px) {
+            .layout { min-height: auto; }
+            .archive-void { min-height: calc(50vh - 60px); }
+        }
+
+        /* Feed specific styles */
+        .add-feed-box {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .add-feed-box input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #000;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        .feed-section {
+            border: 1px solid #000;
+            margin-bottom: 0.5rem;
+        }
+        .feed-header {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            cursor: pointer;
+            background: #f5f5f5;
+            gap: 0.5rem;
+        }
+        .feed-header:hover { background: #eee; }
+        .feed-toggle { font-size: 0.75rem; }
+        .feed-title { flex: 1; font-weight: 500; }
+        .feed-count { color: #666; font-size: 0.875rem; }
+        .feed-menu-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            font-size: 1rem;
+        }
+        .feed-items { }
+        .feed-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-top: 1px solid #eee;
+        }
+        .feed-item:hover { background: #f9f9f9; }
+        .feed-item.selected { background: #f5f5f5; }
+        .feed-item-title { font-weight: 500; }
+        .feed-item-meta { color: #666; font-size: 0.875rem; }
+        .feed-list { }
+
+        /* Video embed styles */
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            margin-bottom: 1rem;
+            background: #000;
+        }
+        .video-embed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .timestamp-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .timestamp-controls label {
+            font-size: 0.875rem;
+        }
+        .timestamp-controls input {
+            width: 80px;
+            padding: 0.5rem;
+            border: 1px solid #000;
+            font-family: inherit;
+            font-size: 0.875rem;
+        }
+
+        /* Modal - Brutalist */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 1000;
+            display: flex;
+            align-items: stretch;
+            justify-content: stretch;
+            padding: 2px;
+        }
+
+        .modal-content {
+            background: #fff;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            border: none;
+        }
+
+        .modal-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #000;
+            color: #fff;
+        }
+
+        .modal-header h2 {
+            font-size: 0.875rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .modal-header .btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .modal-header .btn:hover {
+            background: #000;
+            color: #fff;
+            outline: 2px solid #fff;
+        }
+
+        .modal-body {
+            padding: 1rem;
+            overflow-y: auto;
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .modal-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .modal-footer {
+            padding: 0;
+            border-top: 2px solid #000;
+            display: flex;
+            justify-content: stretch;
+            gap: 0;
+            background: #000;
+        }
+
+        .modal-footer .btn {
+            flex: 1;
+            border: none;
+            padding: 1rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .modal-footer .btn:first-child {
+            background: #fff;
+            color: #000;
+            border-right: 2px solid #000;
+        }
+
+        .modal-footer .btn:first-child:hover {
+            background: #eee;
+        }
+
+        .modal-footer .btn-primary {
+            background: #000;
+            color: #fff;
+        }
+
+        .modal-footer .btn-primary:hover:not(:disabled) {
+            background: #333;
+        }
+
+        .source-content {
+            background: #fff;
+            padding: 1rem;
+            max-height: none;
+            overflow-y: auto;
+            margin-bottom: 0;
+            user-select: text;
+            border: 2px solid #000;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .source-content::before {
+            content: 'SOURCE';
+            display: block;
+            font-size: 0.625rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #000;
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="has-bottom-nav">
+    {% import "components.html" as ui %}
+
+    <header class="header">
+        <h1 class="header__title">Bookmarks</h1>
+        <nav class="tabs header__tabs">
+            <a href="/ui/?view=feeds" class="tab" data-view="feeds"
+               hx-get="/ui/?view=feeds" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Feeds</a>
+            <a href="/ui/?view=inbox" class="tab" data-view="inbox"
+               hx-get="/ui/?view=inbox" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Inbox</a>
+            <a href="/ui/?view=thesis" class="tab" data-view="thesis"
+               hx-get="/ui/?view=thesis" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Thesis</a>
+            <a href="/ui/?view=pins" class="tab" data-view="pins"
+               hx-get="/ui/?view=pins" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Pins</a>
+        </nav>
+    </header>
+
+    <main id="main-content" class="content-container">
+    {% block content %}{% endblock %}
+    </main>
+
+    <nav class="bottom-nav">
+        <div class="bottom-nav__links">
+            <a href="/ui/?view=feeds" class="bottom-nav__link" data-view="feeds"
+               hx-get="/ui/?view=feeds" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Feeds</a>
+            <a href="/ui/?view=inbox" class="bottom-nav__link" data-view="inbox"
+               hx-get="/ui/?view=inbox" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Inbox</a>
+            <a href="/ui/?view=thesis" class="bottom-nav__link" data-view="thesis"
+               hx-get="/ui/?view=thesis" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Thesis</a>
+            <a href="/ui/?view=pins" class="bottom-nav__link" data-view="pins"
+               hx-get="/ui/?view=pins" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true">Pins</a>
+        </div>
+    </nav>
+    <script>
+        // Highlight active tab/nav based on URL
+        (function() {
+            var view = new URLSearchParams(window.location.search).get('view') || 'inbox';
+            // Desktop tabs
+            var tab = document.querySelector('.tab[data-view="' + view + '"]');
+            if (tab) tab.classList.add('tab--active');
+            // Mobile bottom nav
+            var link = document.querySelector('.bottom-nav__link[data-view="' + view + '"]');
+            if (link) link.classList.add('bottom-nav__link--active');
+        })();
+
+        // Update active state on htmx navigation
+        document.body.addEventListener('htmx:afterSettle', function(e) {
+            var url = new URL(window.location.href);
+            var view = url.searchParams.get('view') || 'inbox';
+            // Reset all
+            document.querySelectorAll('.tab--active').forEach(el => el.classList.remove('tab--active'));
+            document.querySelectorAll('.bottom-nav__link--active').forEach(el => el.classList.remove('bottom-nav__link--active'));
+            // Set new active
+            var tab = document.querySelector('.tab[data-view="' + view + '"]');
+            if (tab) tab.classList.add('tab--active');
+            var link = document.querySelector('.bottom-nav__link[data-view="' + view + '"]');
+            if (link) link.classList.add('bottom-nav__link--active');
+        });
+    </script>
+
+    <!-- Citation Modal -->
+    <div id="cite-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Cite</h2>
+                <button class="btn" onclick="closeCiteModal()">×</button>
+            </div>
+            <div class="modal-body" style="grid-template-columns: 1fr;">
+                <div id="cite-source-content" class="source-content">
+                    Loading...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeCiteModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="citeSelection()" id="cite-btn" disabled>Cite this</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared JS utilities -->
+    <script src="/static/shared/js/components.js"></script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  api:
+    image: git.fml128.ch/albert/bookmark-manager:latest
+    container_name: bookmark-manager-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/bookmarks.db
+      - JINA_API_KEY=${JINA_API_KEY:-}
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
+      - CANVAS_API_URL=${CANVAS_API_URL:-http://canvas:8000/api/quotes}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  telegram-bot:
+    build: ./bot
+    container_name: bookmark-manager-bot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - API_URL=http://api:8000
+      - ALLOWED_TELEGRAM_USERS=${ALLOWED_TELEGRAM_USERS:-}
+    depends_on:
+      - api
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:alpine
+    container_name: bookmark-manager-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,167 @@
+{% if view == 'inbox' %}
+<!-- INBOX: Conveyor Belt -->
+<div class="view-header">
+    <span class="view-header__title">INBOX ({{ bookmarks|length }})</span>
+</div>
+
+{% if bookmarks %}
+<div class="conveyor-layout">
+    <section class="current-item" id="current-item">
+        {% set current = bookmarks[0] %}
+        <div class="current-item-title" data-id="{{ current.id }}">
+            {% if current.video_id %}<span class="label">[VID]</span> {% endif %}
+            {% if current.pinned %}<span class="label">[PIN]</span> {% endif %}
+            {% if current.is_thesis %}<span class="label">[DOC]</span> {% endif %}
+            {{ current.title or 'Untitled' }}
+            {% if current.expires_at %}
+            <span class="expiry-timer" data-expires="{{ current.expires_at.isoformat() }}Z" style="color: #666; font-weight: normal; font-size: 0.875rem; float: right;">
+                {{ current.expires_at | expiry }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="current-item-domain">{{ current.url | domain }}</div>
+
+        {% if current.video_id %}
+        <div class="video-container">
+            <iframe id="yt-player"
+                src="https://www.youtube-nocookie.com/embed/{{ current.video_id }}?start={{ current.video_timestamp or 0 }}&enablejsapi=1&origin={{ request.url.scheme }}://{{ request.url.netloc }}"
+                frameborder="0"
+                allowfullscreen
+                allow="autoplay; fullscreen"
+                class="video-embed">
+            </iframe>
+        </div>
+        <div class="video-status">
+            <span id="timestamp-status">Position: <span id="timestamp-display">{{ '%d:%02d' % ((current.video_timestamp or 0) // 60, (current.video_timestamp or 0) % 60) }}</span></span>
+            <span id="save-indicator"></span>
+        </div>
+        {% else %}
+        <div class="current-item-description" id="description">{{ current.description or 'No description' }}</div>
+        <button class="read-more-btn" id="read-more-btn" onclick="toggleDescription()" style="display: none;">Read more</button>
+        {% endif %}
+
+        {% if bookmarks|length > 1 %}
+        <div class="next-up">
+            <div class="next-up__header">Next Up</div>
+            {% for bookmark in bookmarks[1:5] %}
+            <div class="next-up__item" data-id="{{ bookmark.id }}">
+                {% if bookmark.video_id %}<span class="label">[VID]</span> {% endif %}
+                {% if bookmark.pinned %}<span class="label">[PIN]</span> {% endif %}
+                {% if bookmark.is_thesis %}<span class="label">[DOC]</span> {% endif %}
+                <span class="next-up__title">{{ bookmark.title or 'Untitled' }}</span>
+                {% if bookmark.expires_at %}
+                <span class="next-up__timer expiry-timer" data-expires="{{ bookmark.expires_at.isoformat() }}Z">{{ bookmark.expires_at | expiry }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+
+    <aside class="action-panel" id="action-panel">
+        <div class="action-bar">
+            <button class="action-btn action-btn-primary" onclick="openCiteModal({{ current.id }})">Cite</button>
+            <div class="action-row">
+                <a href="{{ current.url }}" target="_blank" class="action-btn">Open</a>
+                <div class="move-menu-container">
+                    <button class="action-btn" onclick="toggleMoveMenu()">Move</button>
+                    <div class="move-menu" id="move-menu">
+                        <button onclick="moveToThesis({{ current.id }})">[DOC] Thesis</button>
+                        <button onclick="pinItem({{ current.id }})">[PIN] Pins</button>
+                        <button onclick="closeMoveMenu()">Cancel</button>
+                    </div>
+                </div>
+                {% if current.title in ['Error', 'Error fetching content'] or not current.content %}
+                <button class="action-btn" id="retry-btn" onclick="retryScrape({{ current.id }})">Retry</button>
+                {% endif %}
+                <button class="action-btn action-danger" onclick="deleteItem({{ current.id }})">Delete</button>
+            </div>
+        </div>
+        <div class="move-menu-backdrop" id="move-menu-backdrop" onclick="closeMoveMenu()"></div>
+    </aside>
+</div>
+
+<div class="progress-bar-container">
+    <div class="progress-bar">
+        <div class="progress-bar-fill" style="width: {{ ((inbox_count - bookmarks|length) / inbox_count * 100) if inbox_count > 0 else 0 }}%"></div>
+    </div>
+    <div class="progress-text">{{ bookmarks|length }}/{{ inbox_count }} remaining</div>
+</div>
+
+{% else %}
+<!-- Empty Inbox -->
+<div class="archive-void">
+    <div class="archive-void-message">INBOX ZERO</div>
+    <p style="color: #666;">All bookmarks processed</p>
+</div>
+{% endif %}
+
+{% elif view == 'thesis' %}
+<!-- THESIS: Research Items -->
+<div class="view-header">
+    <span class="view-header__title">THESIS ({{ bookmarks|length }})</span>
+</div>
+
+{% if bookmarks %}
+<div class="layout--list-detail">
+    <section class="list" id="bookmark-list">
+        {% for bookmark in bookmarks %}
+        <div class="list__item"
+             data-id="{{ bookmark.id }}"
+             data-url="{{ bookmark.url }}"
+             data-title="{{ bookmark.title or 'Untitled' }}">
+            <div class="list__item-title">
+                <span class="label">[DOC]</span> {{ bookmark.title or 'Untitled' }}
+            </div>
+            <div class="list__item-meta">{{ bookmark.url | domain }}</div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <aside class="detail-panel" id="detail-panel">
+        <div class="detail-panel__empty">Select a thesis item to view</div>
+    </aside>
+</div>
+{% else %}
+<div class="archive-void">
+    <div class="archive-void-message">NO THESIS ITEMS</div>
+    <p style="color: #666;">Use /thesis in Telegram or Move to > Thesis</p>
+</div>
+{% endif %}
+
+{% elif view == 'pins' %}
+<!-- PINS: Pinned Items -->
+<div class="view-header">
+    <span class="view-header__title">PINS ({{ bookmarks|length }})</span>
+</div>
+
+{% if bookmarks %}
+<div class="layout--list-detail">
+    <section class="list" id="bookmark-list">
+        {% for bookmark in bookmarks %}
+        <div class="list__item"
+             data-id="{{ bookmark.id }}"
+             data-url="{{ bookmark.url }}"
+             data-title="{{ bookmark.title or 'Untitled' }}">
+            <div class="list__item-title">
+                <span class="label">[PIN]</span> {{ bookmark.title or 'Untitled' }}
+            </div>
+            <div class="list__item-meta">{{ bookmark.url | domain }}</div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <aside class="detail-panel" id="detail-panel">
+        <div class="detail-panel__empty">Select a pinned item to view</div>
+    </aside>
+</div>
+{% else %}
+<div class="archive-void">
+    <div class="archive-void-message">NO PINNED ITEMS</div>
+    <p style="color: #666;">Use /pin in Telegram or Move to > Pins</p>
+</div>
+{% endif %}
+
+{% endif %}
+
+{% include "_scripts_index.html" %}

@@ -1,0 +1,7 @@
+bookmark.gstoehl.dev {
+    reverse_proxy api:8000
+}
+
+canvas.gstoehl.dev {
+    reverse_proxy canvas:8000
+}
