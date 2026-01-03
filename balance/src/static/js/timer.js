@@ -21,12 +21,16 @@ const Balance = {
   priorities: [],
   selectedPriorityId: null,
 
+  // YouTube duration state
+  selectedDuration: 30, // default 30 minutes
+
   // Session data from server
   currentSession: null,
 
   // Session end state
   selectedDistractions: null,
   selectedDidThing: null,
+  selectedSavedSomething: null, // YouTube only
 
   // Rabbit hole state
   showRabbitHolePrompt: false,
@@ -100,6 +104,14 @@ const Balance = {
     this.el.priorityTrigger = document.getElementById('priority-trigger');
     this.el.priorityLabel = document.getElementById('priority-label');
     this.el.priorityDropdown = document.getElementById('dropdown-priority');
+
+    // YouTube duration
+    this.el.durationSection = document.getElementById('duration-section');
+    this.el.durationBtns = document.querySelectorAll('.duration-options .btn--option');
+
+    // YouTube-specific end
+    this.el.youtubeEndGroup = document.getElementById('youtube-end-group');
+    this.el.savedSomethingOptions = document.getElementById('saved-something-options');
   },
 
   bindEvents() {
@@ -110,10 +122,11 @@ const Balance = {
         btn.classList.add('active');
         this.sessionType = btn.dataset.type;
 
-        // Show/hide priority section
+        const intentionLabel = document.querySelector('.intention-group .label');
+
+        // Show/hide priority section (Expected only)
         if (this.sessionType === 'expected' && this.priorities.length > 0) {
           this.el.prioritySection.style.display = 'block';
-          // Reset priority selection
           this.selectedPriorityId = null;
           this.el.priorityLabel.textContent = 'Select...';
           this.el.priorityTrigger.classList.remove('selected');
@@ -121,7 +134,26 @@ const Balance = {
           this.el.prioritySection.style.display = 'none';
           this.selectedPriorityId = null;
         }
+
+        // Show/hide duration section (YouTube only)
+        if (this.sessionType === 'youtube') {
+          this.el.durationSection.style.display = 'block';
+          if (intentionLabel) intentionLabel.textContent = "What are you looking for?";
+        } else {
+          this.el.durationSection.style.display = 'none';
+          if (intentionLabel) intentionLabel.textContent = "What's the one thing?";
+        }
+
         this.updateStartButton();
+      });
+    });
+
+    // Duration selection (YouTube)
+    this.el.durationBtns?.forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.el.durationBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedDuration = parseInt(btn.dataset.duration);
       });
     });
 
@@ -163,6 +195,16 @@ const Balance = {
         this.el.rabbitHoleOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.selectedRabbitHole = btn.dataset.value === 'yes';
+        this.checkEndComplete();
+      });
+    });
+
+    // Saved something options (YouTube)
+    this.el.savedSomethingOptions?.querySelectorAll('.btn--option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.el.savedSomethingOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        this.selectedSavedSomething = btn.dataset.value === 'yes';
         this.checkEndComplete();
       });
     });
@@ -411,15 +453,30 @@ const Balance = {
     this.el.endExpected.textContent = `${this.todaySessions.expected} Expected`;
     this.el.endPersonal.textContent = `${this.todaySessions.personal} Personal`;
 
+    const isYoutube = this.sessionType === 'youtube';
+
+    // Show/hide appropriate question groups based on session type
+    if (this.el.distractionOptions?.parentElement) {
+      this.el.distractionOptions.parentElement.style.display = isYoutube ? 'none' : 'block';
+    }
+    if (this.el.didThingOptions?.parentElement) {
+      this.el.didThingOptions.parentElement.style.display = isYoutube ? 'none' : 'block';
+    }
+    if (this.el.youtubeEndGroup) {
+      this.el.youtubeEndGroup.style.display = isYoutube ? 'block' : 'none';
+    }
+
     // Reset selections
     this.selectedDistractions = null;
     this.selectedDidThing = null;
+    this.selectedSavedSomething = null;
     this.el.continueBtn.disabled = true;
-    this.el.distractionOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
-    this.el.didThingOptions.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+    this.el.distractionOptions?.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+    this.el.didThingOptions?.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
+    this.el.savedSomethingOptions?.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
 
-    // Show rabbit hole prompt if needed
-    if (this.showRabbitHolePrompt && this.el.rabbitHoleGroup) {
+    // Show rabbit hole prompt if needed (not for YouTube)
+    if (!isYoutube && this.showRabbitHolePrompt && this.el.rabbitHoleGroup) {
       this.el.rabbitHoleGroup.style.display = 'block';
       this.selectedRabbitHole = null;
       this.el.rabbitHoleOptions?.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
@@ -430,9 +487,17 @@ const Balance = {
   },
 
   checkEndComplete() {
-    const baseComplete = this.selectedDistractions && this.selectedDidThing !== null;
-    const rabbitHoleComplete = !this.showRabbitHolePrompt || this.selectedRabbitHole !== null;
-    this.el.continueBtn.disabled = !(baseComplete && rabbitHoleComplete);
+    const isYoutube = this.sessionType === 'youtube';
+
+    if (isYoutube) {
+      // YouTube only needs saved_something
+      this.el.continueBtn.disabled = this.selectedSavedSomething === null;
+    } else {
+      // Regular sessions need distractions + did_the_thing + optional rabbit_hole
+      const baseComplete = this.selectedDistractions && this.selectedDidThing !== null;
+      const rabbitHoleComplete = !this.showRabbitHolePrompt || this.selectedRabbitHole !== null;
+      this.el.continueBtn.disabled = !(baseComplete && rabbitHoleComplete);
+    }
   },
 
   // Calculate remaining seconds using server-adjusted time
@@ -505,14 +570,25 @@ const Balance = {
 
   async startSession() {
     try {
+      const body = {
+        type: this.sessionType,
+        intention: this.intention || null
+      };
+
+      // Add priority_id for expected sessions
+      if (this.sessionType === 'expected') {
+        body.priority_id = this.selectedPriorityId;
+      }
+
+      // Add duration_minutes for YouTube sessions
+      if (this.sessionType === 'youtube') {
+        body.duration_minutes = this.selectedDuration;
+      }
+
       const response = await fetch('/api/sessions/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: this.sessionType,
-          intention: this.intention || null,
-          priority_id: this.sessionType === 'expected' ? this.selectedPriorityId : null
-        })
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
@@ -552,14 +628,22 @@ const Balance = {
 
   async endSession() {
     try {
+      const body = {};
+
+      if (this.sessionType === 'youtube') {
+        // YouTube sessions only send saved_something
+        body.saved_something = this.selectedSavedSomething;
+      } else {
+        // Regular sessions send distractions, did_the_thing, rabbit_hole
+        body.distractions = this.selectedDistractions;
+        body.did_the_thing = this.selectedDidThing;
+        body.rabbit_hole = this.selectedRabbitHole || false;
+      }
+
       const response = await fetch('/api/sessions/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          distractions: this.selectedDistractions,
-          did_the_thing: this.selectedDidThing,
-          rabbit_hole: this.selectedRabbitHole || false
-        })
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
@@ -568,7 +652,9 @@ const Balance = {
       }
 
       // Update session counts
-      this.todaySessions[this.sessionType]++;
+      if (this.todaySessions[this.sessionType] !== undefined) {
+        this.todaySessions[this.sessionType]++;
+      }
 
       // Reset form for next session
       this.intention = '';
