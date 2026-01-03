@@ -23,6 +23,18 @@ spec:
           env:
             - name: DATABASE_URL
               value: "./data/balance.db"
+            - name: NEXTDNS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: balance-secrets
+                  key: nextdns-api-key
+                  optional: true
+            - name: NEXTDNS_PROFILE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: balance-secrets
+                  key: nextdns-profile-id
+                  optional: true
           volumeMounts:
             - name: data
               mountPath: /app/data

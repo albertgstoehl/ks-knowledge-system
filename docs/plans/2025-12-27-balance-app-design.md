@@ -35,13 +35,15 @@ All analytics orient around this. The question isn't "how productive were you?" 
 ```
 Sessions
 ├── id
-├── type: 'expected' | 'personal'
+├── type: 'expected' | 'personal' | 'youtube'
 ├── intention: string (3 words max)
 ├── priority_id: int | null (FK to Priorities, for expected sessions)
+├── next_up_id: int | null (FK to NextUp, for quick task linking)
+├── duration_minutes: int | null (custom duration for YouTube sessions)
 ├── started_at: timestamp
 ├── ended_at: timestamp | null
-├── distractions: 'none' | 'some' | 'many'
-├── did_the_thing: boolean
+├── distractions: 'none' | 'some' | 'many' (not for youtube)
+├── did_the_thing: boolean (not for youtube)
 ├── rabbit_hole: boolean | null
 └── claude_used: boolean (for transcript analysis)
 
