@@ -66,4 +66,6 @@ services:
       - ./shared:/app/shared
     environment:
       - DATABASE_URL=./data/balance.db
+      - NEXTDNS_API_KEY=${NEXTDNS_API_KEY:-}
+      - NEXTDNS_PROFILE_ID=${NEXTDNS_PROFILE_ID:-}
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
