@@ -36,3 +36,29 @@ async def test_list_nextup_empty():
         assert data["items"] == []
         assert data["count"] == 0
         assert data["max"] == 5
+
+
+async def test_create_nextup():
+    """Test creating a next_up item."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/api/nextup", json={"text": "Do taxes"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["text"] == "Do taxes"
+        assert data["id"] is not None
+
+
+async def test_create_nextup_max_limit():
+    """Test that creating beyond max fails."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create 5 items
+        for i in range(5):
+            response = await client.post("/api/nextup", json={"text": f"Task {i}"})
+            assert response.status_code == 200
+
+        # 6th should fail
+        response = await client.post("/api/nextup", json={"text": "Task 6"})
+        assert response.status_code == 400
+        assert "Maximum" in response.json()["detail"]
