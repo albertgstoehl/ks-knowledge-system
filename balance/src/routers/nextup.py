@@ -1,7 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from ..database import get_db
-from ..models import NextUp, NextUpList
+from ..models import NextUp, NextUpList, NextUpCreate
 
 router = APIRouter(prefix="/api/nextup", tags=["nextup"])
 
@@ -39,3 +39,51 @@ async def list_nextup() -> NextUpList:
             for row in rows
         ]
         return NextUpList(items=items, count=len(items), max=MAX_ITEMS)
+
+
+@router.post("", response_model=NextUp)
+async def create_nextup(data: NextUpCreate) -> NextUp:
+    """Create a new Next Up item. Fails if already at max capacity."""
+    async with get_db() as db:
+        # Check count
+        cursor = await db.execute("SELECT COUNT(*) FROM next_up")
+        count = (await cursor.fetchone())[0]
+        if count >= MAX_ITEMS:
+            raise HTTPException(status_code=400, detail=f"Maximum {MAX_ITEMS} items allowed")
+
+        # Validate priority if provided
+        priority_name = None
+        if data.priority_id:
+            cursor = await db.execute(
+                "SELECT name FROM priorities WHERE id = ? AND archived_at IS NULL",
+                (data.priority_id,)
+            )
+            row = await cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=400, detail="Priority not found")
+            priority_name = row[0]
+
+        # Insert
+        cursor = await db.execute(
+            "INSERT INTO next_up (text, due_date, priority_id) VALUES (?, ?, ?)",
+            (data.text, data.due_date, data.priority_id)
+        )
+        await db.commit()
+        item_id = cursor.lastrowid
+
+        # Fetch created item
+        cursor = await db.execute(
+            "SELECT id, text, due_date, priority_id, created_at FROM next_up WHERE id = ?",
+            (item_id,)
+        )
+        row = await cursor.fetchone()
+
+        return NextUp(
+            id=row[0],
+            text=row[1],
+            due_date=row[2],
+            priority_id=row[3],
+            created_at=row[4],
+            priority_name=priority_name,
+            session_count=0
+        )
