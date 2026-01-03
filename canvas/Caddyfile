@@ -1,0 +1,3 @@
+canvas.gstoehl.dev {
+    reverse_proxy canvas:8000
+}

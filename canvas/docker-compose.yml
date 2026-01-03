@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  canvas:
+    build: .
+    container_name: canvas
+    restart: unless-stopped
+    networks:
+      - bookmark-manager_default
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/canvas.db
+
+networks:
+  bookmark-manager_default:
+    external: true
