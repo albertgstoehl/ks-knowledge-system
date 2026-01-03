@@ -7,13 +7,18 @@ import os
 
 from .database import init_db
 from .routers import sessions, logging, settings, priorities, nextup
+from .scheduler import start_scheduler, stop_scheduler, check_expired_sessions
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database on startup."""
+    """Initialize database and scheduler on startup."""
     await init_db()
+    # Check for any expired sessions on startup (catches sessions from pod restarts)
+    await check_expired_sessions()
+    start_scheduler()
     yield
+    stop_scheduler()
 
 
 app = FastAPI(title="Balance", lifespan=lifespan)
