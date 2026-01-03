@@ -337,3 +337,41 @@ async def test_get_effectiveness_stats():
         data = response.json()
         assert "total_analyzed" in data
         assert "alignment_breakdown" in data
+
+
+async def test_start_youtube_session():
+    """YouTube sessions require duration_minutes."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/api/sessions/start", json={
+            "type": "youtube",
+            "intention": "exploring music production",
+            "duration_minutes": 30
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["type"] == "youtube"
+        assert data["duration_minutes"] == 30
+
+
+async def test_start_youtube_session_without_duration_fails():
+    """YouTube sessions must have duration."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/api/sessions/start", json={
+            "type": "youtube",
+            "intention": "exploring"
+        })
+        assert response.status_code == 400
+
+
+async def test_start_youtube_session_invalid_duration_fails():
+    """YouTube sessions must have valid duration (15, 30, 45, 60)."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/api/sessions/start", json={
+            "type": "youtube",
+            "intention": "exploring",
+            "duration_minutes": 25  # Invalid - not in allowed list
+        })
+        assert response.status_code == 400

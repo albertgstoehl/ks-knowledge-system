@@ -144,11 +144,28 @@ async def start_session(data: SessionStart):
         if datetime.now() < break_until:
             raise HTTPException(400, "Currently on break")
 
+    # Validate youtube-specific requirements
+    if data.type == "youtube":
+        if not data.duration_minutes:
+            raise HTTPException(400, "YouTube sessions require duration_minutes")
+        if data.duration_minutes not in (15, 30, 45, 60):
+            raise HTTPException(400, "Duration must be 15, 30, 45, or 60 minutes")
+
+        # Unblock YouTube via NextDNS (skip if not configured)
+        try:
+            from ..services.nextdns import get_nextdns_service
+            nextdns = get_nextdns_service()
+            await nextdns.unblock_youtube()
+        except ValueError:
+            pass  # NextDNS not configured, skip
+        except Exception as e:
+            raise HTTPException(500, f"Failed to unlock YouTube: {str(e)}")
+
     async with get_db() as db:
         cursor = await db.execute(
-            """INSERT INTO sessions (type, intention, priority_id, next_up_id, started_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            (data.type, data.intention, data.priority_id, data.next_up_id, datetime.now().isoformat())
+            """INSERT INTO sessions (type, intention, priority_id, next_up_id, duration_minutes, started_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (data.type, data.intention, data.priority_id, data.next_up_id, data.duration_minutes, datetime.now().isoformat())
         )
         session_id = cursor.lastrowid
         await db.commit()
@@ -383,10 +400,13 @@ async def check_session_active() -> SessionActiveResponse:
     if not session:
         return SessionActiveResponse(allowed=False, reason="no_session")
 
-    # Calculate remaining time
+    # Calculate remaining time (YouTube uses custom duration)
     settings = await get_settings()
     started_at = datetime.fromisoformat(session["started_at"])
-    session_duration = settings["session_duration"] * 60
+    if session.get("duration_minutes"):
+        session_duration = session["duration_minutes"] * 60
+    else:
+        session_duration = settings["session_duration"] * 60
     end_time = started_at + timedelta(seconds=session_duration)
     remaining = max(0, int((end_time - datetime.now()).total_seconds()))
 
@@ -527,7 +547,11 @@ async def get_full_status():
     session = await get_current_session()
     if session:
         started_at = datetime.fromisoformat(session["started_at"])
-        session_duration = settings["session_duration"] * 60
+        # YouTube uses custom duration, others use default
+        if session.get("duration_minutes"):
+            session_duration = session["duration_minutes"] * 60
+        else:
+            session_duration = settings["session_duration"] * 60
         end_time = started_at + timedelta(seconds=session_duration)
 
         if now < end_time:
