@@ -102,3 +102,25 @@ async def test_update_nextup():
         items = list_resp.json()["items"]
         assert items[0]["text"] == "Updated"
         assert items[0]["due_date"] == "2026-01-15"
+
+
+async def test_start_session_with_nextup():
+    """Test starting a session linked to a next_up item."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create next_up item
+        create_resp = await client.post("/api/nextup", json={"text": "Work on feature"})
+        item_id = create_resp.json()["id"]
+
+        # Start session with next_up_id
+        response = await client.post("/api/sessions/start", json={
+            "type": "expected",
+            "intention": "Work on feature",
+            "next_up_id": item_id
+        })
+        assert response.status_code == 200
+
+        # Verify session count on next_up item
+        list_resp = await client.get("/api/nextup")
+        items = list_resp.json()["items"]
+        assert items[0]["session_count"] == 1

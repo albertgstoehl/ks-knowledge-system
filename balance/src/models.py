@@ -8,6 +8,7 @@ class SessionStart(BaseModel):
     type: Literal["expected", "personal"]
     intention: Optional[str] = None
     priority_id: Optional[int] = None
+    next_up_id: Optional[int] = None
 
 
 class SessionEnd(BaseModel):
