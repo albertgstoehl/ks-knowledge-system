@@ -94,6 +94,17 @@ async def init_db(db_url: str = None):
                 archived_at TEXT
             );
 
+            -- Next Up (quick task capture)
+            CREATE TABLE IF NOT EXISTS next_up (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                text TEXT NOT NULL,
+                due_date DATE,
+                priority_id INTEGER,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                position INTEGER DEFAULT 0,
+                FOREIGN KEY (priority_id) REFERENCES priorities(id)
+            );
+
             -- Session Analyses (Claude Code transcript analysis)
             CREATE TABLE IF NOT EXISTS session_analyses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -156,6 +167,12 @@ async def init_db(db_url: str = None):
         # Migration: add priority_id if missing (for existing DBs)
         try:
             await db.execute("ALTER TABLE sessions ADD COLUMN priority_id INTEGER")
+        except Exception:
+            pass  # Column already exists
+
+        # Migration: add next_up_id if missing (for existing DBs)
+        try:
+            await db.execute("ALTER TABLE sessions ADD COLUMN next_up_id INTEGER REFERENCES next_up(id)")
         except Exception:
             pass  # Column already exists
 

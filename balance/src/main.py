@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import os
 
 from .database import init_db
-from .routers import sessions, logging, settings, priorities
+from .routers import sessions, logging, settings, priorities, nextup
 
 
 @asynccontextmanager
@@ -23,6 +23,7 @@ app.include_router(sessions.router)
 app.include_router(logging.router)
 app.include_router(settings.router)
 app.include_router(priorities.router)
+app.include_router(nextup.router)
 
 # Static files and templates
 static_path = os.path.join(os.path.dirname(__file__), "static")
@@ -82,7 +83,7 @@ async def evening_page(request: Request):
 
 
 # Dev-only mockup route (set DEV_MODE=true to enable)
-if os.getenv("DEV_MODE") == "true":
+if os.getenv("DEV_MODE", "").lower() == "true":
     @app.get("/mockup", response_class=HTMLResponse)
     async def mockup_page(request: Request):
         """UI mockup for design iteration (dev only)."""
