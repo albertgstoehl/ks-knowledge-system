@@ -62,3 +62,20 @@ async def test_create_nextup_max_limit():
         response = await client.post("/api/nextup", json={"text": "Task 6"})
         assert response.status_code == 400
         assert "Maximum" in response.json()["detail"]
+
+
+async def test_delete_nextup():
+    """Test deleting a next_up item."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create item
+        create_resp = await client.post("/api/nextup", json={"text": "To delete"})
+        item_id = create_resp.json()["id"]
+
+        # Delete it
+        response = await client.delete(f"/api/nextup/{item_id}")
+        assert response.status_code == 200
+
+        # Verify it's gone
+        list_resp = await client.get("/api/nextup")
+        assert list_resp.json()["count"] == 0

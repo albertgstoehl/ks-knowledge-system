@@ -87,3 +87,16 @@ async def create_nextup(data: NextUpCreate) -> NextUp:
             priority_name=priority_name,
             session_count=0
         )
+
+
+@router.delete("/{item_id}")
+async def delete_nextup(item_id: int):
+    """Delete a Next Up item."""
+    async with get_db() as db:
+        cursor = await db.execute("SELECT id FROM next_up WHERE id = ?", (item_id,))
+        if not await cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Item not found")
+
+        await db.execute("DELETE FROM next_up WHERE id = ?", (item_id,))
+        await db.commit()
+    return {"deleted": True}
