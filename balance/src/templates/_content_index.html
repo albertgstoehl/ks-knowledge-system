@@ -11,6 +11,7 @@
       <div class="button-group type-selection">
         <button class="btn btn--option active" data-type="expected">Expected</button>
         <button class="btn btn--option" data-type="personal">Personal</button>
+        <button class="btn btn--option" data-type="youtube">YouTube</button>
       </div>
 
       <div id="priority-section" class="priority-section" style="display: none;">
@@ -24,6 +25,16 @@
             <!-- Populated by JS -->
           </div>
           <div class="dropdown__backdrop" id="backdrop-priority" onclick="Balance.closePriorityDropdown()"></div>
+        </div>
+      </div>
+
+      <div id="duration-section" class="duration-section" style="display: none;">
+        <label class="label">Duration</label>
+        <div class="button-group duration-options">
+          <button class="btn btn--option" data-duration="15">15m</button>
+          <button class="btn btn--option active" data-duration="30">30m</button>
+          <button class="btn btn--option" data-duration="45">45m</button>
+          <button class="btn btn--option" data-duration="60">60m</button>
         </div>
       </div>
 
@@ -113,6 +124,15 @@
         <div class="button-group binary-options" id="rabbit-hole-options">
           <button class="btn btn--option" data-value="no">Still on track</button>
           <button class="btn btn--option" data-value="yes">Rabbit hole, take a break</button>
+        </div>
+      </div>
+
+      <!-- YouTube-specific question -->
+      <div class="question-group youtube-only" id="youtube-end-group" style="display: none;">
+        <label class="question-label">Save anything good?</label>
+        <div class="button-group binary-options" id="saved-something-options">
+          <button class="btn btn--option" data-value="yes">Yes</button>
+          <button class="btn btn--option" data-value="no">No</button>
         </div>
       </div>
 
