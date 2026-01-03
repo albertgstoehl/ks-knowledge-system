@@ -5,16 +5,18 @@ from typing import Optional, Literal
 
 # Session models
 class SessionStart(BaseModel):
-    type: Literal["expected", "personal"]
+    type: Literal["expected", "personal", "youtube"]
     intention: Optional[str] = None
     priority_id: Optional[int] = None
     next_up_id: Optional[int] = None
+    duration_minutes: Optional[int] = None  # Only for youtube sessions
 
 
 class SessionEnd(BaseModel):
-    distractions: Literal["none", "some", "many"]
-    did_the_thing: bool
+    distractions: Optional[Literal["none", "some", "many"]] = None  # Not for youtube
+    did_the_thing: Optional[bool] = None  # Not for youtube
     rabbit_hole: Optional[bool] = None
+    saved_something: Optional[bool] = None  # Only for youtube
 
 
 class Session(BaseModel):
@@ -129,8 +131,9 @@ class SessionActiveResponse(BaseModel):
 
 
 class QuickStartRequest(BaseModel):
-    type: Literal["expected", "personal"]
+    type: Literal["expected", "personal", "youtube"]
     intention: str
+    duration_minutes: Optional[int] = None  # Only for youtube
 
 
 class QuickStartResponse(BaseModel):
