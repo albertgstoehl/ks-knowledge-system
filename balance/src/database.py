@@ -154,6 +154,17 @@ async def init_db(db_url: str = None):
                 north_star TEXT DEFAULT 'Quality time with family and healthy relationships. Community. Being present. Not taking myself too seriously. Exploring the unexplored. Learning, solving problems, and having fun.'
             );
 
+            -- Analytics Events
+            CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+                event_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                metadata TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
+            CREATE INDEX IF NOT EXISTS idx_events_name ON events(name);
+
             -- Initialize settings if not exists
             INSERT OR IGNORE INTO settings (id) VALUES (1);
             INSERT OR IGNORE INTO app_state (id) VALUES (1);

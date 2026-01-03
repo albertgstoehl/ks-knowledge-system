@@ -6,8 +6,8 @@ from contextlib import asynccontextmanager
 import os
 
 from .database import init_db
-from .routers import sessions, logging, settings, priorities, nextup
-from .scheduler import start_scheduler, stop_scheduler, check_expired_sessions
+from .routers import sessions, logging, settings, priorities, nextup, events
+from .scheduler import start_scheduler, stop_scheduler, check_expired_sessions, ensure_youtube_blocked
 
 
 @asynccontextmanager
@@ -16,6 +16,8 @@ async def lifespan(app: FastAPI):
     await init_db()
     # Check for any expired sessions on startup (catches sessions from pod restarts)
     await check_expired_sessions()
+    # Ensure YouTube is blocked by default (unless active YouTube session)
+    await ensure_youtube_blocked()
     start_scheduler()
     yield
     stop_scheduler()
@@ -29,6 +31,7 @@ app.include_router(logging.router)
 app.include_router(settings.router)
 app.include_router(priorities.router)
 app.include_router(nextup.router)
+app.include_router(events.router)
 
 # Static files and templates
 static_path = os.path.join(os.path.dirname(__file__), "static")
