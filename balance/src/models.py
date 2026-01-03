@@ -178,3 +178,34 @@ class SessionAnalysisCreate(BaseModel):
     projects_used: list[str]
     prompt_count: int
     raw_response: Optional[str] = None
+
+
+# NextUp models
+class NextUp(BaseModel):
+    id: int
+    text: str
+    due_date: Optional[str] = None
+    priority_id: Optional[int] = None
+    priority_name: Optional[str] = None
+    created_at: str
+    session_count: int = 0
+
+
+class NextUpCreate(BaseModel):
+    text: str
+    due_date: Optional[str] = None
+    priority_id: Optional[int] = None
+
+
+class NextUpUpdate(BaseModel):
+    text: Optional[str] = None
+    due_date: Optional[str] = None
+    priority_id: Optional[int] = None
+    clear_due_date: bool = False
+    clear_priority: bool = False
+
+
+class NextUpList(BaseModel):
+    items: list[NextUp]
+    count: int
+    max: int = 5
