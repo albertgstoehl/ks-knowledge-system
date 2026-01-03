@@ -688,10 +688,10 @@ async def store_session_analysis(session_id: int, data: SessionAnalysisCreate):
 
 @router.get("/stats/effectiveness")
 async def get_effectiveness_stats():
-    """Get aggregated effectiveness stats."""
+    """Get aggregated effectiveness stats from last 7 days."""
     async with get_db() as db:
-        # Get today's analyses
-        today_start = datetime.now().replace(
+        # Get last 7 days of analyses
+        week_start = (datetime.now() - timedelta(days=7)).replace(
             hour=0, minute=0, second=0, microsecond=0
         ).isoformat()
 
@@ -701,7 +701,7 @@ async def get_effectiveness_stats():
             FROM session_analyses
             WHERE analyzed_at >= ?
             ORDER BY analyzed_at DESC
-        """, (today_start,))
+        """, (week_start,))
         rows = await cursor.fetchall()
 
         if not rows:
