@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 import os
 from src.utils.paths import find_shared_dir
+from src.utils.sanitize import safe_html
 
 CANVAS_EXTERNAL_URL = os.getenv("CANVAS_EXTERNAL_URL", "http://localhost:8002")
 
@@ -32,6 +33,7 @@ def domain_filter(url: str) -> str:
 
 
 templates.env.filters["domain"] = domain_filter
+templates.env.filters["safe_html"] = safe_html
 
 
 def expiry_filter(expires_at: datetime) -> str:
