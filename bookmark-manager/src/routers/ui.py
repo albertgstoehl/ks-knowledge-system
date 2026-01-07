@@ -11,13 +11,14 @@ from src.models import Bookmark, BookmarkState, Feed, FeedItem
 from pathlib import Path
 from urllib.parse import urlparse
 import os
+from src.utils.paths import find_shared_dir
 
 CANVAS_EXTERNAL_URL = os.getenv("CANVAS_EXTERNAL_URL", "http://localhost:8002")
 
 router = APIRouter(prefix="/ui", tags=["ui"])
 
 templates_dir = Path(__file__).parent.parent / "templates"
-shared_templates_dir = Path(__file__).parent.parent.parent / "shared" / "templates"
+shared_templates_dir = find_shared_dir(Path(__file__)) / "templates"
 templates = Jinja2Templates(directory=[str(templates_dir), str(shared_templates_dir)])
 
 
