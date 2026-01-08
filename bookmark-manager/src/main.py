@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from src.services.background_jobs import BackgroundJobService
-from src.routers import bookmarks, search, backup, ui, feeds, canvas, events
+from src.routers import bookmarks, search, backup, ui, feeds, canvas
 from src.scheduler import start_scheduler, stop_scheduler
+from src.utils.paths import find_shared_dir
+from pathlib import Path
 import os
 
 app = FastAPI(
@@ -13,8 +15,9 @@ app = FastAPI(
 )
 
 # Mount shared CSS and JS
-app.mount("/static/shared/css", StaticFiles(directory="shared/css"), name="shared-css")
-app.mount("/static/shared/js", StaticFiles(directory="shared/js"), name="shared-js")
+shared_dir = find_shared_dir(Path(__file__))
+app.mount("/static/shared/css", StaticFiles(directory=str(shared_dir / "css")), name="shared-css")
+app.mount("/static/shared/js", StaticFiles(directory=str(shared_dir / "js")), name="shared-js")
 
 # Initialize services
 jina_api_key = os.getenv("JINA_API_KEY")
@@ -50,4 +53,3 @@ app.include_router(backup.router)
 app.include_router(ui.router)
 app.include_router(feeds.router)
 app.include_router(canvas.router)
-app.include_router(events.router)

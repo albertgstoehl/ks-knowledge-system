@@ -1,8 +1,18 @@
 from fastapi import APIRouter, HTTPException, Response
 from datetime import datetime, timedelta
+import logging
+import os
 
 from ..database import get_db
 import json
+
+logger = logging.getLogger(__name__)
+_DEBUG_BREAK = os.getenv("BALANCE_DEBUG_BREAK") == "1"
+
+
+def _debug_break(msg: str):
+    if _DEBUG_BREAK:
+        logger.info(msg)
 
 from ..models import (
     SessionStart, SessionEnd, Session,
@@ -179,20 +189,27 @@ async def start_session(data: SessionStart):
 async def end_session(data: SessionEnd):
     """Submit questionnaire for completed session. Break already started via timer-complete."""
     async with get_db() as db:
+        # Find most recent session that needs questionnaire data
+        # This handles both:
+        # 1. Active session (ended_at IS NULL) - normal case
+        # 2. Session ended by scheduler (ended_at set, but did_the_thing IS NULL)
         cursor = await db.execute(
-            "SELECT id, type FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
+            """SELECT id, type FROM sessions
+               WHERE did_the_thing IS NULL
+               ORDER BY started_at DESC LIMIT 1"""
         )
         current = await cursor.fetchone()
 
         if not current:
-            raise HTTPException(400, "No active session to end")
+            raise HTTPException(400, "No session awaiting questionnaire")
 
         session_id = current[0]
 
-        # Update session with questionnaire answers
+        # Update session with questionnaire answers (set ended_at if not already set)
         await db.execute(
             """UPDATE sessions
-               SET ended_at = ?, distractions = ?, did_the_thing = ?, rabbit_hole = ?
+               SET ended_at = COALESCE(ended_at, ?),
+                   distractions = ?, did_the_thing = ?, rabbit_hole = ?
                WHERE id = ?""",
             (datetime.now().isoformat(), data.distractions,
              data.did_the_thing, data.rabbit_hole, session_id)
@@ -206,6 +223,7 @@ async def end_session(data: SessionEnd):
                 "UPDATE app_state SET break_until = ? WHERE id = 1",
                 (new_break_until.isoformat(),)
             )
+            _debug_break(f"/api/sessions/end rabbit_hole=True extend break_until={new_break_until.isoformat()}")
 
         await db.commit()
 
@@ -215,15 +233,17 @@ async def end_session(data: SessionEnd):
 @router.post("/sessions/timer-complete")
 async def timer_complete():
     """Called when session timer hits 0. Starts break immediately."""
-    # Get current session
+    # Get current session (may have been ended by scheduler, check for missing questionnaire)
     async with get_db() as db:
         cursor = await db.execute(
-            "SELECT id, type FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
+            """SELECT id, type FROM sessions
+               WHERE did_the_thing IS NULL
+               ORDER BY started_at DESC LIMIT 1"""
         )
         current = await cursor.fetchone()
 
         if not current:
-            raise HTTPException(400, "No active session")
+            raise HTTPException(400, "No session awaiting completion")
 
     settings = await get_settings()
     cycle_position = await get_cycle_position_smart()
@@ -241,6 +261,10 @@ async def timer_complete():
             (break_until.isoformat(),)
         )
         await db.commit()
+    _debug_break(
+        f"/api/sessions/timer-complete set break_until={break_until.isoformat()} "
+        f"duration={break_duration} is_long_break={is_long_break} cycle_position={cycle_position}"
+    )
 
     return {
         "break_duration": break_duration,
@@ -257,6 +281,17 @@ async def abandon_session():
     current = await get_current_session()
     if not current:
         raise HTTPException(400, "No active session")
+
+    # Block YouTube if abandoning a YouTube session
+    if current["type"] == "youtube":
+        try:
+            from ..services.nextdns import get_nextdns_service
+            nextdns = get_nextdns_service()
+            await nextdns.block_youtube()
+        except ValueError:
+            pass  # NextDNS not configured
+        except Exception as e:
+            logger.error(f"Failed to block YouTube on abandon: {e}")
 
     async with get_db() as db:
         await db.execute("DELETE FROM sessions WHERE id = ?", (current["id"],))
@@ -498,6 +533,9 @@ async def get_full_status():
     # Check break status
     state = await get_app_state()
     settings = await get_settings()
+    _debug_break(
+        f"/api/status enter now={now.isoformat()} break_until={state['break_until']}"
+    )
 
     # Check for session needing questionnaire (timer done but no ended_at)
     async with get_db() as db:
@@ -513,6 +551,10 @@ async def get_full_status():
         break_until = datetime.fromisoformat(state["break_until"])
         if now < break_until:
             remaining = int((break_until - now).total_seconds())
+            _debug_break(
+                f"/api/status mode=session_ended (break running, questionnaire pending) "
+                f"remaining={remaining} break_until={state['break_until']}"
+            )
             return {
                 "mode": "session_ended",
                 "remaining_seconds": remaining,
@@ -531,6 +573,9 @@ async def get_full_status():
         break_until = datetime.fromisoformat(state["break_until"])
         if now < break_until:
             remaining = int((break_until - now).total_seconds())
+            _debug_break(
+                f"/api/status mode=break remaining={remaining} break_until={state['break_until']}"
+            )
             return {
                 "mode": "break",
                 "remaining_seconds": remaining,
@@ -543,6 +588,7 @@ async def get_full_status():
             async with get_db() as db:
                 await db.execute("UPDATE app_state SET break_until = NULL WHERE id = 1")
                 await db.commit()
+            _debug_break("/api/status break expired -> cleared break_until")
 
     # Check for active session
     session = await get_current_session()
@@ -557,6 +603,9 @@ async def get_full_status():
 
         if now < end_time:
             remaining = int((end_time - now).total_seconds())
+            _debug_break(
+                f"/api/status mode=session remaining={remaining} session_id={session['id']}"
+            )
             return {
                 "mode": "session",
                 "remaining_seconds": remaining,
@@ -572,6 +621,9 @@ async def get_full_status():
             }
         else:
             # Session expired - should show end page
+            _debug_break(
+                f"/api/status mode=session_ended (session expired) session_id={session['id']}"
+            )
             return {
                 "mode": "session_ended",
                 "remaining_seconds": 0,
@@ -587,6 +639,7 @@ async def get_full_status():
             }
 
     # Idle - no active session or break
+    _debug_break("/api/status mode=idle")
     return {
         "mode": "idle",
         "remaining_seconds": settings["session_duration"] * 60,
