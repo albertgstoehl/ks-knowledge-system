@@ -1,6 +1,7 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 import os
+from datetime import datetime
 
 # Verify DATABASE_URL is set
 assert "DATABASE_URL" in os.environ, "Run tests with DATABASE_URL=./data/test.db"
@@ -73,6 +74,28 @@ async def test_end_session():
         data = response.json()
         assert data["status"] == "ok"
         assert data["session_id"] == session_id
+
+
+async def test_timer_complete_includes_break_timestamp():
+    """Timer-complete returns both ISO and epoch break timestamps."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Start session first
+        start_response = await client.post("/api/sessions/start", json={
+            "type": "expected",
+            "intention": "Timer complete ts"
+        })
+        assert start_response.status_code == 200
+
+        timer_response = await client.post("/api/sessions/timer-complete")
+        assert timer_response.status_code == 200
+        data = timer_response.json()
+
+        assert "break_until" in data
+        assert "break_until_ts" in data
+
+        iso_ts = datetime.fromisoformat(data["break_until"]).timestamp()
+        assert abs(iso_ts - data["break_until_ts"]) <= 1
 
 
 async def test_break_check_not_on_break():

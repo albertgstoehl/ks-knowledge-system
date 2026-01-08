@@ -41,6 +41,11 @@ const Balance = {
   todaySessions: { expected: 0, personal: 0 },
   dailyCap: 10,
 
+  // Next Up state
+  nextUpItems: [],
+  selectedNextUpId: null,
+  maxNextUpItems: 5,
+
   // DOM elements
   el: {},
 
@@ -112,6 +117,13 @@ const Balance = {
     // YouTube-specific end
     this.el.youtubeEndGroup = document.getElementById('youtube-end-group');
     this.el.savedSomethingOptions = document.getElementById('saved-something-options');
+
+    // Next Up
+    this.el.nextupInput = document.getElementById('nextup-input');
+    this.el.nextupList = document.getElementById('nextup-list');
+    this.el.slotsLeft = document.getElementById('slots-left');
+    this.el.slotsWord = document.getElementById('slots-word');
+    this.el.timerCaptureInput = document.getElementById('timer-capture-input');
   },
 
   bindEvents() {
@@ -143,6 +155,10 @@ const Balance = {
           this.el.durationSection.style.display = 'none';
           if (intentionLabel) intentionLabel.textContent = "What's the one thing?";
         }
+
+        // Clear Next Up selection when switching types
+        this.selectedNextUpId = null;
+        this.renderNextUp();
 
         this.updateStartButton();
       });
@@ -215,6 +231,38 @@ const Balance = {
     // Quick actions
     document.getElementById('quick-meditation')?.addEventListener('click', () => this.quickLog('meditation'));
     document.getElementById('quick-exercise')?.addEventListener('click', () => this.quickLog('exercise'));
+
+    // Next Up capture input
+    this.el.nextupInput?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.addNextUp(e.target.value);
+      }
+    });
+
+    // Timer mini capture
+    this.el.timerCaptureInput?.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        const text = e.target.value.trim();
+        if (text) {
+          try {
+            const response = await fetch('/api/nextup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text })
+            });
+            if (response.ok) {
+              e.target.value = '';
+              e.target.placeholder = '✓ Captured';
+              setTimeout(() => {
+                e.target.placeholder = '+ Quick capture...';
+              }, 1000);
+            }
+          } catch (err) {
+            console.error('Failed to capture:', err);
+          }
+        }
+      }
+    });
   },
 
   setupVisibilityHandler() {
@@ -287,6 +335,9 @@ const Balance = {
       // Load priorities
       await this.loadPriorities();
 
+      // Load Next Up items
+      await this.loadNextUp();
+
     } catch (err) {
       console.error('Failed to sync with server:', err);
     }
@@ -318,6 +369,127 @@ const Balance = {
     } catch (err) {
       console.error('Failed to load priorities:', err);
     }
+  },
+
+  async loadNextUp() {
+    try {
+      const response = await fetch('/api/nextup');
+      const data = await response.json();
+      this.nextUpItems = data.items;
+      this.maxNextUpItems = data.max;
+      this.renderNextUp();
+    } catch (err) {
+      console.error('Failed to load Next Up:', err);
+    }
+  },
+
+  renderNextUp() {
+    if (!this.el.nextupList) return;
+
+    const count = this.nextUpItems.length;
+    const remaining = this.maxNextUpItems - count;
+    this.el.slotsLeft.textContent = remaining;
+    this.el.slotsWord.textContent = remaining === 1 ? 'slot' : 'slots';
+
+    let html = '';
+
+    // Render items
+    this.nextUpItems.forEach(item => {
+      const dueStr = item.due_date ? this.formatDueDate(item.due_date) : '';
+      const priorityStr = item.priority_name ? `${item.priority_name}` : '';
+      const meta = [priorityStr, dueStr].filter(Boolean).join(' · ');
+      const selected = item.id === this.selectedNextUpId ? 'next-up__item--selected' : '';
+
+      html += `
+        <div class="next-up__item ${selected}" data-id="${item.id}">
+          <span class="next-up__title">${this.escapeHtml(item.text)}</span>
+          ${meta ? `<span class="next-up__timer">${meta}</span>` : ''}
+          <button class="next-up__delete" onclick="event.stopPropagation(); Balance.deleteNextUp(${item.id})">✕</button>
+        </div>
+      `;
+    });
+
+    // Render empty slots
+    for (let i = count; i < this.maxNextUpItems; i++) {
+      html += `<div class="next-up__item next-up__item--empty">${i + 1}. empty</div>`;
+    }
+
+    this.el.nextupList.innerHTML = html;
+
+    // Bind click events for selection
+    this.el.nextupList.querySelectorAll('.next-up__item:not(.next-up__item--empty)').forEach(item => {
+      item.addEventListener('click', () => this.selectNextUp(parseInt(item.dataset.id)));
+    });
+  },
+
+  formatDueDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  },
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  },
+
+  async addNextUp(text) {
+    if (!text.trim()) return;
+
+    try {
+      const response = await fetch('/api/nextup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim() })
+      });
+
+      if (response.ok) {
+        this.el.nextupInput.value = '';
+        await this.loadNextUp();
+      } else {
+        const error = await response.json();
+        alert(error.detail || 'Failed to add task');
+      }
+    } catch (err) {
+      console.error('Failed to add Next Up:', err);
+    }
+  },
+
+  async deleteNextUp(id) {
+    try {
+      await fetch(`/api/nextup/${id}`, { method: 'DELETE' });
+
+      // Clear selection if deleting selected item
+      if (this.selectedNextUpId === id) {
+        this.selectedNextUpId = null;
+        this.el.intentionInput.value = '';
+        this.intention = '';
+      }
+
+      await this.loadNextUp();
+    } catch (err) {
+      console.error('Failed to delete Next Up:', err);
+    }
+  },
+
+  selectNextUp(id) {
+    // Toggle selection
+    if (this.selectedNextUpId === id) {
+      this.selectedNextUpId = null;
+      this.el.intentionInput.value = '';
+      this.intention = '';
+    } else {
+      this.selectedNextUpId = id;
+      const item = this.nextUpItems.find(i => i.id === id);
+      if (item) {
+        this.el.intentionInput.value = item.text;
+        this.intention = item.text;
+        this.el.charCount.textContent = item.text.length;
+      }
+    }
+
+    this.renderNextUp();
+    this.updateStartButton();
   },
 
   renderPriorityDropdown() {
@@ -356,8 +528,11 @@ const Balance = {
   },
 
   updateStartButton() {
-    if (this.sessionType === 'expected' && this.priorities.length > 0) {
-      this.el.startBtn.disabled = !this.selectedPriorityId;
+    if (this.sessionType === 'expected') {
+      // Expected requires priority AND Next Up selection (if items exist)
+      const hasPriority = !this.priorities.length || this.selectedPriorityId;
+      const hasNextUp = !this.nextUpItems.length || this.selectedNextUpId;
+      this.el.startBtn.disabled = !(hasPriority && hasNextUp);
     } else {
       this.el.startBtn.disabled = false;
     }
@@ -575,9 +750,13 @@ const Balance = {
         intention: this.intention || null
       };
 
-      // Add priority_id for expected sessions
+      // Add priority_id and next_up_id for expected sessions
       if (this.sessionType === 'expected') {
         body.priority_id = this.selectedPriorityId;
+        // Add next_up_id if a task is selected
+        if (this.selectedNextUpId) {
+          body.next_up_id = this.selectedNextUpId;
+        }
       }
 
       // Add duration_minutes for YouTube sessions
@@ -599,6 +778,9 @@ const Balance = {
 
       // Sync with server to get correct end_timestamp
       await this.syncWithServer();
+
+      // Clear Next Up selection for next session
+      this.selectedNextUpId = null;
 
     } catch (err) {
       console.error('Failed to start session:', err);
@@ -682,8 +864,12 @@ const Balance = {
 
       const data = await response.json();
 
-      // Update break timing
-      this.endTimestamp = new Date(data.break_until).getTime() / 1000;
+      // Update break timing (prefer server-provided epoch to avoid TZ parsing)
+      if (data.break_until_ts) {
+        this.endTimestamp = data.break_until_ts;
+      } else {
+        this.endTimestamp = new Date(data.break_until).getTime() / 1000;
+      }
       this.totalDuration = data.break_duration * 60;
 
       // Check for rabbit hole if personal session
