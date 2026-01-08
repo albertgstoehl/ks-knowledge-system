@@ -246,7 +246,8 @@ async def timer_complete():
         "break_duration": break_duration,
         "cycle_position": cycle_position,
         "is_long_break": is_long_break,
-        "break_until": break_until.isoformat()
+        "break_until": break_until.isoformat(),
+        "break_until_ts": int(break_until.timestamp())
     }
 
 

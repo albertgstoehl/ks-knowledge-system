@@ -682,8 +682,12 @@ const Balance = {
 
       const data = await response.json();
 
-      // Update break timing
-      this.endTimestamp = new Date(data.break_until).getTime() / 1000;
+      // Update break timing (prefer server-provided epoch to avoid TZ parsing)
+      if (data.break_until_ts) {
+        this.endTimestamp = data.break_until_ts;
+      } else {
+        this.endTimestamp = new Date(data.break_until).getTime() / 1000;
+      }
       this.totalDuration = data.break_duration * 60;
 
       // Check for rabbit hole if personal session
