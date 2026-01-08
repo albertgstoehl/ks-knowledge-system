@@ -18,6 +18,32 @@ async def get_settings(db):
     return dict(row)
 
 
+async def ensure_youtube_blocked(db_url: str = None):
+    """Ensure YouTube is blocked unless there's an active YouTube session."""
+    try:
+        async with get_db(db_url) as db:
+            cursor = await db.execute("""
+                SELECT id FROM sessions
+                WHERE type = 'youtube' AND ended_at IS NULL
+            """)
+            active_youtube = await cursor.fetchone()
+
+            if not active_youtube:
+                try:
+                    from .services.nextdns import get_nextdns_service, NextDNSError
+                    nextdns = get_nextdns_service()
+                    await nextdns.block_youtube()
+                    logger.info("Startup: YouTube blocked (no active session)")
+                except ValueError:
+                    logger.warning("NextDNS not configured, skipping startup block")
+                except Exception as e:
+                    logger.error(f"Failed to block YouTube on startup: {e}")
+            else:
+                logger.info(f"Startup: Active YouTube session {active_youtube['id']}, keeping unblocked")
+    except Exception as e:
+        logger.error(f"Error ensuring YouTube blocked: {e}")
+
+
 async def check_expired_sessions(db_url: str = None):
     """Check for ALL expired sessions, end them, and set breaks.
 
