@@ -1,0 +1,77 @@
+# /home/ags/knowledge-system/k8s/dev/bookmark-manager.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookmark-manager
+  namespace: knowledge-system-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookmark-manager
+  template:
+    metadata:
+      labels:
+        app: bookmark-manager
+    spec:
+      containers:
+        - name: bookmark-manager
+          image: ghcr.io/albertgstoehl/bookmark-manager:dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: TZ
+              value: "Europe/Zurich"
+            - name: CANVAS_URL
+              value: "http://canvas.knowledge-system-dev.svc.cluster.local:8000"
+            - name: CANVAS_EXTERNAL_URL
+              value: "https://canvas.gstoehl.dev/dev"
+            - name: DATABASE_URL
+              value: "sqlite+aiosqlite:///./data/bookmarks.db"
+            - name: BASE_PATH
+              value: "/dev"
+          envFrom:
+            - secretRef:
+                name: bookmark-manager-secrets-dev
+                optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "100m"
+            limits:
+              memory: "4Gi"
+              cpu: "1000m"
+      volumes:
+        - name: data
+          emptyDir: {}
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookmark-manager
+  namespace: knowledge-system-dev
+spec:
+  selector:
+    app: bookmark-manager
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
