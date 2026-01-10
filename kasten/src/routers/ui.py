@@ -10,6 +10,8 @@ import os
 import re
 import random
 
+BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
+
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory=["src/templates", "shared/templates"])
 
@@ -17,7 +19,7 @@ def render_links(content: str) -> str:
     """Convert [[id]] to clickable links."""
     def replace_link(match):
         note_id = match.group(1)
-        return f'<a href="/note/{note_id}">{note_id}</a>'
+        return f'<a href="{BASE_PATH}/note/{note_id}">{note_id}</a>'
     return re.sub(r'\[\[([^\]]+)\]\]', replace_link, content)
 
 @router.get("/")
@@ -30,7 +32,8 @@ async def landing(request: Request, session: AsyncSession = Depends(get_db)):
 
     return templates.TemplateResponse("landing.html", {
         "request": request,
-        "entry_points": entry_points
+        "entry_points": entry_points,
+        "base_path": BASE_PATH
     })
 
 @router.get("/random")
@@ -38,9 +41,9 @@ async def random_redirect(session: AsyncSession = Depends(get_db)):
     result = await session.execute(select(Note))
     notes = result.scalars().all()
     if not notes:
-        return RedirectResponse(url="/")
+        return RedirectResponse(url=f"{BASE_PATH}/")
     note = random.choice(notes)
-    return RedirectResponse(url=f"/note/{note.id}")
+    return RedirectResponse(url=f"{BASE_PATH}/note/{note.id}")
 
 @router.get("/note/{note_id}")
 async def note_view(request: Request, note_id: str, session: AsyncSession = Depends(get_db)):
@@ -50,7 +53,7 @@ async def note_view(request: Request, note_id: str, session: AsyncSession = Depe
     result = await session.execute(select(Note).where(Note.id == note_id))
     note = result.scalar_one_or_none()
     if not note:
-        return RedirectResponse(url="/")
+        return RedirectResponse(url=f"{BASE_PATH}/")
 
     # Read content
     notes_path = os.getenv("NOTES_PATH", "/app/notes")
@@ -119,5 +122,6 @@ async def note_view(request: Request, note_id: str, session: AsyncSession = Depe
         "parent": parent,
         "children": children,
         "siblings": siblings,
-        "canvas_url": canvas_url
+        "canvas_url": canvas_url,
+        "base_path": BASE_PATH
     })

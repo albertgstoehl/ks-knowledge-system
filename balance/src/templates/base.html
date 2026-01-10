@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% block title %}Balance{% endblock %}</title>
   <!-- Shared component library -->
-  <link rel="stylesheet" href="/static/shared/css/variables.css?v=2">
-  <link rel="stylesheet" href="/static/shared/css/base.css?v=2">
-  <link rel="stylesheet" href="/static/shared/css/components.css?v=4">
-  <link rel="stylesheet" href="/static/shared/css/utilities.css?v=2">
+  <link rel="stylesheet" href="{{ base_path }}/static/shared/css/variables.css?v=2">
+  <link rel="stylesheet" href="{{ base_path }}/static/shared/css/base.css?v=2">
+  <link rel="stylesheet" href="{{ base_path }}/static/shared/css/components.css?v=4">
+  <link rel="stylesheet" href="{{ base_path }}/static/shared/css/utilities.css?v=2">
   <!-- Balance-specific styles -->
-  <link rel="stylesheet" href="/static/css/style.css?v=6">
+  <link rel="stylesheet" href="{{ base_path }}/static/css/style.css?v=6">
   <!-- htmx for SPA navigation -->
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   {% block head %}{% endblock %}
 </head>
 <body class="has-bottom-nav">
   {% import "components.html" as ui %}
-  {% set tabs = [("Timer", "/"), ("Log", "/log"), ("Stats", "/stats"), ("Settings", "/settings")] %}
+  {% set tabs = [("Timer", base_path ~ "/"), ("Log", base_path ~ "/log"), ("Stats", base_path ~ "/stats"), ("Settings", base_path ~ "/settings")] %}
 
   <header class="header">
     <h1 class="header__title">Balance</h1>
@@ -51,16 +51,17 @@
   </nav>
 
   <!-- Shared JS utilities -->
-  <script src="/static/shared/js/components.js"></script>
+  <script src="{{ base_path }}/static/shared/js/components.js"></script>
 
   <!-- Core page scripts - loaded once -->
-  <script src="/static/js/timer.js?v=6"></script>
-  <script src="/static/js/log.js?v=3"></script>
+  <script src="{{ base_path }}/static/js/timer.js?v=6"></script>
+  <script src="{{ base_path }}/static/js/log.js?v=3"></script>
 
   <script>
   // Update active tab state after htmx navigation
   document.body.addEventListener('htmx:afterSettle', function() {
     var path = window.location.pathname;
+    var basePath = '{{ base_path }}';
     document.querySelectorAll('.header__tabs .tab').forEach(function(tab) {
       tab.classList.toggle('tab--active', tab.getAttribute('href') === path);
     });
@@ -68,8 +69,8 @@
       link.classList.toggle('bottom-nav__link--active', link.getAttribute('href') === path);
     });
     // Reinitialize page-specific JS
-    if (path === '/' && typeof Balance !== 'undefined') Balance.init();
-    if (path === '/log' && typeof LogPage !== 'undefined') LogPage.init();
+    if (path === basePath + '/' && typeof Balance !== 'undefined') Balance.init();
+    if (path === basePath + '/log' && typeof LogPage !== 'undefined') LogPage.init();
   });
   </script>
 

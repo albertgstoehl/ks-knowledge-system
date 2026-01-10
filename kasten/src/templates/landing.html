@@ -4,14 +4,14 @@
 {% block content %}
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
     <h2 style="font-weight: normal;">Entry Points</h2>
-    <a href="/random" class="btn">Feeling Lucky</a>
+    <a href="{{ base_path }}/random" class="btn">Feeling Lucky</a>
 </div>
 
 {% if entry_points %}
 <ul class="entry-list list">
     {% for note in entry_points %}
     <li class="list__item">
-        <a href="/note/{{ note.id }}">
+        <a href="{{ base_path }}/note/{{ note.id }}">
             <span class="list__item-id">{{ note.id }}</span>
             <span>{{ note.title }}</span>
         </a>

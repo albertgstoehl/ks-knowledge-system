@@ -48,7 +48,7 @@ async def health_check():
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/ui/")
+    return RedirectResponse(url=f"{BASE_PATH}/ui/")
 
 # Register routers
 app.include_router(bookmarks.router)

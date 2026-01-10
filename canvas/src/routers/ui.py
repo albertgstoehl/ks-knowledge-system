@@ -6,12 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.routers.canvas import get_or_create_canvas
 
+BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
+
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory=["src/templates", "shared/templates"])
 
 @router.get("/")
 async def root():
-    return RedirectResponse(url="/draft")
+    return RedirectResponse(url=f"{BASE_PATH}/draft")
 
 @router.get("/draft")
 async def draft_page(request: Request, session: AsyncSession = Depends(get_db)):
@@ -20,7 +22,8 @@ async def draft_page(request: Request, session: AsyncSession = Depends(get_db)):
         "request": request,
         "active_tab": "draft",
         "content": canvas.content,
-        "kasten_url": os.getenv("KASTEN_URL", "http://localhost:8003")
+        "kasten_url": os.getenv("KASTEN_URL", "http://localhost:8003"),
+        "base_path": BASE_PATH
     }
     # Return partial for htmx requests
     if request.headers.get("HX-Request"):
@@ -32,7 +35,8 @@ async def workspace_page(request: Request, session: AsyncSession = Depends(get_d
     context = {
         "request": request,
         "active_tab": "workspace",
-        "kasten_url": os.getenv("KASTEN_URL", "http://localhost:8003")
+        "kasten_url": os.getenv("KASTEN_URL", "http://localhost:8003"),
+        "base_path": BASE_PATH
     }
     # Return partial for htmx requests
     if request.headers.get("HX-Request"):
