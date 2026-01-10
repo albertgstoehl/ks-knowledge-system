@@ -1,0 +1,52 @@
+# /home/ags/knowledge-system/k8s/dev/pvcs.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bookmark-manager-pvc
+  namespace: knowledge-system-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi  # Smaller for dev
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: canvas-pvc
+  namespace: knowledge-system-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kasten-pvc
+  namespace: knowledge-system-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: balance-pvc
+  namespace: knowledge-system-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
