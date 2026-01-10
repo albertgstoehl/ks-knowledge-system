@@ -18,14 +18,14 @@ async def test_create_and_retrieve_bookmark(bookmark_url):
     async with httpx.AsyncClient() as client:
         # Create bookmark
         response = await client.post(
-            f"{bookmark_url}/api/bookmarks",
+            f"{bookmark_url}/bookmarks",
             json={"url": "https://example.com", "title": "Example"}
         )
         assert response.status_code == 201
         bookmark_id = response.json()["id"]
         
         # Retrieve bookmark
-        response = await client.get(f"{bookmark_url}/api/bookmarks/{bookmark_id}")
+        response = await client.get(f"{bookmark_url}/bookmarks/{bookmark_id}")
         assert response.status_code == 200
         assert response.json()["url"] == "https://example.com"
 
@@ -34,7 +34,7 @@ async def test_create_and_retrieve_bookmark(bookmark_url):
 async def test_list_bookmarks(bookmark_url):
     """Verify bookmark listing works."""
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{bookmark_url}/api/bookmarks")
+        response = await client.get(f"{bookmark_url}/bookmarks")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -44,7 +44,7 @@ async def test_list_bookmarks(bookmark_url):
 async def test_rss_feeds(bookmark_url):
     """Verify RSS feeds endpoint works."""
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{bookmark_url}/api/feeds")
+        response = await client.get(f"{bookmark_url}/feeds")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)

@@ -18,7 +18,8 @@ async def test_get_canvas(canvas_url):
         response = await client.get(f"{canvas_url}/api/canvas")
         assert response.status_code == 200
         data = response.json()
-        assert "quotes" in data
+        assert "content" in data
+        assert "updated_at" in data
 
 
 @pytest.mark.asyncio
