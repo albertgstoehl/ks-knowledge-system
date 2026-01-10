@@ -18,6 +18,36 @@ async def get_settings(db):
     return dict(row)
 
 
+async def ensure_youtube_blocked(db_url: str = None):
+    """Ensure YouTube is blocked unless there's an active YouTube session.
+
+    Called on startup to enforce default-blocked state.
+    """
+    try:
+        async with get_db(db_url) as db:
+            # Check for active YouTube session
+            cursor = await db.execute("""
+                SELECT id FROM sessions
+                WHERE type = 'youtube' AND ended_at IS NULL
+            """)
+            active_youtube = await cursor.fetchone()
+
+            if not active_youtube:
+                try:
+                    from .services.nextdns import get_nextdns_service, NextDNSError
+                    nextdns = get_nextdns_service()
+                    await nextdns.block_youtube()
+                    logger.info("Startup: YouTube blocked (no active session)")
+                except ValueError:
+                    logger.warning("NextDNS not configured, skipping startup block")
+                except Exception as e:
+                    logger.error(f"Failed to block YouTube on startup: {e}")
+            else:
+                logger.info(f"Startup: Active YouTube session {active_youtube['id']}, keeping unblocked")
+    except Exception as e:
+        logger.error(f"Error ensuring YouTube blocked: {e}")
+
+
 async def check_expired_sessions(db_url: str = None):
     """Check for ALL expired sessions, end them, and set breaks.
 
@@ -71,13 +101,32 @@ async def check_expired_sessions(db_url: str = None):
                         (now.isoformat(), session["id"])
                     )
 
-                    # Set break
-                    break_until = now + timedelta(minutes=short_break)
-                    await db.execute(
-                        "UPDATE app_state SET break_until = ? WHERE id = 1",
-                        (break_until.isoformat(),)
-                    )
-                    logger.info(f"Break set until {break_until.isoformat()}")
+                    # Set break ONLY if not already set (timer-complete may have set it)
+                    cursor = await db.execute("SELECT break_until FROM app_state WHERE id = 1")
+                    state = await cursor.fetchone()
+                    existing_break = state["break_until"] if state else None
+
+                    if existing_break:
+                        existing_break_time = datetime.fromisoformat(existing_break)
+                        if existing_break_time > now:
+                            # Break already running from timer-complete, don't overwrite
+                            logger.info(f"Session {session['id']} ended, break already set until {existing_break}")
+                        else:
+                            # Old break expired, set new one
+                            break_until = now + timedelta(minutes=short_break)
+                            await db.execute(
+                                "UPDATE app_state SET break_until = ? WHERE id = 1",
+                                (break_until.isoformat(),)
+                            )
+                            logger.info(f"Break set until {break_until.isoformat()}")
+                    else:
+                        # No break set, set one
+                        break_until = now + timedelta(minutes=short_break)
+                        await db.execute(
+                            "UPDATE app_state SET break_until = ? WHERE id = 1",
+                            (break_until.isoformat(),)
+                        )
+                        logger.info(f"Break set until {break_until.isoformat()}")
 
                     await db.commit()
     except Exception as e:
