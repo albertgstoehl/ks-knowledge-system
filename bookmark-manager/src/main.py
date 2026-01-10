@@ -14,8 +14,7 @@ BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 app = FastAPI(
     title="Bookmark Manager API",
     description="Minimal bookmark management with semantic search",
-    version="0.1.0",
-    root_path=BASE_PATH
+    version="0.1.0"
 )
 
 # Mount shared CSS and JS

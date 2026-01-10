@@ -7,7 +7,7 @@ import os
 # Support path-based routing (e.g., /dev prefix for dev environment)
 BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 
-app = FastAPI(title="Canvas", version="0.1.0", root_path=BASE_PATH)
+app = FastAPI(title="Canvas", version="0.1.0")
 
 # Allow CORS for Kasten integration
 app.add_middleware(

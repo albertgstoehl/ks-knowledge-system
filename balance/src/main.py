@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     stop_scheduler()
 
 
-app = FastAPI(title="Balance", lifespan=lifespan, root_path=BASE_PATH)
+app = FastAPI(title="Balance", lifespan=lifespan)
 
 # Register routers
 app.include_router(sessions.router)
