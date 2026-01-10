@@ -2,8 +2,12 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers import canvas, ui, workspace, events
+import os
 
-app = FastAPI(title="Canvas", version="0.1.0")
+# Support path-based routing (e.g., /dev prefix for dev environment)
+BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
+
+app = FastAPI(title="Canvas", version="0.1.0", root_path=BASE_PATH)
 
 # Allow CORS for Kasten integration
 app.add_middleware(
