@@ -998,6 +998,67 @@ body.evening-mode {
 }
 
 /* ==========================================================================
+   NEXT UP EXTENSIONS (extends shared .next-up)
+   ========================================================================== */
+
+/* Selection state - shared .next-up doesn't have this */
+.next-up__item--selected {
+  background: var(--color-hover);
+  border-left: 3px solid var(--color-text);
+  padding-left: calc(var(--space-sm) - 3px);
+}
+
+/* Delete button - hidden until hover */
+.next-up__delete {
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0 0.5rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-muted);
+}
+
+.next-up__item:hover .next-up__delete,
+.next-up__item--selected .next-up__delete {
+  opacity: 1;
+}
+
+/* Empty slot styling */
+.next-up__item--empty {
+  border: 1px dashed var(--color-border-light);
+  padding: var(--space-sm);
+  color: var(--color-muted);
+  cursor: default;
+}
+
+.next-up__item--empty:hover {
+  color: var(--color-muted);
+}
+
+/* Capture hint */
+.next-up__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  margin-top: var(--space-xs);
+}
+
+/* Timer mini capture (reuses shared .next-up styling) */
+.timer-capture {
+  margin-top: var(--space-lg);
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.timer-capture__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  margin-top: var(--space-xs);
+  text-align: center;
+}
+
+/* ==========================================================================
    DESKTOP COMPACT LAYOUT
    ========================================================================== */
 

@@ -2,872 +2,115 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Analyze Claude Code transcripts from Balance pomodoro sessions to evaluate effectiveness and detect misalignment with stated intentions.
+**Goal:** Complete and verify the transcript analysis system that evaluates Claude Code session effectiveness.
 
-**Architecture:** End-of-day cron script extracts user prompts from `~/.claude/projects/` JSONL files, correlates with Balance sessions, runs analysis via `claude --print`, stores results in Balance DB.
+**Architecture:** End-of-day cron script parses Claude transcripts from `~/.claude/projects/`, correlates with Balance sessions, analyzes via Claude CLI (Haiku), and stores results for Stats page display.
 
-**Tech Stack:** Python 3.11, FastAPI, SQLite, Claude CLI.
+**Tech Stack:** Python 3.11, Claude CLI (`claude --print`), FastAPI, SQLite, vanilla JS
 
-**Prerequisite:** Priority drift detection should be implemented first (provides priority context).
-
----
-
-## Task 1: Extend Intention Field — Remove "3 Words" Constraint
-
-**Files:**
-- Modify: `scripts/claude-hooks/balance-check.py:95`
-- Modify: `balance/src/templates/_content_index.html`
-
-**Step 1: Update hook prompt**
-
-In `scripts/claude-hooks/balance-check.py`, change the intention input:
-
-```python
-# Before (around line 95)
-intention = input("Intention (3 words): ").strip()
-
-# After
-intention = input("Intention: ").strip()
-```
-
-**Step 2: Update timer UI placeholder**
-
-In `balance/src/templates/_content_index.html`, find the intention input and update placeholder:
-
-```html
-<!-- Before -->
-<input ... placeholder="3 words...">
-
-<!-- After -->
-<input ... placeholder="What are you working on?">
-```
-
-**Step 3: Test manually**
-
-Run: `python3 ~/.claude/hooks/balance-check.py`
-Expected: Prompts "Intention:" without word limit
-
-**Step 4: Commit**
-
-```bash
-git add scripts/claude-hooks/balance-check.py balance/src/templates/_content_index.html
-git commit -m "feat(balance): extend intention field to allow longer descriptions"
-```
+**Status:** ~95% implemented. This plan covers verification, edge case handling, and cron setup.
 
 ---
 
-## Task 2: Database Schema — session_analyses Table
+## Implementation Status
 
-**Files:**
-- Modify: `balance/src/database.py`
-- Modify: `balance/tests/test_database.py`
-
-**Step 1: Write failing test**
-
-```python
-# Add to balance/tests/test_database.py
-@pytest.mark.asyncio
-async def test_session_analyses_table_exists():
-    async with get_db() as db:
-        cursor = await db.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='session_analyses'"
-        )
-        result = await cursor.fetchone()
-        assert result is not None
-        assert result[0] == "session_analyses"
-```
-
-**Step 2: Run test to verify it fails**
-
-Run: `cd balance && python -m pytest tests/test_database.py::test_session_analyses_table_exists -v`
-Expected: FAIL — table doesn't exist
-
-**Step 3: Add session_analyses table to init_db**
-
-In `balance/src/database.py`, add after other table creations:
-
-```python
-await db.execute("""
-    CREATE TABLE IF NOT EXISTS session_analyses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id INTEGER NOT NULL REFERENCES sessions(id),
-        analyzed_at TEXT NOT NULL,
-
-        -- What happened
-        projects_used TEXT,
-        prompt_count INTEGER,
-
-        -- Analysis results
-        intention_alignment TEXT,
-        alignment_detail TEXT,
-        scope_behavior TEXT,
-        scope_detail TEXT,
-        project_switches INTEGER,
-        tool_appropriate_count INTEGER,
-        tool_questionable_count INTEGER,
-        tool_questionable_examples TEXT,
-        red_flags TEXT,
-        one_line_summary TEXT,
-        severity TEXT,
-
-        -- Raw reference
-        raw_response TEXT
-    )
-""")
-```
-
-**Step 4: Run test to verify it passes**
-
-Run: `cd balance && python -m pytest tests/test_database.py::test_session_analyses_table_exists -v`
-Expected: PASS
-
-**Step 5: Commit**
-
-```bash
-git add balance/src/database.py balance/tests/test_database.py
-git commit -m "feat(balance): add session_analyses table schema"
-```
+| Component | Status | Location |
+|-----------|--------|----------|
+| Database schema | Done | `balance/src/database.py:98-122` |
+| Pydantic models | Done | `balance/src/models.py:146-181` |
+| GET /sessions/unanalyzed | Done | `balance/src/routers/sessions.py:641-658` |
+| POST /sessions/{id}/analysis | Done | `balance/src/routers/sessions.py:661-686` |
+| GET /stats/effectiveness | Done | `balance/src/routers/sessions.py:689-757` |
+| Transcript parser | Done | `scripts/balance-analysis/transcript_parser.py` |
+| Analysis prompt | Done | `scripts/balance-analysis/prompts/session_analysis.md` |
+| Analysis script | Done | `scripts/balance-analysis/analyze_sessions.py` |
+| Stats UI | Done | `balance/src/templates/_content_stats.html:8-15` |
+| Intention field (hook) | Done | `scripts/claude-hooks/balance-check.py:95` |
+| Intention placeholder (UI) | Done | `balance/src/templates/_content_index.html:32` |
+| Cron setup | **Pending** | Server crontab |
+| Edge case handling | **Pending** | `analyze_sessions.py` |
 
 ---
 
-## Task 3: Pydantic Models for Analysis
+## Task 1: Verify Existing Components
 
-**Files:**
-- Modify: `balance/src/models.py`
+**Purpose:** Confirm all pieces work before proceeding.
 
-**Step 1: Add Analysis models**
+**Step 1: Verify database schema includes session_analyses table**
 
-```python
-# Add to balance/src/models.py
-
-class SessionAnalysis(BaseModel):
-    id: int
-    session_id: int
-    analyzed_at: str
-    projects_used: list[str]
-    prompt_count: int
-    intention_alignment: str  # aligned|pivoted|drifted
-    alignment_detail: str
-    scope_behavior: str  # focused|expanded|rabbit_hole
-    scope_detail: Optional[str] = None
-    project_switches: int
-    tool_appropriate_count: int
-    tool_questionable_count: int
-    tool_questionable_examples: list[str]
-    red_flags: list[str]
-    one_line_summary: str
-    severity: str  # none|minor|notable|significant
-
-class SessionAnalysisCreate(BaseModel):
-    intention_alignment: str
-    alignment_detail: str
-    scope_behavior: str
-    scope_detail: Optional[str] = None
-    project_switches: int
-    tool_appropriate_count: int
-    tool_questionable_count: int
-    tool_questionable_examples: list[str]
-    red_flags: list[str]
-    one_line_summary: str
-    severity: str
-    projects_used: list[str]
-    prompt_count: int
-    raw_response: Optional[str] = None
-```
-
-**Step 2: Verify imports work**
-
-Run: `cd balance && python -c "from src.models import SessionAnalysis, SessionAnalysisCreate; print('OK')"`
-Expected: OK
-
-**Step 3: Commit**
-
+Run:
 ```bash
-git add balance/src/models.py
-git commit -m "feat(balance): add SessionAnalysis pydantic models"
+sqlite3 ~/knowledge-system/balance/data/balance.db ".schema session_analyses"
 ```
+
+Expected: Table with columns including `id, session_id, analyzed_at, intention_alignment, one_line_summary, severity`
+
+**Step 2: Verify transcript parser finds Claude directories**
+
+Run:
+```bash
+ls -la ~/.claude/projects/
+```
+
+Expected: Directories like `-home-ags-knowledge-system/` with `.jsonl` files
+
+**Step 3: Test transcript parser standalone**
+
+Run:
+```bash
+cd ~/knowledge-system && python3 -c "
+from scripts.balance_analysis.transcript_parser import find_project_dirs, decode_project_path
+dirs = find_project_dirs()
+print(f'Found {len(dirs)} project dirs:')
+for d in dirs[:5]:
+    print(f'  {d.name} -> {decode_project_path(d.name)}')
+"
+```
+
+Expected: List of project directories with decoded names
 
 ---
 
-## Task 4: API Endpoint — Get Unanalyzed Sessions
+## Task 2: Test Balance API Endpoints
 
-**Files:**
-- Modify: `balance/src/routers/sessions.py`
-- Modify: `balance/tests/test_sessions.py`
+**Purpose:** Verify API endpoints work correctly.
 
-**Step 1: Write failing test**
+**Step 1: Test /api/sessions/unanalyzed endpoint**
 
-```python
-# Add to balance/tests/test_sessions.py
-@pytest.mark.asyncio
-async def test_get_unanalyzed_sessions():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/sessions/unanalyzed")
-        assert response.status_code == 200
-        assert isinstance(response.json(), list)
-```
-
-**Step 2: Run test to verify it fails**
-
-Run: `cd balance && python -m pytest tests/test_sessions.py::test_get_unanalyzed_sessions -v`
-Expected: FAIL — 404 Not Found
-
-**Step 3: Add endpoint**
-
-```python
-# Add to balance/src/routers/sessions.py
-@router.get("/sessions/unanalyzed")
-async def get_unanalyzed_sessions():
-    """Get sessions with claude_used=true that haven't been analyzed."""
-    async with get_db() as db:
-        cursor = await db.execute("""
-            SELECT s.id, s.type, s.intention, s.priority_id,
-                   s.started_at, s.ended_at,
-                   p.name as priority_name, p.rank as priority_rank
-            FROM sessions s
-            LEFT JOIN priorities p ON s.priority_id = p.id
-            LEFT JOIN session_analyses sa ON s.id = sa.session_id
-            WHERE s.claude_used = 1
-              AND s.ended_at IS NOT NULL
-              AND sa.id IS NULL
-            ORDER BY s.started_at DESC
-        """)
-        rows = await cursor.fetchall()
-        return [dict(row) for row in rows]
-```
-
-**Step 4: Run test to verify it passes**
-
-Run: `cd balance && python -m pytest tests/test_sessions.py::test_get_unanalyzed_sessions -v`
-Expected: PASS
-
-**Step 5: Commit**
-
+Run:
 ```bash
-git add balance/src/routers/sessions.py balance/tests/test_sessions.py
-git commit -m "feat(balance): add GET /api/sessions/unanalyzed endpoint"
+curl -s https://balance.gstoehl.dev/api/sessions/unanalyzed | python3 -m json.tool
 ```
+
+Expected: JSON array of sessions with `claude_used=true` and no analysis (may be empty)
+
+**Step 2: Test /api/stats/effectiveness endpoint**
+
+Run:
+```bash
+curl -s https://balance.gstoehl.dev/api/stats/effectiveness | python3 -m json.tool
+```
+
+Expected: JSON with `total_analyzed`, `alignment_breakdown`, etc.
+
+**Step 3: Verify Stats UI loads effectiveness section**
+
+Open: https://balance.gstoehl.dev/stats
+
+Expected: If analyses exist, shows "Session effectiveness (today)" card. If none, section is hidden.
 
 ---
 
-## Task 5: API Endpoint — Store Analysis Results
+## Task 3: Add Edge Case Handling
+
+**Purpose:** Handle edge cases from design doc (retry logic, no-data handling).
 
 **Files:**
-- Modify: `balance/src/routers/sessions.py`
-- Modify: `balance/tests/test_sessions.py`
+- Modify: `scripts/balance-analysis/analyze_sessions.py:115-155`
 
-**Step 1: Write failing test**
-
-```python
-# Add to balance/tests/test_sessions.py
-@pytest.mark.asyncio
-async def test_store_session_analysis():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # Create a session first
-        await client.post("/api/sessions/start", json={
-            "type": "expected",
-            "intention": "Test intention"
-        })
-        # Mark it as using claude and end it
-        await client.post("/api/session/mark-claude-used", json={})
-        await client.post("/api/sessions/end", json={"did_the_thing": True})
-
-        # Get the session ID
-        sessions = await client.get("/api/sessions/unanalyzed")
-        session_id = sessions.json()[0]["id"]
-
-        # Store analysis
-        response = await client.post(f"/api/sessions/{session_id}/analysis", json={
-            "intention_alignment": "aligned",
-            "alignment_detail": "Work matched intention",
-            "scope_behavior": "focused",
-            "scope_detail": None,
-            "project_switches": 0,
-            "tool_appropriate_count": 5,
-            "tool_questionable_count": 1,
-            "tool_questionable_examples": ["prompt 3: simple file read"],
-            "red_flags": [],
-            "one_line_summary": "Focused session on intended task",
-            "severity": "none",
-            "projects_used": ["knowledge-system"],
-            "prompt_count": 6
-        })
-        assert response.status_code == 200
-        assert response.json()["id"] is not None
-```
-
-**Step 2: Run test to verify it fails**
-
-Run: `cd balance && python -m pytest tests/test_sessions.py::test_store_session_analysis -v`
-Expected: FAIL — 404 or 405
-
-**Step 3: Add endpoint**
+**Step 1: Update analyze_session function with retry and no-data handling**
 
 ```python
-# Add to balance/src/routers/sessions.py
-from ..models import SessionAnalysisCreate
-import json
-
-@router.post("/sessions/{session_id}/analysis")
-async def store_session_analysis(session_id: int, data: SessionAnalysisCreate):
-    """Store analysis results for a session."""
-    async with get_db() as db:
-        now = datetime.now().isoformat()
-        cursor = await db.execute(
-            """INSERT INTO session_analyses (
-                session_id, analyzed_at, projects_used, prompt_count,
-                intention_alignment, alignment_detail, scope_behavior,
-                scope_detail, project_switches, tool_appropriate_count,
-                tool_questionable_count, tool_questionable_examples,
-                red_flags, one_line_summary, severity, raw_response
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                session_id, now,
-                json.dumps(data.projects_used), data.prompt_count,
-                data.intention_alignment, data.alignment_detail,
-                data.scope_behavior, data.scope_detail, data.project_switches,
-                data.tool_appropriate_count, data.tool_questionable_count,
-                json.dumps(data.tool_questionable_examples),
-                json.dumps(data.red_flags), data.one_line_summary,
-                data.severity, data.raw_response
-            )
-        )
-        await db.commit()
-        return {"id": cursor.lastrowid, "session_id": session_id}
-```
-
-**Step 4: Run test to verify it passes**
-
-Run: `cd balance && python -m pytest tests/test_sessions.py::test_store_session_analysis -v`
-Expected: PASS
-
-**Step 5: Commit**
-
-```bash
-git add balance/src/routers/sessions.py balance/tests/test_sessions.py
-git commit -m "feat(balance): add POST /api/sessions/{id}/analysis endpoint"
-```
-
----
-
-## Task 6: API Endpoint — Effectiveness Stats
-
-**Files:**
-- Modify: `balance/src/routers/sessions.py`
-- Modify: `balance/tests/test_sessions.py`
-
-**Step 1: Write failing test**
-
-```python
-# Add to balance/tests/test_sessions.py
-@pytest.mark.asyncio
-async def test_get_effectiveness_stats():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/stats/effectiveness")
-        assert response.status_code == 200
-        data = response.json()
-        assert "total_analyzed" in data
-        assert "alignment_breakdown" in data
-```
-
-**Step 2: Run test to verify it fails**
-
-Run: `cd balance && python -m pytest tests/test_sessions.py::test_get_effectiveness_stats -v`
-Expected: FAIL — 404
-
-**Step 3: Add endpoint**
-
-```python
-# Add to balance/src/routers/sessions.py
-@router.get("/stats/effectiveness")
-async def get_effectiveness_stats():
-    """Get aggregated effectiveness stats."""
-    async with get_db() as db:
-        # Get today's analyses
-        today_start = datetime.now().replace(
-            hour=0, minute=0, second=0, microsecond=0
-        ).isoformat()
-
-        cursor = await db.execute("""
-            SELECT intention_alignment, scope_behavior, red_flags,
-                   tool_questionable_count, one_line_summary, session_id
-            FROM session_analyses
-            WHERE analyzed_at >= ?
-            ORDER BY analyzed_at DESC
-        """, (today_start,))
-        rows = await cursor.fetchall()
-
-        if not rows:
-            return {
-                "total_analyzed": 0,
-                "alignment_breakdown": {},
-                "scope_breakdown": {},
-                "avg_questionable_prompts": 0,
-                "common_red_flags": [],
-                "recent_summaries": []
-            }
-
-        # Count alignments
-        alignment_counts = {}
-        scope_counts = {}
-        total_questionable = 0
-        all_flags = []
-        summaries = []
-
-        for row in rows:
-            alignment = row[0]
-            scope = row[1]
-            flags = json.loads(row[2]) if row[2] else []
-            questionable = row[3] or 0
-            summary = row[4]
-            session_id = row[5]
-
-            alignment_counts[alignment] = alignment_counts.get(alignment, 0) + 1
-            scope_counts[scope] = scope_counts.get(scope, 0) + 1
-            total_questionable += questionable
-            all_flags.extend(flags)
-            if summary:
-                summaries.append({"session_id": session_id, "summary": summary})
-
-        # Count flag occurrences
-        flag_counts = {}
-        for flag in all_flags:
-            flag_counts[flag] = flag_counts.get(flag, 0) + 1
-
-        common_flags = sorted(
-            [{"flag": k, "count": v} for k, v in flag_counts.items()],
-            key=lambda x: x["count"],
-            reverse=True
-        )[:5]
-
-        return {
-            "total_analyzed": len(rows),
-            "alignment_breakdown": alignment_counts,
-            "scope_breakdown": scope_counts,
-            "avg_questionable_prompts": round(total_questionable / len(rows), 1),
-            "common_red_flags": common_flags,
-            "recent_summaries": summaries[:3]
-        }
-```
-
-**Step 4: Run test to verify it passes**
-
-Run: `cd balance && python -m pytest tests/test_sessions.py::test_get_effectiveness_stats -v`
-Expected: PASS
-
-**Step 5: Commit**
-
-```bash
-git add balance/src/routers/sessions.py balance/tests/test_sessions.py
-git commit -m "feat(balance): add GET /api/stats/effectiveness endpoint"
-```
-
----
-
-## Task 7: Transcript Parser Script
-
-**Files:**
-- Create: `scripts/balance-analysis/transcript_parser.py`
-
-**Step 1: Create the parser module**
-
-```python
-#!/usr/bin/env python3
-"""Parse Claude Code JSONL transcripts and extract user prompts."""
-
-import json
-from datetime import datetime
-from pathlib import Path
-from typing import Iterator
-
-
-CLAUDE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
-
-
-def find_project_dirs() -> list[Path]:
-    """Find all project directories in Claude storage."""
-    if not CLAUDE_PROJECTS_DIR.exists():
-        return []
-    return [d for d in CLAUDE_PROJECTS_DIR.iterdir() if d.is_dir()]
-
-
-def decode_project_path(encoded: str) -> str:
-    """Decode project path from directory name.
-
-    e.g., '-home-ags-knowledge-system' -> 'knowledge-system'
-    """
-    # Remove leading dash and split
-    parts = encoded.lstrip("-").split("-")
-    # Return just the last part (project name)
-    return parts[-1] if parts else encoded
-
-
-def parse_jsonl_file(filepath: Path) -> Iterator[dict]:
-    """Parse a JSONL file and yield message objects."""
-    try:
-        with open(filepath, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        yield json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-    except Exception:
-        return
-
-
-def extract_messages_in_timewindow(
-    start_ts: datetime,
-    end_ts: datetime
-) -> list[dict]:
-    """Extract all user messages across all projects within a time window."""
-    messages = []
-
-    for project_dir in find_project_dirs():
-        project_name = decode_project_path(project_dir.name)
-
-        for jsonl_file in project_dir.glob("*.jsonl"):
-            for msg in parse_jsonl_file(jsonl_file):
-                # Check timestamp
-                ts_str = msg.get("timestamp")
-                if not ts_str:
-                    continue
-
-                try:
-                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-                    # Make naive for comparison if needed
-                    ts = ts.replace(tzinfo=None)
-                except ValueError:
-                    continue
-
-                # Filter by time window
-                if start_ts <= ts <= end_ts:
-                    msg_type = msg.get("type")
-
-                    if msg_type == "user":
-                        # User message
-                        content = msg.get("message", {}).get("content", "")
-                        messages.append({
-                            "timestamp": ts_str,
-                            "project": project_name,
-                            "type": "user",
-                            "prompt": content[:500],  # Truncate long prompts
-                        })
-
-                    elif msg_type == "assistant":
-                        # Extract tools used from assistant message
-                        content = msg.get("message", {}).get("content", [])
-                        tools = []
-                        if isinstance(content, list):
-                            for block in content:
-                                if isinstance(block, dict) and block.get("type") == "tool_use":
-                                    tools.append(block.get("name"))
-                        if tools:
-                            messages.append({
-                                "timestamp": ts_str,
-                                "project": project_name,
-                                "type": "tools",
-                                "tools_used": tools,
-                            })
-
-    # Sort by timestamp
-    messages.sort(key=lambda x: x["timestamp"])
-    return messages
-
-
-def build_timeline(messages: list[dict]) -> list[dict]:
-    """Build a timeline combining user prompts with their tool usage."""
-    timeline = []
-    current_prompt = None
-
-    for msg in messages:
-        if msg["type"] == "user":
-            # Save previous prompt if exists
-            if current_prompt:
-                timeline.append(current_prompt)
-
-            current_prompt = {
-                "timestamp": msg["timestamp"],
-                "project": msg["project"],
-                "prompt": msg["prompt"],
-                "tools_used": []
-            }
-        elif msg["type"] == "tools" and current_prompt:
-            # Add tools to current prompt
-            current_prompt["tools_used"].extend(msg["tools_used"])
-
-    # Don't forget the last one
-    if current_prompt:
-        timeline.append(current_prompt)
-
-    return timeline
-
-
-def summarize_timeline(timeline: list[dict]) -> dict:
-    """Create summary statistics from timeline."""
-    projects = set()
-    tools = {}
-
-    for entry in timeline:
-        projects.add(entry["project"])
-        for tool in entry.get("tools_used", []):
-            tools[tool] = tools.get(tool, 0) + 1
-
-    return {
-        "total_prompts": len(timeline),
-        "projects_touched": list(projects),
-        "tools_invoked": tools
-    }
-
-
-if __name__ == "__main__":
-    # Test with last hour
-    from datetime import timedelta
-
-    end = datetime.now()
-    start = end - timedelta(hours=1)
-
-    print(f"Extracting messages from {start} to {end}")
-    messages = extract_messages_in_timewindow(start, end)
-    timeline = build_timeline(messages)
-    summary = summarize_timeline(timeline)
-
-    print(f"\nFound {len(timeline)} prompts")
-    print(f"Projects: {summary['projects_touched']}")
-    print(f"Tools: {summary['tools_invoked']}")
-
-    if timeline:
-        print("\nFirst 3 prompts:")
-        for entry in timeline[:3]:
-            print(f"  [{entry['project']}] {entry['prompt'][:80]}...")
-```
-
-**Step 2: Create directory and test**
-
-```bash
-mkdir -p scripts/balance-analysis
-```
-
-Run: `python3 scripts/balance-analysis/transcript_parser.py`
-Expected: Shows recent prompts from your Claude usage
-
-**Step 3: Commit**
-
-```bash
-git add scripts/balance-analysis/transcript_parser.py
-git commit -m "feat(analysis): add transcript parser for Claude JSONL files"
-```
-
----
-
-## Task 8: Analysis Prompt Template
-
-**Files:**
-- Create: `scripts/balance-analysis/prompts/session_analysis.md`
-
-**Step 1: Create prompt template**
-
-```markdown
-# Session Effectiveness Analysis
-
-You are analyzing a pomodoro work session for alignment and effectiveness.
-Return ONLY valid JSON matching the schema below. No commentary, no markdown.
-
-## Session Context
-
-- **Stated intention:** "{intention}"
-- **Type:** {type}
-- **Priority:** "{priority}" (#{priority_rank})
-- **Duration:** {duration} minutes
-
-## Timeline of Claude Usage
-
-{timeline_json}
-
-## Analysis Dimensions
-
-### 1. Intention Alignment
-Did the work match what was declared?
-- `aligned` — Prompts match intention throughout
-- `pivoted` — Conscious shift to different goal (acceptable)
-- `drifted` — Gradual slide away from intention (problematic)
-
-### 2. Scope Behavior
-- `focused` — Stayed on task
-- `expanded` — "While I'm here..." additions
-- `rabbit_hole` — Exploratory tangent > 30% of prompts
-
-### 3. Tool Appropriateness
-Flag prompts that were likely faster without Claude:
-- Single file reads/edits user has done before
-- Simple git commands
-- Lookups that could be a quick grep
-
-### 4. Project Coherence
-- Single project = focused
-- Multiple projects = context switching (note if intentional vs drift)
-
-## Red Flags to Detect
-
-| Pattern | Indicator |
-|---------|-----------|
-| just_one_more_thing | Prompt starts with "also", "while we're here", "quickly" |
-| scope_creep | Early prompts narrow, late prompts broad |
-| yak_shaving | Refactoring/cleanup before actual task |
-| avoidance | Working on lower priority when intention was higher |
-| rubber_ducking | Asking Claude to confirm things user likely knows |
-
-## Output Schema
-
-Return exactly this JSON structure:
-
-{
-  "intention_alignment": "aligned|pivoted|drifted",
-  "alignment_detail": "one sentence explanation",
-  "scope_behavior": "focused|expanded|rabbit_hole",
-  "scope_detail": "what expanded, if applicable, else null",
-  "project_switches": 0,
-  "project_switch_note": "intentional or drift, if switches > 0, else null",
-  "tool_appropriate_count": 0,
-  "tool_questionable_count": 0,
-  "tool_questionable_examples": ["prompt N: reason"],
-  "red_flags": ["flag_name"],
-  "one_line_summary": "what actually happened in one sentence",
-  "severity": "none|minor|notable|significant"
-}
-
-No suggestions. Just observations.
-```
-
-**Step 2: Create directory and commit**
-
-```bash
-mkdir -p scripts/balance-analysis/prompts
-git add scripts/balance-analysis/prompts/session_analysis.md
-git commit -m "feat(analysis): add session analysis prompt template"
-```
-
----
-
-## Task 9: Main Analysis Script
-
-**Files:**
-- Create: `scripts/balance-analysis/analyze_sessions.py`
-
-**Step 1: Create the main script**
-
-```python
-#!/usr/bin/env python3
-"""
-Analyze Claude Code transcripts for Balance sessions.
-
-Run via cron at end of day:
-    0 22 * * * cd ~/knowledge-system && python3 scripts/balance-analysis/analyze_sessions.py
-"""
-
-import json
-import subprocess
-import sys
-from datetime import datetime
-from pathlib import Path
-from urllib.request import urlopen, Request
-from urllib.error import URLError
-
-from transcript_parser import extract_messages_in_timewindow, build_timeline, summarize_timeline
-
-
-BALANCE_URL = "https://balance.gstoehl.dev"
-PROMPT_TEMPLATE = Path(__file__).parent / "prompts" / "session_analysis.md"
-
-
-def api_get(endpoint: str) -> dict:
-    """GET request to Balance API."""
-    try:
-        with urlopen(f"{BALANCE_URL}{endpoint}", timeout=10) as response:
-            return json.loads(response.read().decode())
-    except URLError as e:
-        print(f"Error fetching {endpoint}: {e}", file=sys.stderr)
-        return None
-
-
-def api_post(endpoint: str, data: dict) -> dict:
-    """POST request to Balance API."""
-    try:
-        req = Request(
-            f"{BALANCE_URL}{endpoint}",
-            data=json.dumps(data).encode(),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urlopen(req, timeout=10) as response:
-            return json.loads(response.read().decode())
-    except URLError as e:
-        print(f"Error posting to {endpoint}: {e}", file=sys.stderr)
-        return None
-
-
-def load_prompt_template() -> str:
-    """Load the analysis prompt template."""
-    with open(PROMPT_TEMPLATE) as f:
-        return f.read()
-
-
-def build_analysis_prompt(session: dict, timeline: list[dict], summary: dict) -> str:
-    """Build the analysis prompt for a session."""
-    template = load_prompt_template()
-
-    # Calculate duration
-    start = datetime.fromisoformat(session["started_at"].replace("Z", "+00:00"))
-    end = datetime.fromisoformat(session["ended_at"].replace("Z", "+00:00"))
-    duration = int((end - start).total_seconds() / 60)
-
-    # Format timeline as compact JSON
-    timeline_json = json.dumps(timeline, indent=2)
-
-    # Fill template
-    prompt = template.format(
-        intention=session.get("intention") or "No intention specified",
-        type=session.get("type", "unknown"),
-        priority=session.get("priority_name") or "No priority",
-        priority_rank=session.get("priority_rank") or "?",
-        duration=duration,
-        timeline_json=timeline_json
-    )
-
-    return prompt
-
-
-def analyze_with_claude(prompt: str) -> dict:
-    """Run analysis via Claude CLI."""
-    result = subprocess.run(
-        [
-            "claude", "--print",
-            "--output-format", "json",
-            "--tools", "",
-            "--model", "haiku",
-            "--no-session-persistence"
-        ],
-        input=prompt,
-        capture_output=True,
-        text=True,
-        timeout=120
-    )
-
-    if result.returncode != 0:
-        raise Exception(f"Claude CLI failed: {result.stderr}")
-
-    response = json.loads(result.stdout)
-    if response.get("type") == "result" and response.get("subtype") == "success":
-        # Parse the inner JSON from Claude's response
-        return json.loads(response["result"])
-    else:
-        raise Exception(f"Analysis failed: {response}")
-
-
 def analyze_session(session: dict) -> bool:
     """Analyze a single session and store results."""
     session_id = session["id"]
@@ -881,25 +124,49 @@ def analyze_session(session: dict) -> bool:
     messages = extract_messages_in_timewindow(start, end)
     if not messages:
         print(f"  No Claude messages found in time window")
-        return False
+        # Store as no_data instead of silently skipping
+        api_post(f"/api/sessions/{session_id}/analysis", {
+            "intention_alignment": "unknown",
+            "alignment_detail": "No Claude messages found in session time window",
+            "scope_behavior": "unknown",
+            "scope_detail": None,
+            "project_switches": 0,
+            "tool_appropriate_count": 0,
+            "tool_questionable_count": 0,
+            "tool_questionable_examples": [],
+            "red_flags": [],
+            "one_line_summary": "No data - possible clock skew or transcripts deleted",
+            "severity": "none",
+            "projects_used": [],
+            "prompt_count": 0,
+            "raw_response": None
+        })
+        return True
 
     timeline = build_timeline(messages)
     summary = summarize_timeline(timeline)
 
     print(f"  Found {len(timeline)} prompts across {summary['projects_touched']}")
 
-    # Build and run analysis
+    # Build and run analysis with retry
     prompt = build_analysis_prompt(session, timeline, summary)
 
-    try:
-        analysis = analyze_with_claude(prompt)
-    except Exception as e:
-        print(f"  Analysis failed: {e}", file=sys.stderr)
-        return False
+    max_retries = 2
+    for attempt in range(max_retries):
+        try:
+            analysis = analyze_with_claude(prompt)
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"  Retry {attempt + 1}: {e}")
+                continue
+            print(f"  Analysis failed after {max_retries} attempts: {e}", file=sys.stderr)
+            return False
 
     # Add metadata
     analysis["projects_used"] = summary["projects_touched"]
     analysis["prompt_count"] = summary["total_prompts"]
+    analysis["raw_response"] = None  # Don't store raw for now
 
     # Store results
     result = api_post(f"/api/sessions/{session_id}/analysis", analysis)
@@ -909,298 +176,176 @@ def analyze_session(session: dict) -> bool:
     else:
         print(f"  Failed to store analysis", file=sys.stderr)
         return False
-
-
-def main():
-    print(f"=== Balance Session Analysis — {datetime.now().isoformat()} ===")
-
-    # Get unanalyzed sessions
-    sessions = api_get("/api/sessions/unanalyzed")
-    if sessions is None:
-        print("Failed to fetch unanalyzed sessions", file=sys.stderr)
-        sys.exit(1)
-
-    if not sessions:
-        print("No sessions to analyze")
-        return
-
-    print(f"Found {len(sessions)} unanalyzed sessions")
-
-    # Analyze each session
-    success = 0
-    for session in sessions:
-        if analyze_session(session):
-            success += 1
-
-    print(f"\n=== Complete: {success}/{len(sessions)} sessions analyzed ===")
-
-
-if __name__ == "__main__":
-    main()
 ```
 
-**Step 2: Test the script**
+**Step 2: Run analysis script to verify**
 
-Run: `python3 scripts/balance-analysis/analyze_sessions.py`
-Expected: Shows "No sessions to analyze" or attempts to analyze any pending sessions
+Run:
+```bash
+cd ~/knowledge-system && python3 scripts/balance-analysis/analyze_sessions.py
+```
+
+Expected: No errors, handles edge cases gracefully
 
 **Step 3: Commit**
 
 ```bash
 git add scripts/balance-analysis/analyze_sessions.py
-git commit -m "feat(analysis): add main session analysis script"
+git commit -m "$(cat <<'EOF'
+fix(analysis): add retry logic and no-data handling
+
+- Retry Claude CLI calls up to 2 times on failure
+- Store analysis with 'unknown' status when no messages found
+- Prevents silent failures for edge cases
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+EOF
+)"
 ```
 
 ---
 
-## Task 10: Stats UI — Effectiveness Section
+## Task 4: Set Up Cron Job
 
-**Files:**
-- Modify: `balance/src/templates/_content_stats.html`
+**Purpose:** Automate daily analysis at 22:00.
 
-**Step 1: Add effectiveness section**
+**Step 1: Create log directory**
 
-Add after the drift alert section:
-
-```html
-<div id="effectiveness-section" style="display: none;">
-  <div class="stats-card">
-    <div class="stats-card__header">Session effectiveness (today)</div>
-    <div class="stats-card__body">
-      <div id="effectiveness-summary"></div>
-      <div id="effectiveness-flags" class="mt-md"></div>
-      <div id="effectiveness-quotes" class="mt-md"></div>
-    </div>
-  </div>
-</div>
-```
-
-**Step 2: Add JavaScript to load effectiveness**
-
-Add to the Stats object in the inline script:
-
-```javascript
-async loadEffectiveness() {
-  try {
-    const data = await fetch('/api/stats/effectiveness').then(r => r.json());
-    const section = document.getElementById('effectiveness-section');
-
-    if (data.total_analyzed === 0) {
-      section.style.display = 'none';
-      return;
-    }
-
-    section.style.display = 'block';
-
-    // Summary
-    const summary = document.getElementById('effectiveness-summary');
-    const aligned = data.alignment_breakdown.aligned || 0;
-    const drifted = data.alignment_breakdown.drifted || 0;
-    const pivoted = data.alignment_breakdown.pivoted || 0;
-
-    summary.innerHTML = `
-      <div class="text-lg">${data.total_analyzed} sessions analyzed</div>
-      <div class="mt-sm">
-        <span class="badge badge--success">${aligned} aligned</span>
-        <span class="badge badge--warning">${pivoted} pivoted</span>
-        <span class="badge badge--error">${drifted} drifted</span>
-      </div>
-    `;
-
-    // Red flags
-    const flags = document.getElementById('effectiveness-flags');
-    if (data.common_red_flags.length > 0) {
-      flags.innerHTML = `
-        <div class="text-muted text-sm">Red flags:</div>
-        <div class="mt-xs">
-          ${data.common_red_flags.map(f =>
-            `<span class="tag">${f.flag} (${f.count})</span>`
-          ).join(' ')}
-        </div>
-      `;
-    } else {
-      flags.innerHTML = '';
-    }
-
-    // Quotes
-    const quotes = document.getElementById('effectiveness-quotes');
-    if (data.recent_summaries.length > 0) {
-      quotes.innerHTML = data.recent_summaries.map(s => `
-        <div class="quote mt-sm">
-          <div class="quote__text">"${s.summary}"</div>
-          <div class="quote__source">— Session #${s.session_id}</div>
-        </div>
-      `).join('');
-    }
-  } catch (err) {
-    console.error('Failed to load effectiveness:', err);
-  }
-}
-```
-
-**Step 3: Call in init**
-
-```javascript
-init() {
-  this.bindEvents();
-  this.loadStats();
-  this.loadNorthStar();
-  this.loadDrift();
-  this.loadEffectiveness();  // Add this
-}
-```
-
-**Step 4: Add styles (inline or extend shared)**
-
-```html
-<style>
-.badge { display: inline-block; padding: 0.25rem 0.5rem; font-size: var(--font-size-xs); }
-.badge--success { background: var(--color-success-bg); }
-.badge--warning { background: var(--color-warning-bg); }
-.badge--error { background: var(--color-error-bg); }
-.tag { display: inline-block; padding: 0.25rem 0.5rem; border: 1px solid var(--color-border); font-size: var(--font-size-xs); margin-right: 0.25rem; }
-.quote { padding-left: 1rem; border-left: 2px solid var(--color-border); }
-.quote__text { font-style: italic; }
-.quote__source { font-size: var(--font-size-xs); color: var(--color-muted); margin-top: 0.25rem; }
-</style>
-```
-
-**Step 5: Manual test**
-
-Run: `cd balance && python -m uvicorn src.main:app --reload`
-Visit: http://localhost:8005/stats
-Expected: Effectiveness section appears if analyses exist
-
-**Step 6: Commit**
-
+Run:
 ```bash
-git add balance/src/templates/_content_stats.html
-git commit -m "feat(balance): add effectiveness section to stats UI"
+mkdir -p ~/knowledge-system/logs
 ```
 
----
+**Step 2: Add crontab entry**
 
-## Task 11: Cron Setup
-
-**Files:**
-- Document in: `k8s/OPERATIONS.md`
-
-**Step 1: Add cron entry on server**
-
-SSH into server and add cron:
-
+Run:
 ```bash
 crontab -e
 ```
 
-Add:
+Add line:
 ```
-# Balance session analysis - runs at 22:00 daily
-0 22 * * * cd /home/ags/knowledge-system && /usr/bin/python3 scripts/balance-analysis/analyze_sessions.py >> /var/log/balance-analysis.log 2>&1
+0 22 * * * cd ~/knowledge-system && /usr/bin/python3 scripts/balance-analysis/analyze_sessions.py >> logs/balance-analysis.log 2>&1
 ```
 
-**Step 2: Create log file with permissions**
+**Step 3: Verify crontab saved**
 
+Run:
 ```bash
-sudo touch /var/log/balance-analysis.log
-sudo chown ags:ags /var/log/balance-analysis.log
+crontab -l | grep balance-analysis
 ```
 
-**Step 3: Document in OPERATIONS.md**
-
-Add section to `k8s/OPERATIONS.md`:
-
-```markdown
-## Cron Jobs
-
-### Balance Session Analysis
-
-Runs daily at 22:00 to analyze Claude Code usage during Balance sessions.
-
-**Location:** Server crontab
-**Script:** `scripts/balance-analysis/analyze_sessions.py`
-**Log:** `/var/log/balance-analysis.log`
-
-**Manual run:**
-```bash
-cd ~/knowledge-system && python3 scripts/balance-analysis/analyze_sessions.py
-```
-
-**Check logs:**
-```bash
-tail -f /var/log/balance-analysis.log
-```
-```
-
-**Step 4: Commit docs**
-
-```bash
-git add k8s/OPERATIONS.md
-git commit -m "docs: add balance analysis cron job documentation"
-```
+Expected: The crontab line appears
 
 ---
 
-## Task 12: End-to-End Test
+## Task 5: Create Test Session for End-to-End Testing
 
-**No files to modify — integration test**
+**Purpose:** Generate a real session with Claude usage to test the full pipeline.
 
-**Step 1: Start a Balance session with Claude**
+**Step 1: Start a test session via UI**
 
-1. Start Balance session with intention: "Test the transcript analysis feature"
-2. Use Claude Code for a few prompts
-3. End the session
+1. Go to https://balance.gstoehl.dev
+2. Start an Expected session with intention: "Test transcript analysis system"
+3. Use Claude Code during the session (this conversation counts!)
 
-**Step 2: Verify session is marked for analysis**
+**Step 2: Complete the session**
 
+1. Let timer complete or abandon after a few minutes
+2. Fill out questionnaire
+
+**Step 3: Verify session marked claude_used**
+
+Run:
 ```bash
-curl https://balance.gstoehl.dev/api/sessions/unanalyzed
+sqlite3 ~/knowledge-system/balance/data/balance.db \
+  "SELECT id, intention, claude_used FROM sessions ORDER BY id DESC LIMIT 5;"
 ```
 
-Expected: Session appears in list
+Expected: Recent session shows `claude_used = 1`
 
-**Step 3: Run analysis manually**
+---
 
+## Task 6: Run Analysis Script Manually
+
+**Purpose:** Test the full analysis pipeline.
+
+**Step 1: Run analysis script**
+
+Run:
 ```bash
 cd ~/knowledge-system && python3 scripts/balance-analysis/analyze_sessions.py
 ```
 
-Expected: Session gets analyzed, results stored
-
-**Step 4: Verify in Stats page**
-
-Visit: https://balance.gstoehl.dev/stats
-Expected: Effectiveness section shows the analysis
-
-**Step 5: Commit any fixes discovered**
-
-```bash
-git add -A
-git commit -m "fix(analysis): fixes from end-to-end testing"
+Expected output:
 ```
+=== Balance Session Analysis — 2026-01-01T... ===
+Found N unanalyzed sessions
+Analyzing session X: Test transcript analysis system
+  Found M prompts across ['knowledge-system']
+  Stored analysis: aligned, severity=none
+=== Complete: 1/1 sessions analyzed ===
+```
+
+**Step 2: Verify analysis stored**
+
+Run:
+```bash
+sqlite3 ~/knowledge-system/balance/data/balance.db \
+  "SELECT session_id, intention_alignment, one_line_summary FROM session_analyses ORDER BY id DESC LIMIT 3;"
+```
+
+Expected: Recent analysis with alignment verdict and summary
+
+**Step 3: Verify Stats UI shows new analysis**
+
+Refresh: https://balance.gstoehl.dev/stats
+
+Expected: "Session effectiveness (today)" card shows with analysis data
+
+---
+
+## Task 7: Final Verification and Documentation
+
+**Purpose:** Confirm everything works and update docs.
+
+**Step 1: Check Stats page with real data**
+
+Open: https://balance.gstoehl.dev/stats
+
+Verify:
+- Effectiveness section visible if analyses exist
+- Shows correct alignment breakdown
+- Red flags display correctly
+- Quotes from recent sessions appear
+
+**Step 2: Run analysis again to confirm idempotency**
+
+Run:
+```bash
+cd ~/knowledge-system && python3 scripts/balance-analysis/analyze_sessions.py
+```
+
+Expected: "No sessions to analyze" (already analyzed sessions not re-processed)
+
+**Step 3: Update CLAUDE.md if needed**
+
+Verify `CLAUDE.md` already references the design doc under Balance section.
 
 ---
 
 ## Summary
 
-| Task | Description |
-|------|-------------|
-| 1 | Extend intention field |
-| 2 | Database schema |
-| 3 | Pydantic models |
-| 4 | GET /sessions/unanalyzed |
-| 5 | POST /sessions/{id}/analysis |
-| 6 | GET /stats/effectiveness |
-| 7 | Transcript parser script |
-| 8 | Analysis prompt template |
-| 9 | Main analysis script |
-| 10 | Stats UI effectiveness section |
-| 11 | Cron setup |
-| 12 | End-to-end test |
+| Task | Description | Status |
+|------|-------------|--------|
+| 1 | Verify existing components | Pending |
+| 2 | Test Balance API endpoints | Pending |
+| 3 | Add edge case handling | Pending |
+| 4 | Set up cron job | Pending |
+| 5 | Create test session | Pending |
+| 6 | Run analysis script | Pending |
+| 7 | Final verification | Pending |
 
-**Dependencies:**
-- Task 1-3 can run in parallel
-- Tasks 4-6 depend on Tasks 2-3
-- Tasks 7-9 can run in parallel with API work
-- Task 10 depends on Task 6
-- Task 11-12 are final integration steps
+**Implementation is ~95% complete.** Main work is verification, edge case handling, and cron setup.

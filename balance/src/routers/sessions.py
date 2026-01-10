@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Response
 from datetime import datetime, timedelta
 import logging
 import os
+import math
 
 from ..database import get_db
 import json
@@ -246,6 +247,22 @@ async def timer_complete():
             raise HTTPException(400, "No session awaiting completion")
 
     settings = await get_settings()
+    state = await get_app_state()
+    if state["break_until"]:
+        break_until = datetime.fromisoformat(state["break_until"])
+        now = datetime.now()
+        if now < break_until:
+            remaining_seconds = int((break_until - now).total_seconds())
+            remaining_minutes = max(1, math.ceil(remaining_seconds / 60))
+            is_long_break = remaining_minutes >= settings["long_break"]
+            return {
+                "break_duration": remaining_minutes,
+                "cycle_position": None,
+                "is_long_break": is_long_break,
+                "break_until": break_until.isoformat(),
+                "break_until_ts": int(break_until.timestamp())
+            }
+
     cycle_position = await get_cycle_position_smart()
 
     # Every 4th session (position 3) gets long break

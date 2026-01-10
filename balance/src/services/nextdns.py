@@ -10,8 +10,13 @@ class NextDNSError(Exception):
 
 
 class NextDNSService:
+    """NextDNS API client for YouTube blocking via Parental Control.
+
+    Uses the Parental Control services API which blocks YouTube and all
+    related domains (googlevideo.com, ytimg.com, etc.) more reliably
+    than manual denylist entries.
+    """
     BASE_URL = "https://api.nextdns.io"
-    YOUTUBE_DOMAIN = "youtube.com"
 
     def __init__(self, api_key: str = None, profile_id: str = None):
         self.api_key = api_key or os.getenv("NEXTDNS_API_KEY")
@@ -21,28 +26,27 @@ class NextDNSService:
             raise ValueError("NEXTDNS_API_KEY and NEXTDNS_PROFILE_ID required")
 
     async def unblock_youtube(self) -> bool:
-        """Remove youtube.com from denylist."""
+        """Disable YouTube in parental control (allow access)."""
         async with httpx.AsyncClient() as client:
-            response = await client.request(
-                method="DELETE",
-                url=f"{self.BASE_URL}/profiles/{self.profile_id}/denylist/{self.YOUTUBE_DOMAIN}",
+            response = await client.patch(
+                url=f"{self.BASE_URL}/profiles/{self.profile_id}/parentalControl/services/youtube",
                 headers={"X-Api-Key": self.api_key},
+                json={"active": False},
                 timeout=10.0
             )
 
-            if response.status_code not in (200, 204, 404):
+            if response.status_code not in (200, 204):
                 raise NextDNSError(f"Failed to unblock: {response.status_code}")
 
             return True
 
     async def block_youtube(self) -> bool:
-        """Add youtube.com to denylist."""
+        """Enable YouTube in parental control (block access)."""
         async with httpx.AsyncClient() as client:
-            response = await client.request(
-                method="PUT",
-                url=f"{self.BASE_URL}/profiles/{self.profile_id}/denylist/{self.YOUTUBE_DOMAIN}",
+            response = await client.patch(
+                url=f"{self.BASE_URL}/profiles/{self.profile_id}/parentalControl/services/youtube",
                 headers={"X-Api-Key": self.api_key},
-                json={"id": self.YOUTUBE_DOMAIN, "active": True},
+                json={"active": True},
                 timeout=10.0
             )
 

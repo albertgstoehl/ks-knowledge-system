@@ -55,3 +55,35 @@ document.addEventListener('click', function(e) {
     });
   }
 });
+
+// ==========================================================================
+// PRIORITY LIST - Up/down reorder
+// ==========================================================================
+
+function movePriority(btn, direction) {
+  const item = btn.closest('.priority-list__item');
+  const list = item.closest('.priority-list');
+
+  if (direction === 'up' && item.previousElementSibling) {
+    item.previousElementSibling.before(item);
+  } else if (direction === 'down' && item.nextElementSibling) {
+    item.nextElementSibling.after(item);
+  }
+
+  updatePriorityList(list);
+}
+
+function updatePriorityList(list) {
+  const items = list.querySelectorAll('.priority-list__item');
+  items.forEach((item, index) => {
+    // Update rank number
+    const rank = item.querySelector('.priority-list__rank');
+    if (rank) rank.textContent = index + 1;
+
+    // Update button states
+    const upBtn = item.querySelector('.priority-list__arrow[data-dir="up"]');
+    const downBtn = item.querySelector('.priority-list__arrow[data-dir="down"]');
+    if (upBtn) upBtn.disabled = index === 0;
+    if (downBtn) downBtn.disabled = index === items.length - 1;
+  });
+}

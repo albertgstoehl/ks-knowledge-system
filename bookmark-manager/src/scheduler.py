@@ -35,7 +35,7 @@ def start_scheduler():
         replace_existing=True
     )
     scheduler.start()
-    logging.info("Scheduler started with expiry check (5m interval)")
+    logger.info("Scheduler started with expiry check (5m interval)")
 
 
 def stop_scheduler():

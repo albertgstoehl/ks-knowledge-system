@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balance - Stats Mockup</title>
+  <link rel="stylesheet" href="/static/shared/css/variables.css">
+  <link rel="stylesheet" href="/static/shared/css/base.css">
+  <link rel="stylesheet" href="/static/shared/css/components.css">
+  <link rel="stylesheet" href="/static/shared/css/utilities.css">
+  <style>
+    /* Mockup-specific styles */
+    .mockup-nav {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      border-bottom: 2px solid var(--color-border);
+      background: var(--color-hover);
+    }
+    .mockup-nav a {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--color-border);
+      text-decoration: none;
+      color: var(--color-text);
+      cursor: pointer;
+    }
+    .mockup-nav a.active {
+      background: var(--color-text);
+      color: var(--color-bg);
+    }
+    .screen { display: none; padding: 2rem; max-width: 600px; margin: 0 auto; }
+    .screen.active { display: block; }
+
+    /* Drift Alert */
+    .drift-alert {
+      border: 2px solid var(--color-border);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .drift-alert__header {
+      font-size: var(--font-size-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    .drift-alert__main {
+      font-size: var(--font-size-lg);
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+    .drift-alert__context {
+      font-size: var(--font-size-sm);
+      color: var(--color-muted);
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-border-light);
+    }
+    .drift-alert__priority {
+      font-weight: bold;
+    }
+    .drift-alert__stat {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--color-border);
+      margin: 0 0.25rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Week Stats */
+    .week-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .week-stat {
+      text-align: center;
+      padding: 1rem;
+      border: 1px solid var(--color-border-light);
+    }
+    .week-stat__value {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .week-stat__label {
+      font-size: var(--font-size-xs);
+      color: var(--color-muted);
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    /* Priority Breakdown */
+    .priority-breakdown {
+      margin-top: 2rem;
+    }
+    .breakdown-row {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--color-border-light);
+      gap: 1rem;
+    }
+    .breakdown-row__rank {
+      width: 20px;
+      font-size: var(--font-size-sm);
+      color: var(--color-muted);
+    }
+    .breakdown-row__name { flex: 1; }
+    .breakdown-row__bar {
+      width: 100px;
+      height: 8px;
+      background: var(--color-border-light);
+    }
+    .breakdown-row__fill {
+      height: 100%;
+      background: var(--color-text);
+    }
+    .breakdown-row__pct {
+      width: 40px;
+      text-align: right;
+      font-size: var(--font-size-sm);
+    }
+
+    /* Full-width dropdown trigger for priority selection */
+    .dropdown--full {
+      width: 100%;
+      margin: 1rem 0;
+    }
+    .dropdown--full .btn {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .dropdown--full .btn.selected {
+      border-width: 2px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="mockup-nav">
+    <a class="active" onclick="showScreen('nextup', this)">Home + Next Up</a>
+    <a onclick="showScreen('timer', this)">Timer (with capture)</a>
+    <a onclick="showScreen('edit', this)">Edit Task</a>
+    <a onclick="showScreen('stats', this)">Stats</a>
+    <a href="/" style="margin-left: auto;">Back to Balance</a>
+  </nav>
+
+  <!-- HOME + NEXT UP SCREEN -->
+  <div id="nextup" class="screen active">
+    <h2 style="margin-bottom: 1rem;">Balance</h2>
+
+    <!-- Quick Capture Input -->
+    <div style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 0.5rem;">
+        <input type="text" class="input" id="capture-input" placeholder="+ Add task..." style="flex: 1;">
+      </div>
+      <div style="font-size: var(--font-size-xs); color: var(--color-muted); margin-top: 0.25rem;">
+        Press Enter to add · <span id="slot-count">2 slots left</span>
+      </div>
+    </div>
+
+    <!-- Next Up List (using priority-list component, no arrows, with dates) -->
+    <div class="view-header" style="margin-bottom: 0.5rem;">
+      <span class="view-header__title">NEXT UP</span>
+    </div>
+
+    <div class="priority-list" id="nextup-list">
+      <div class="priority-list__item" data-id="1" onclick="showScreen('edit', document.querySelector('.mockup-nav a:nth-child(3)'))">
+        <span class="priority-list__name" style="flex: 1;">Do taxes</span>
+        <span class="priority-list__meta">Jan 7</span>
+        <button class="btn btn--ghost btn--sm" onclick="event.stopPropagation(); deleteTask(1)" style="padding: 0 0.5rem;">✕</button>
+      </div>
+      <div class="priority-list__item" data-id="2" onclick="showScreen('edit', document.querySelector('.mockup-nav a:nth-child(3)'))" style="background: var(--color-hover);">
+        <span class="priority-list__name" style="flex: 1;">Deploy feature X</span>
+        <span class="priority-list__meta" style="color: var(--color-text);">Work · Jan 8</span>
+        <button class="btn btn--ghost btn--sm" onclick="event.stopPropagation(); deleteTask(2)" style="padding: 0 0.5rem;">✕</button>
+      </div>
+      <div class="priority-list__item" data-id="3" onclick="showScreen('edit', document.querySelector('.mockup-nav a:nth-child(3)'))">
+        <span class="priority-list__name" style="flex: 1;">Submit chapter 3 draft</span>
+        <span class="priority-list__meta">Thesis · Jan 10</span>
+        <button class="btn btn--ghost btn--sm" onclick="event.stopPropagation(); deleteTask(3)" style="padding: 0 0.5rem;">✕</button>
+      </div>
+      <div class="priority-list__item priority-list__item--empty" style="border: 1px dashed var(--color-border-light); background: none;">
+        <span style="color: var(--color-muted); font-size: var(--font-size-sm);">4. empty slot</span>
+      </div>
+      <div class="priority-list__item priority-list__item--empty" style="border: 1px dashed var(--color-border-light); border-top: none; background: none;">
+        <span style="color: var(--color-muted); font-size: var(--font-size-sm);">5. empty slot</span>
+      </div>
+    </div>
+
+    <!-- Session Type Toggle -->
+    <div style="margin-top: 2rem;">
+      <div class="button-group" style="margin-bottom: 1rem;">
+        <button class="btn btn--option selected" id="home-expected">Expected</button>
+        <button class="btn btn--option" id="home-personal">Personal</button>
+      </div>
+
+      <!-- For Expected: must select from Next Up -->
+      <div id="expected-flow">
+        <p style="font-size: var(--font-size-sm); color: var(--color-muted); margin-bottom: 1rem;">
+          Select a task from Next Up to start an Expected session
+        </p>
+        <button class="btn btn--primary btn--full btn--lg" disabled>Start Session</button>
+      </div>
+
+      <!-- For Personal: free-form (hidden by default) -->
+      <div id="personal-flow" style="display: none;">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <input type="text" class="input" placeholder="What are you exploring?">
+        </div>
+        <button class="btn btn--primary btn--full btn--lg">Start Session</button>
+      </div>
+    </div>
+
+    <!-- Today Progress -->
+    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--color-border-light);">
+      <div style="font-size: var(--font-size-xs); color: var(--color-muted); text-transform: uppercase; margin-bottom: 0.5rem;">Today</div>
+      <div style="display: flex; gap: 1rem; font-size: var(--font-size-sm);">
+        <span>Expected: ●●●○○○○○○○</span>
+        <span>Personal: ●○○</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMER WITH CAPTURE SCREEN -->
+  <div id="timer" class="screen">
+    <div style="text-align: center; padding-top: 2rem;">
+      <div style="font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-muted);">Expected · Work</div>
+
+      <div style="font-size: 4rem; font-weight: bold; margin: 2rem 0;">21:34</div>
+
+      <div style="margin-bottom: 2rem;">
+        <div style="font-size: var(--font-size-sm); color: var(--color-muted);">Focus on</div>
+        <div style="font-size: var(--font-size-lg);">Deploy feature X</div>
+      </div>
+
+      <!-- Progress ring placeholder -->
+      <div style="width: 200px; height: 8px; background: var(--color-border-light); margin: 0 auto 3rem;">
+        <div style="width: 60%; height: 100%; background: var(--color-text);"></div>
+      </div>
+
+      <!-- Mini Capture Input -->
+      <div style="max-width: 300px; margin: 0 auto;">
+        <input type="text" class="input" id="timer-capture" placeholder="+ Quick capture..." style="font-size: var(--font-size-sm);">
+        <div style="font-size: var(--font-size-xs); color: var(--color-muted); margin-top: 0.25rem;">
+          Thought? Capture it, stay focused.
+        </div>
+      </div>
+
+      <button class="btn btn--ghost" style="margin-top: 3rem;">Abandon session</button>
+    </div>
+  </div>
+
+  <!-- EDIT TASK MODAL/SCREEN -->
+  <div id="edit" class="screen">
+    <h2 style="margin-bottom: 1.5rem;">Edit Task</h2>
+
+    <div class="form-group" style="margin-bottom: 1.5rem;">
+      <label class="form-group__label">Task</label>
+      <input type="text" class="input" value="Deploy feature X">
+    </div>
+
+    <div class="form-group" style="margin-bottom: 1.5rem;">
+      <label class="form-group__label">Due date (optional)</label>
+      <input type="date" class="input" value="2026-01-08">
+    </div>
+
+    <div class="form-group" style="margin-bottom: 1.5rem;">
+      <label class="form-group__label">Link to priority (optional)</label>
+      <div class="dropdown dropdown--full">
+        <button class="btn selected" id="edit-priority-trigger" onclick="toggleDropdown('edit-priority')">
+          <span>Work</span>
+          <span>▾</span>
+        </button>
+        <div class="dropdown__menu" id="dropdown-edit-priority">
+          <button class="dropdown__item" onclick="closeDropdown('edit-priority')">None</button>
+          <button class="dropdown__item dropdown__item--with-meta">
+            <span>Thesis</span>
+            <span class="dropdown__item-meta">#1</span>
+          </button>
+          <button class="dropdown__item dropdown__item--with-meta">
+            <span>Work</span>
+            <span class="dropdown__item-meta">#2</span>
+          </button>
+          <button class="dropdown__item dropdown__item--with-meta">
+            <span>Knowledge-system</span>
+            <span class="dropdown__item-meta">#3</span>
+          </button>
+        </div>
+        <div class="dropdown__backdrop" id="backdrop-edit-priority" onclick="closeDropdown('edit-priority')"></div>
+      </div>
+    </div>
+
+    <!-- Session history for this task -->
+    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--color-border-light);">
+      <div style="font-size: var(--font-size-xs); color: var(--color-muted); text-transform: uppercase; margin-bottom: 0.5rem;">Sessions on this task</div>
+      <div style="font-size: var(--font-size-sm);">
+        2 sessions · 50 min total
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+      <button class="btn btn--full" onclick="showScreen('nextup', document.querySelector('.mockup-nav a:first-child'))">Cancel</button>
+      <button class="btn btn--primary btn--full">Save</button>
+    </div>
+
+    <button class="btn btn--danger btn--full" style="margin-top: 1rem;">Delete Task</button>
+  </div>
+
+  <!-- STATS SCREEN (Cockpit) -->
+  <div id="stats" class="screen">
+    <h2 style="margin-bottom: 1.5rem;">This Week</h2>
+
+    <!-- Main Drift Alert -->
+    <div class="drift-alert">
+      <div class="drift-alert__header">Biggest drift</div>
+      <div class="drift-alert__main">
+        <span class="drift-alert__priority">Thesis</span> is priority #1 but got
+        <span class="drift-alert__stat">2</span> sessions.
+        <span class="drift-alert__priority">Knowledge-system</span> (priority #3) got
+        <span class="drift-alert__stat">8</span>.
+      </div>
+      <div class="drift-alert__context">
+        This is week 3 of Thesis being deprioritized.
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="week-stats">
+      <div class="week-stat">
+        <div class="week-stat__value">14</div>
+        <div class="week-stat__label">Sessions</div>
+      </div>
+      <div class="week-stat">
+        <div class="week-stat__value">11</div>
+        <div class="week-stat__label">Expected</div>
+      </div>
+      <div class="week-stat">
+        <div class="week-stat__value">3</div>
+        <div class="week-stat__label">Personal</div>
+      </div>
+    </div>
+
+    <!-- Priority Breakdown -->
+    <div class="priority-breakdown">
+      <div class="view-header">
+        <span class="view-header__title">Expected Sessions by Priority</span>
+      </div>
+
+      <div class="breakdown-row">
+        <div class="breakdown-row__rank">#1</div>
+        <div class="breakdown-row__name">Thesis</div>
+        <div class="breakdown-row__bar">
+          <div class="breakdown-row__fill" style="width: 18%"></div>
+        </div>
+        <div class="breakdown-row__pct">18%</div>
+      </div>
+
+      <div class="breakdown-row">
+        <div class="breakdown-row__rank">#2</div>
+        <div class="breakdown-row__name">Work catchup</div>
+        <div class="breakdown-row__bar">
+          <div class="breakdown-row__fill" style="width: 9%"></div>
+        </div>
+        <div class="breakdown-row__pct">9%</div>
+      </div>
+
+      <div class="breakdown-row">
+        <div class="breakdown-row__rank">#3</div>
+        <div class="breakdown-row__name">Knowledge-system</div>
+        <div class="breakdown-row__bar">
+          <div class="breakdown-row__fill" style="width: 73%"></div>
+        </div>
+        <div class="breakdown-row__pct">73%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- START SESSION SCREEN -->
+  <div id="start" class="screen">
+    <h2 style="margin-bottom: 1.5rem;">Start Session</h2>
+
+    <div class="button-group" style="margin-bottom: 1.5rem;">
+      <button class="btn btn--option selected" id="btn-expected">Expected</button>
+      <button class="btn btn--option" id="btn-personal">Personal</button>
+    </div>
+
+    <div id="priority-section">
+      <label class="form-group__label">Priority</label>
+      <!-- Using shared dropdown component -->
+      <div class="dropdown dropdown--full">
+        <button class="btn" id="priority-trigger" onclick="toggleDropdown('priority')">
+          <span id="priority-label">Select priority...</span>
+          <span>▾</span>
+        </button>
+        <div class="dropdown__menu" id="dropdown-priority">
+          <button class="dropdown__item dropdown__item--with-meta" onclick="selectPriority('Thesis', 1)">
+            <span>Thesis</span>
+            <span class="dropdown__item-meta">#1</span>
+          </button>
+          <button class="dropdown__item dropdown__item--with-meta" onclick="selectPriority('Work catchup', 2)">
+            <span>Work catchup</span>
+            <span class="dropdown__item-meta">#2</span>
+          </button>
+          <button class="dropdown__item dropdown__item--with-meta" onclick="selectPriority('Knowledge-system', 3)">
+            <span>Knowledge-system</span>
+            <span class="dropdown__item-meta">#3</span>
+          </button>
+        </div>
+        <div class="dropdown__backdrop" id="backdrop-priority" onclick="closeDropdown('priority')"></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-group__label" for="intention">Intention (optional)</label>
+      <input type="text" class="input" id="intention" placeholder="3 words max">
+    </div>
+
+    <button class="btn btn--primary btn--full btn--lg" disabled id="start-btn">Start Session</button>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="settings" class="screen">
+    <h2 style="margin-bottom: 1.5rem;">Priorities</h2>
+    <p style="color: var(--color-muted); margin-bottom: 1rem; font-size: var(--font-size-sm);">
+      Use arrows to reorder. Expected sessions must be tagged to a priority.
+    </p>
+
+    <!-- Using shared priority-list component -->
+    <div class="priority-list" id="priority-list">
+      <div class="priority-list__item" data-id="1">
+        <span class="priority-list__rank">1</span>
+        <span class="priority-list__name">Thesis</span>
+        <span class="priority-list__meta">2 sessions</span>
+        <span class="priority-list__arrows">
+          <button class="priority-list__arrow" data-dir="up" onclick="movePriority(this, 'up')" disabled>&#9650;</button>
+          <button class="priority-list__arrow" data-dir="down" onclick="movePriority(this, 'down')">&#9660;</button>
+        </span>
+      </div>
+      <div class="priority-list__item" data-id="2">
+        <span class="priority-list__rank">2</span>
+        <span class="priority-list__name">Work catchup</span>
+        <span class="priority-list__meta">1 session</span>
+        <span class="priority-list__arrows">
+          <button class="priority-list__arrow" data-dir="up" onclick="movePriority(this, 'up')">&#9650;</button>
+          <button class="priority-list__arrow" data-dir="down" onclick="movePriority(this, 'down')">&#9660;</button>
+        </span>
+      </div>
+      <div class="priority-list__item" data-id="3">
+        <span class="priority-list__rank">3</span>
+        <span class="priority-list__name">Knowledge-system</span>
+        <span class="priority-list__meta">8 sessions</span>
+        <span class="priority-list__arrows">
+          <button class="priority-list__arrow" data-dir="up" onclick="movePriority(this, 'up')">&#9650;</button>
+          <button class="priority-list__arrow" data-dir="down" onclick="movePriority(this, 'down')" disabled>&#9660;</button>
+        </span>
+      </div>
+    </div>
+
+    <button class="btn btn--full" style="margin-top: 1rem;">+ Add Priority</button>
+    <p style="color: var(--color-muted); margin-top: 0.5rem; font-size: var(--font-size-xs);">
+      Max 4 priorities
+    </p>
+
+    <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--color-border);">
+      <h3 style="margin-bottom: 1rem;">North Star</h3>
+      <textarea class="textarea" rows="3">Quality time with family and healthy relationships. Community. Being present. Not taking myself too seriously.</textarea>
+    </div>
+  </div>
+
+  <!-- Shared component JS -->
+  <script src="/static/shared/js/components.js"></script>
+  <script>
+    function showScreen(id, link) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.mockup-nav a').forEach(a => a.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      link.classList.add('active');
+    }
+
+    function selectPriority(name, rank) {
+      document.getElementById('priority-label').textContent = name;
+      document.getElementById('priority-trigger').classList.add('selected');
+      closeDropdown('priority');
+      document.getElementById('start-btn').disabled = false;
+    }
+
+    // Toggle expected/personal
+    document.getElementById('btn-expected').addEventListener('click', function() {
+      this.classList.add('selected');
+      document.getElementById('btn-personal').classList.remove('selected');
+      document.getElementById('priority-section').style.display = 'block';
+      // Reset priority selection
+      document.getElementById('priority-label').textContent = 'Select priority...';
+      document.getElementById('priority-trigger').classList.remove('selected');
+      document.getElementById('start-btn').disabled = true;
+    });
+
+    document.getElementById('btn-personal').addEventListener('click', function() {
+      this.classList.add('selected');
+      document.getElementById('btn-expected').classList.remove('selected');
+      document.getElementById('priority-section').style.display = 'none';
+      document.getElementById('start-btn').disabled = false;
+    });
+
+    // Home screen Expected/Personal toggle
+    document.getElementById('home-expected')?.addEventListener('click', function() {
+      this.classList.add('selected');
+      document.getElementById('home-personal').classList.remove('selected');
+      document.getElementById('expected-flow').style.display = 'block';
+      document.getElementById('personal-flow').style.display = 'none';
+    });
+
+    document.getElementById('home-personal')?.addEventListener('click', function() {
+      this.classList.add('selected');
+      document.getElementById('home-expected').classList.remove('selected');
+      document.getElementById('expected-flow').style.display = 'none';
+      document.getElementById('personal-flow').style.display = 'block';
+    });
+
+    // Task selection for starting session
+    document.querySelectorAll('#nextup-list .priority-list__item:not(.priority-list__item--empty)').forEach(item => {
+      item.style.cursor = 'pointer';
+    });
+
+    function deleteTask(id) {
+      alert('Task ' + id + ' deleted');
+    }
+  </script>
+</body>
+</html>
