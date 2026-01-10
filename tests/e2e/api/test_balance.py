@@ -26,15 +26,17 @@ async def test_session_workflow(balance_url):
             pytest.skip("System in break mode, cannot start session")
         
         # Create a priority first (fresh database might not have any)
-        await client.post(
+        create_priority_response = await client.post(
             f"{balance_url}/api/priorities",
             json={"name": "Test Priority", "order": 1}
         )
+        # Get the created priority ID
+        priority_id = create_priority_response.json().get("id", 1)
         
         # Start a session
         response = await client.post(
             f"{balance_url}/api/sessions/start",
-            json={"type": "expected", "priority_id": 1}
+            json={"type": "expected", "priority_id": priority_id}
         )
         assert response.status_code == 200
         
