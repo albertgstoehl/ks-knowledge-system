@@ -19,9 +19,13 @@ async def get_settings(db):
 
 
 async def ensure_youtube_blocked(db_url: str = None):
-    """Ensure YouTube is blocked unless there's an active YouTube session."""
+    """Ensure YouTube is blocked unless there's an active YouTube session.
+
+    Called on startup to enforce default-blocked state.
+    """
     try:
         async with get_db(db_url) as db:
+            # Check for active YouTube session
             cursor = await db.execute("""
                 SELECT id FROM sessions
                 WHERE type = 'youtube' AND ended_at IS NULL
@@ -97,13 +101,32 @@ async def check_expired_sessions(db_url: str = None):
                         (now.isoformat(), session["id"])
                     )
 
-                    # Set break
-                    break_until = now + timedelta(minutes=short_break)
-                    await db.execute(
-                        "UPDATE app_state SET break_until = ? WHERE id = 1",
-                        (break_until.isoformat(),)
-                    )
-                    logger.info(f"Break set until {break_until.isoformat()}")
+                    # Set break ONLY if not already set (timer-complete may have set it)
+                    cursor = await db.execute("SELECT break_until FROM app_state WHERE id = 1")
+                    state = await cursor.fetchone()
+                    existing_break = state["break_until"] if state else None
+
+                    if existing_break:
+                        existing_break_time = datetime.fromisoformat(existing_break)
+                        if existing_break_time > now:
+                            # Break already running from timer-complete, don't overwrite
+                            logger.info(f"Session {session['id']} ended, break already set until {existing_break}")
+                        else:
+                            # Old break expired, set new one
+                            break_until = now + timedelta(minutes=short_break)
+                            await db.execute(
+                                "UPDATE app_state SET break_until = ? WHERE id = 1",
+                                (break_until.isoformat(),)
+                            )
+                            logger.info(f"Break set until {break_until.isoformat()}")
+                    else:
+                        # No break set, set one
+                        break_until = now + timedelta(minutes=short_break)
+                        await db.execute(
+                            "UPDATE app_state SET break_until = ? WHERE id = 1",
+                            (break_until.isoformat(),)
+                        )
+                        logger.info(f"Break set until {break_until.isoformat()}")
 
                     await db.commit()
     except Exception as e:

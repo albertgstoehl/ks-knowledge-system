@@ -8,6 +8,9 @@ from src.utils.paths import find_shared_dir
 from pathlib import Path
 import os
 
+# Support path-based routing (e.g., /dev prefix for dev environment)
+BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
+
 app = FastAPI(
     title="Bookmark Manager API",
     description="Minimal bookmark management with semantic search",
@@ -44,7 +47,7 @@ async def health_check():
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/ui/")
+    return RedirectResponse(url=f"{BASE_PATH}/ui/")
 
 # Register routers
 app.include_router(bookmarks.router)

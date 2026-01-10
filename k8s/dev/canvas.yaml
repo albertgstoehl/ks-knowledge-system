@@ -1,9 +1,9 @@
-# /home/ags/knowledge-system/k8s/base/canvas.yaml
+# /home/ags/knowledge-system/k8s/dev/canvas.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: canvas
-  namespace: knowledge-system
+  namespace: knowledge-system-dev
 spec:
   replicas: 1
   selector:
@@ -14,11 +14,9 @@ spec:
       labels:
         app: canvas
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull-secret
       containers:
         - name: canvas
-          image: ghcr.io/albertgstoehl/canvas:latest
+          image: ghcr.io/albertgstoehl/canvas:dev
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -28,7 +26,9 @@ spec:
             - name: DATABASE_URL
               value: "sqlite+aiosqlite:///./data/canvas.db"
             - name: KASTEN_URL
-              value: "https://kasten.gstoehl.dev"
+              value: "https://kasten.gstoehl.dev/dev"
+            - name: BASE_PATH
+              value: "/dev"
           volumeMounts:
             - name: data
               mountPath: /app/data
@@ -47,17 +47,17 @@ spec:
               cpu: "200m"
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: canvas-pvc
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: canvas
-  namespace: knowledge-system
+  namespace: knowledge-system-dev
 spec:
   selector:
     app: canvas
   ports:
     - port: 8000
       targetPort: 8000
+  type: ClusterIP

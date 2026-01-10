@@ -15,6 +15,7 @@ from src.utils.paths import find_shared_dir
 from src.utils.sanitize import safe_html
 
 CANVAS_EXTERNAL_URL = os.getenv("CANVAS_EXTERNAL_URL", "http://localhost:8002")
+BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 
 router = APIRouter(prefix="/ui", tags=["ui"])
 
@@ -88,7 +89,7 @@ async def ui_index(
                 "feed_items": items
             })
 
-        context = {"request": request, "feeds": feeds_with_items, "view": view}
+        context = {"request": request, "feeds": feeds_with_items, "view": view, "base_path": BASE_PATH}
 
         # htmx request → return partial
         if request.headers.get("HX-Request"):
@@ -144,7 +145,8 @@ async def ui_index(
         "query": q,
         "filter": filter,
         "inbox_count": inbox_count,
-        "canvas_url": CANVAS_EXTERNAL_URL
+        "canvas_url": CANVAS_EXTERNAL_URL,
+        "base_path": BASE_PATH
     }
 
     # htmx request → return partial

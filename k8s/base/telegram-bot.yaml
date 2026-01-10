@@ -19,6 +19,8 @@ spec:
           image: docker.io/library/telegram-bot:latest
           imagePullPolicy: Never
           env:
+            - name: TZ
+              value: "Europe/Zurich"
             - name: API_URL
               value: "http://bookmark-manager.knowledge-system.svc.cluster.local:8000"
           envFrom:

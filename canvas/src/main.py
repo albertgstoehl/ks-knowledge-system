@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers import canvas, ui, workspace, events
+import os
+
+# Support path-based routing (e.g., /dev prefix for dev environment)
+BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 
 app = FastAPI(title="Canvas", version="0.1.0")
 

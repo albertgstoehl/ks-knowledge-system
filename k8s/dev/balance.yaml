@@ -1,24 +1,22 @@
-# /home/ags/knowledge-system/k8s/base/canvas.yaml
+# /home/ags/knowledge-system/k8s/dev/balance.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: canvas
-  namespace: knowledge-system
+  name: balance
+  namespace: knowledge-system-dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: canvas
+      app: balance
   template:
     metadata:
       labels:
-        app: canvas
+        app: balance
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull-secret
       containers:
-        - name: canvas
-          image: ghcr.io/albertgstoehl/canvas:latest
+        - name: balance
+          image: ghcr.io/albertgstoehl/balance:dev
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -26,9 +24,21 @@ spec:
             - name: TZ
               value: "Europe/Zurich"
             - name: DATABASE_URL
-              value: "sqlite+aiosqlite:///./data/canvas.db"
-            - name: KASTEN_URL
-              value: "https://kasten.gstoehl.dev"
+              value: "./data/balance.db"
+            - name: BASE_PATH
+              value: "/dev"
+            - name: NEXTDNS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: balance-secrets-dev
+                  key: nextdns-api-key
+                  optional: true
+            - name: NEXTDNS_PROFILE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: balance-secrets-dev
+                  key: nextdns-profile-id
+                  optional: true
           volumeMounts:
             - name: data
               mountPath: /app/data
@@ -41,23 +51,23 @@ spec:
           resources:
             requests:
               memory: "128Mi"
-              cpu: "50m"
+              cpu: "100m"
             limits:
               memory: "256Mi"
               cpu: "200m"
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: canvas-pvc
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: canvas
-  namespace: knowledge-system
+  name: balance
+  namespace: knowledge-system-dev
 spec:
   selector:
-    app: canvas
+    app: balance
   ports:
     - port: 8000
       targetPort: 8000
+  type: ClusterIP

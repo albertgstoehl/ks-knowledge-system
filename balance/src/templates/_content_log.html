@@ -1,11 +1,8 @@
+<!-- Force rebuild $(date) -->
 <div class="container">
-  <header class="page-header">
-    <h1>Log Activity</h1>
-  </header>
-
-    <div class="log-tabs">
-      <button class="log-tab active" data-tab="meditation">Meditation</button>
-      <button class="log-tab" data-tab="exercise">Exercise</button>
+    <div class="button-group log-tabs">
+      <button class="btn btn--option active" data-tab="meditation">Meditation</button>
+      <button class="btn btn--option" data-tab="exercise">Exercise</button>
     </div>
 
     <!-- Meditation form -->
@@ -16,33 +13,33 @@
           <input type="number" id="meditation-duration" value="10" min="1" max="120">
           <span>minutes</span>
         </div>
-        <div class="quick-durations">
-          <button type="button" class="quick-btn" data-value="5">5</button>
-          <button type="button" class="quick-btn selected" data-value="10">10</button>
-          <button type="button" class="quick-btn" data-value="15">15</button>
-          <button type="button" class="quick-btn" data-value="20">20</button>
+        <div class="button-group quick-durations">
+          <button type="button" class="btn btn--option" data-value="5">5</button>
+          <button type="button" class="btn btn--option selected" data-value="10">10</button>
+          <button type="button" class="btn btn--option" data-value="15">15</button>
+          <button type="button" class="btn btn--option" data-value="20">20</button>
         </div>
       </div>
 
       <div class="time-override">
         <span class="time-override-toggle">This was earlier today</span>
-        <div class="time-override-options" id="meditation-time-options">
-          <button type="button" class="time-option" data-value="morning">Morning</button>
-          <button type="button" class="time-option" data-value="afternoon">Afternoon</button>
-          <button type="button" class="time-option" data-value="evening">Evening</button>
+        <div class="button-group time-override-options" id="meditation-time-options">
+          <button type="button" class="btn btn--option" data-value="morning">Morning</button>
+          <button type="button" class="btn btn--option" data-value="afternoon">Afternoon</button>
+          <button type="button" class="btn btn--option" data-value="evening">Evening</button>
         </div>
       </div>
 
-      <button type="submit" class="btn btn-primary btn-full">Log Meditation</button>
+      <button type="submit" class="btn btn--primary btn--full">Log Meditation</button>
     </form>
 
     <!-- Exercise form -->
     <form class="log-form" id="exercise-form">
       <div class="form-group">
         <label class="form-label">Type</label>
-        <div class="type-options">
-          <button type="button" class="type-option-btn selected" data-value="cardio">Cardio</button>
-          <button type="button" class="type-option-btn" data-value="strength">Strength</button>
+        <div class="button-group type-options">
+          <button type="button" class="btn btn--option selected" data-value="cardio">Cardio</button>
+          <button type="button" class="btn btn--option" data-value="strength">Strength</button>
         </div>
       </div>
 
@@ -52,24 +49,24 @@
           <input type="number" id="exercise-duration" value="30" min="5" max="180">
           <span>minutes</span>
         </div>
-        <div class="quick-durations">
-          <button type="button" class="quick-btn" data-value="15">15</button>
-          <button type="button" class="quick-btn selected" data-value="30">30</button>
-          <button type="button" class="quick-btn" data-value="45">45</button>
-          <button type="button" class="quick-btn" data-value="60">60</button>
+        <div class="button-group quick-durations">
+          <button type="button" class="btn btn--option" data-value="15">15</button>
+          <button type="button" class="btn btn--option selected" data-value="30">30</button>
+          <button type="button" class="btn btn--option" data-value="45">45</button>
+          <button type="button" class="btn btn--option" data-value="60">60</button>
         </div>
       </div>
 
       <div class="form-group">
         <label class="form-label">Intensity</label>
-        <div class="intensity-options">
-          <button type="button" class="intensity-btn" data-value="light">Light</button>
-          <button type="button" class="intensity-btn selected" data-value="medium">Medium</button>
-          <button type="button" class="intensity-btn" data-value="hard">Hard</button>
+        <div class="button-group intensity-options">
+          <button type="button" class="btn btn--option" data-value="light">Light</button>
+          <button type="button" class="btn btn--option selected" data-value="medium">Medium</button>
+          <button type="button" class="btn btn--option" data-value="hard">Hard</button>
         </div>
       </div>
 
-      <button type="submit" class="btn btn-primary btn-full">Log Exercise</button>
+      <button type="submit" class="btn btn--primary btn--full">Log Exercise</button>
     </form>
 
     <div class="week-summary" id="week-summary">

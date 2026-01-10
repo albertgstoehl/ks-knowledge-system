@@ -34,17 +34,83 @@ kubectl describe pod -l app=bookmark-manager -n knowledge-system
 kubectl get certificate -n knowledge-system
 ```
 
-## Updating Images
+## GHCR (GitHub Container Registry) Setup
+
+### One-Time Setup: Create GHCR Pull Secrets
+
+**Prerequisites:**
+- GitHub Personal Access Token with `write:packages` scope
+- NextDNS API key (for Balance dev environment)
+
+**Create GHCR pull secrets (prod and dev):**
 
 ```bash
-# Rebuild and reimport image (example: bookmark-manager)
-cd /home/ags/knowledge-system/bookmark-manager
-docker build -t bookmark-manager:latest .
-docker save bookmark-manager:latest | sudo k3s ctr images import -
-kubectl rollout restart deploy/bookmark-manager -n knowledge-system
+# Production namespace
+kubectl create secret docker-registry ghcr-pull-secret \
+  --docker-server=ghcr.io \
+  --docker-username=albertgstoehl \
+  --docker-password=YOUR_GITHUB_PAT \
+  -n knowledge-system
 
-# Same pattern for other services:
-# canvas, kasten, balance, telegram-bot
+# Dev namespace (create dev namespace first)
+kubectl apply -f k8s/dev/namespace.yaml
+
+kubectl create secret docker-registry ghcr-pull-secret \
+  --docker-server=ghcr.io \
+  --docker-username=albertgstoehl \
+  --docker-password=YOUR_GITHUB_PAT \
+  -n knowledge-system-dev
+```
+
+**Create Balance secrets for dev:**
+
+```bash
+# Dev uses separate secrets from prod
+kubectl create secret generic balance-secrets-dev \
+  --from-literal=nextdns-api-key=YOUR_NEXTDNS_API_KEY \
+  --from-literal=nextdns-profile-id=c87dff \
+  -n knowledge-system-dev
+
+# Optional: Create bookmark-manager secrets for dev (if needed)
+kubectl create secret generic bookmark-manager-secrets-dev \
+  --from-literal=JINA_API_KEY=YOUR_JINA_KEY \
+  --from-literal=CLAUDE_CODE_OAUTH_TOKEN=YOUR_TOKEN \
+  -n knowledge-system-dev
+```
+
+**Verify secrets:**
+
+```bash
+kubectl get secrets -n knowledge-system
+kubectl get secrets -n knowledge-system-dev
+```
+
+### CI/CD Image Workflow
+
+**Dev branch push → GitHub Actions:**
+1. Builds images: `ghcr.io/albertgstoehl/{service}:dev`
+2. Pushes to GHCR
+3. Deploys to `knowledge-system-dev` namespace
+4. Runs E2E tests
+5. Auto-creates PR to main if tests pass
+
+**Main branch merge → GitHub Actions:**
+1. Re-tags `:dev` images as `:latest` (no rebuild)
+2. Pushes `:latest` to GHCR
+3. Deploys to `knowledge-system` namespace (prod)
+
+### Manual Image Update (Legacy)
+
+For local testing without CI/CD:
+
+```bash
+# Build and push to GHCR manually
+cd /home/ags/knowledge-system/balance
+docker build -t ghcr.io/albertgstoehl/balance:dev .
+docker push ghcr.io/albertgstoehl/balance:dev
+
+# Update deployment
+kubectl rollout restart deploy/balance -n knowledge-system-dev
 ```
 
 ## Backup
@@ -189,6 +255,24 @@ cd ~/knowledge-system && python3 scripts/balance-analysis/analyze_sessions.py
 ```bash
 tail -f /var/log/balance-analysis.log
 ```
+
+## APScheduler Considerations (Balance & Bookmark-Manager)
+
+Balance and Bookmark-Manager use APScheduler for background jobs. Keep in mind:
+
+| Service | Jobs | Interval |
+|---------|------|----------|
+| Balance | Session expiry, evening cutoff | 30s, 1m |
+| Bookmark-Manager | Bookmark expiry, feed item cleanup | 5m |
+
+| Concern | Mitigation |
+|---------|------------|
+| Pod restarts | Jobs run on startup after DB init |
+| Multiple replicas | Don't scale beyond 1 replica (scheduler would run on each) |
+| Slow external APIs | Use async jobs with timeouts to prevent blocking |
+| Memory usage | Negligible with few interval jobs |
+
+If scaling becomes necessary, switch to a distributed task queue (e.g., Celery + Redis) or leader election for scheduler.
 
 ## File Locations
 

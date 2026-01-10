@@ -14,13 +14,17 @@ spec:
       labels:
         app: balance
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: balance
-          image: docker.io/library/balance:latest
-          imagePullPolicy: Never
+          image: ghcr.io/albertgstoehl/balance:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
+            - name: TZ
+              value: "Europe/Zurich"
             - name: DATABASE_URL
               value: "./data/balance.db"
             - name: NEXTDNS_API_KEY

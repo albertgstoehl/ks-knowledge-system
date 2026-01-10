@@ -1,0 +1,203 @@
+name: Deploy to Dev & Run E2E Tests
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/albertgstoehl
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      balance: ${{ steps.changes.outputs.balance }}
+      bookmark-manager: ${{ steps.changes.outputs.bookmark-manager }}
+      canvas: ${{ steps.changes.outputs.canvas }}
+      kasten: ${{ steps.changes.outputs.kasten }}
+      shared: ${{ steps.changes.outputs.shared }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            balance:
+              - 'balance/**'
+            bookmark-manager:
+              - 'bookmark-manager/**'
+            canvas:
+              - 'canvas/**'
+            kasten:
+              - 'kasten/**'
+            shared:
+              - 'shared/**'
+
+  build-and-push:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [balance, bookmark-manager, canvas, kasten]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check if build needed
+        id: should-build
+        run: |
+          if [ "${{ needs.detect-changes.outputs.shared }}" == "true" ]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.detect-changes.outputs[matrix.service] }}" == "true" ]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Log in to GHCR
+        if: steps.should-build.outputs.build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push image
+        if: steps.should-build.outputs.build == 'true'
+        run: |
+          docker build -t ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:dev -f ${{ matrix.service }}/Dockerfile .
+          docker push ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:dev
+
+  deploy-to-dev:
+    needs: build-and-push
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+      
+      - name: Deploy to dev namespace
+        run: |
+          kubectl apply -f k8s/dev/ --validate=false
+      
+      - name: Restart deployments
+        run: |
+          kubectl rollout restart deployment/balance -n knowledge-system-dev
+          kubectl rollout restart deployment/bookmark-manager -n knowledge-system-dev
+          kubectl rollout restart deployment/canvas -n knowledge-system-dev
+          kubectl rollout restart deployment/kasten -n knowledge-system-dev
+      
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status deployment/balance -n knowledge-system-dev --timeout=5m
+          kubectl rollout status deployment/bookmark-manager -n knowledge-system-dev --timeout=5m
+          kubectl rollout status deployment/canvas -n knowledge-system-dev --timeout=5m
+          kubectl rollout status deployment/kasten -n knowledge-system-dev --timeout=5m
+
+  reset-dev-databases:
+    needs: deploy-to-dev
+    runs-on: self-hosted
+    steps:
+      - name: Set up kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+      
+      - name: Wait for pods to be ready
+        run: |
+          kubectl wait --for=condition=ready pod -l app=balance -n knowledge-system-dev --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=bookmark-manager -n knowledge-system-dev --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=canvas -n knowledge-system-dev --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=kasten -n knowledge-system-dev --timeout=5m
+      
+      - name: Reset databases
+        run: |
+          kubectl exec -n knowledge-system-dev deployment/balance -- sh -c "rm -f /app/data/*.db || true"
+          kubectl exec -n knowledge-system-dev deployment/bookmark-manager -- sh -c "rm -f /app/data/*.db || true"
+          kubectl exec -n knowledge-system-dev deployment/canvas -- sh -c "rm -f /app/data/*.db || true"
+          kubectl exec -n knowledge-system-dev deployment/kasten -- sh -c "rm -f /app/data/*.db || true"
+      
+      - name: Restart deployments to reinitialize databases
+        run: |
+          kubectl rollout restart deployment/balance -n knowledge-system-dev
+          kubectl rollout restart deployment/bookmark-manager -n knowledge-system-dev
+          kubectl rollout restart deployment/canvas -n knowledge-system-dev
+          kubectl rollout restart deployment/kasten -n knowledge-system-dev
+      
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status deployment/balance -n knowledge-system-dev --timeout=3m
+          kubectl rollout status deployment/bookmark-manager -n knowledge-system-dev --timeout=3m
+          kubectl rollout status deployment/canvas -n knowledge-system-dev --timeout=3m
+          kubectl rollout status deployment/kasten -n knowledge-system-dev --timeout=3m
+
+  run-api-tests:
+    needs: reset-dev-databases
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install test dependencies
+        run: |
+          pip install -r tests/requirements-test.txt
+      
+      - name: Run API tests
+        run: |
+          pytest tests/e2e/api/ -v --base-url=https://bookmark.gstoehl.dev/dev
+
+  run-ui-tests:
+    needs: run-api-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install test dependencies
+        run: |
+          pip install -r tests/requirements-test.txt
+          playwright install chromium
+      
+      - name: Run UI tests
+        run: |
+          # Run pytest-playwright tests
+          pytest tests/e2e/ui/ -v
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+  create-pr:
+    needs: run-api-tests
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create PR to master
+        run: |
+          gh pr create --base master --head dev \
+            --title "Deploy to prod (tests passed)" \
+            --body "All smoke tests passed in dev environment. Ready for production deployment." \
+            || echo "PR already exists"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,37 +1,41 @@
-# /home/ags/knowledge-system/k8s/base/canvas.yaml
+# /home/ags/knowledge-system/k8s/dev/kasten.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: canvas
-  namespace: knowledge-system
+  name: kasten
+  namespace: knowledge-system-dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: canvas
+      app: kasten
   template:
     metadata:
       labels:
-        app: canvas
+        app: kasten
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull-secret
       containers:
-        - name: canvas
-          image: ghcr.io/albertgstoehl/canvas:latest
+        - name: kasten
+          image: ghcr.io/albertgstoehl/kasten:dev
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
             - name: TZ
               value: "Europe/Zurich"
+            - name: NOTES_PATH
+              value: "/app/notes"
             - name: DATABASE_URL
-              value: "sqlite+aiosqlite:///./data/canvas.db"
-            - name: KASTEN_URL
-              value: "https://kasten.gstoehl.dev"
+              value: "sqlite+aiosqlite:///./data/kasten.db"
+            - name: CANVAS_URL
+              value: "https://canvas.gstoehl.dev/dev"
+            - name: BASE_PATH
+              value: "/dev"
           volumeMounts:
             - name: data
               mountPath: /app/data
+            - name: notes
+              mountPath: /app/notes
           livenessProbe:
             httpGet:
               path: /health
@@ -47,17 +51,19 @@ spec:
               cpu: "200m"
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: canvas-pvc
+          emptyDir: {}
+        - name: notes
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: canvas
-  namespace: knowledge-system
+  name: kasten
+  namespace: knowledge-system-dev
 spec:
   selector:
-    app: canvas
+    app: kasten
   ports:
     - port: 8000
       targetPort: 8000
+  type: ClusterIP

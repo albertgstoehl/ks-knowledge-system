@@ -9,6 +9,9 @@ from .database import init_db
 from .routers import sessions, logging, settings, priorities, nextup, events
 from .scheduler import start_scheduler, stop_scheduler, check_expired_sessions, ensure_youtube_blocked
 
+# Support path-based routing (e.g., /dev prefix for dev environment)
+BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -55,9 +58,11 @@ templates = Jinja2Templates(directory=[templates_path, shared_templates_path])
 
 def _template_for(request: Request, full: str, partial: str, context: dict):
     """Return partial for htmx requests, full page otherwise."""
+    # Always include BASE_PATH in template context
+    template_context = {"request": request, "base_path": BASE_PATH, **context}
     if request.headers.get("HX-Request"):
-        return templates.TemplateResponse(partial, {"request": request, **context})
-    return templates.TemplateResponse(full, {"request": request, **context})
+        return templates.TemplateResponse(partial, template_context)
+    return templates.TemplateResponse(full, template_context)
 
 
 @app.get("/", response_class=HTMLResponse)
