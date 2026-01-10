@@ -14,3 +14,4 @@ ENV DATABASE_URL=/app/data/balance.db
 EXPOSE 8000
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Force rebuild 1768075786
