@@ -27,7 +27,8 @@ async def test_create_and_retrieve_bookmark(bookmark_url):
         # Retrieve bookmark
         response = await client.get(f"{bookmark_url}/bookmarks/{bookmark_id}")
         assert response.status_code == 200
-        assert response.json()["url"] == "https://example.com"
+        # API normalizes URLs with trailing slash
+        assert response.json()["url"] == "https://example.com/"
 
 
 @pytest.mark.asyncio
