@@ -193,9 +193,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Create PR to main
+      - name: Create PR to master
         run: |
-          gh pr create --base main --head dev \
+          gh pr create --base master --head dev \
             --title "Deploy to prod (tests passed)" \
             --body "All smoke tests passed in dev environment. Ready for production deployment." \
             || echo "PR already exists"
