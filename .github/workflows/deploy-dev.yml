@@ -69,9 +69,8 @@ jobs:
       
       - name: Build and push image
         if: steps.should-build.outputs.build == 'true'
-        working-directory: ${{ matrix.service }}
         run: |
-          docker build -t ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:dev .
+          docker build -t ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:dev -f ${{ matrix.service }}/Dockerfile .
           docker push ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:dev
 
   deploy-to-dev:
