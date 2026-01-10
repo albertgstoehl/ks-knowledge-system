@@ -1,0 +1,60 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: knowledge-system-dev-ingress
+  namespace: knowledge-system-dev
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: knowledge-system-dev-strip-dev-prefix@kubernetescrd
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - bookmark.gstoehl.dev
+        - canvas.gstoehl.dev
+        - kasten.gstoehl.dev
+        - balance.gstoehl.dev
+      secretName: knowledge-system-dev-tls
+  rules:
+    - host: bookmark.gstoehl.dev
+      http:
+        paths:
+          - path: /dev
+            pathType: Prefix
+            backend:
+              service:
+                name: bookmark-manager
+                port:
+                  number: 8000
+    - host: canvas.gstoehl.dev
+      http:
+        paths:
+          - path: /dev
+            pathType: Prefix
+            backend:
+              service:
+                name: canvas
+                port:
+                  number: 8000
+    - host: kasten.gstoehl.dev
+      http:
+        paths:
+          - path: /dev
+            pathType: Prefix
+            backend:
+              service:
+                name: kasten
+                port:
+                  number: 8000
+    - host: balance.gstoehl.dev
+      http:
+        paths:
+          - path: /dev
+            pathType: Prefix
+            backend:
+              service:
+                name: balance
+                port:
+                  number: 8000
