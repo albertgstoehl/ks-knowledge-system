@@ -2,6 +2,7 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 import os
 from datetime import datetime
+import asyncio
 
 # Verify DATABASE_URL is set
 assert "DATABASE_URL" in os.environ, "Run tests with DATABASE_URL=./data/test.db"
@@ -96,6 +97,31 @@ async def test_timer_complete_includes_break_timestamp():
 
         iso_ts = datetime.fromisoformat(data["break_until"]).timestamp()
         assert abs(iso_ts - data["break_until_ts"]) <= 1
+
+
+async def test_timer_complete_does_not_extend_existing_break():
+    """Timer-complete should not extend a running break."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        start_response = await client.post("/api/sessions/start", json={
+            "type": "expected",
+            "intention": "No break extension"
+        })
+        assert start_response.status_code == 200
+
+        first_response = await client.post("/api/sessions/timer-complete")
+        assert first_response.status_code == 200
+        first_data = first_response.json()
+        first_break_ts = first_data["break_until_ts"]
+
+        await asyncio.sleep(2)
+
+        second_response = await client.post("/api/sessions/timer-complete")
+        assert second_response.status_code == 200
+        second_data = second_response.json()
+        second_break_ts = second_data["break_until_ts"]
+
+        assert abs(second_break_ts - first_break_ts) <= 1
 
 
 async def test_break_check_not_on_break():

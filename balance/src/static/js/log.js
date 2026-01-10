@@ -13,9 +13,9 @@ const LogPage = {
 
   bindEvents() {
     // Tab switching
-    document.querySelectorAll('.log-tab').forEach(tab => {
+    document.querySelectorAll('.log-tabs .btn--option').forEach(tab => {
       tab.addEventListener('click', () => {
-        document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.log-tabs .btn--option').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.log-form').forEach(f => f.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById(tab.dataset.tab + '-form').classList.add('active');
@@ -24,9 +24,9 @@ const LogPage = {
 
     // Quick duration buttons
     document.querySelectorAll('.quick-durations').forEach(group => {
-      group.querySelectorAll('.quick-btn').forEach(btn => {
+      group.querySelectorAll('.btn--option').forEach(btn => {
         btn.addEventListener('click', () => {
-          group.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('selected'));
+          group.querySelectorAll('.btn--option').forEach(b => b.classList.remove('selected'));
           btn.classList.add('selected');
           group.closest('.form-group').querySelector('input').value = btn.dataset.value;
         });
@@ -34,18 +34,18 @@ const LogPage = {
     });
 
     // Exercise type selection
-    document.querySelectorAll('.type-option-btn').forEach(btn => {
+    document.querySelectorAll('.type-options .btn--option').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.type-option-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.type-options .btn--option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.exerciseType = btn.dataset.value;
       });
     });
 
     // Intensity selection
-    document.querySelectorAll('.intensity-btn').forEach(btn => {
+    document.querySelectorAll('.intensity-options .btn--option').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.intensity-options .btn--option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.exerciseIntensity = btn.dataset.value;
       });
@@ -60,9 +60,9 @@ const LogPage = {
     });
 
     // Time of day selection (meditation)
-    document.querySelectorAll('#meditation-time-options .time-option').forEach(btn => {
+    document.querySelectorAll('#meditation-time-options .btn--option').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('#meditation-time-options .time-option').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('#meditation-time-options .btn--option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.meditationTimeOfDay = btn.dataset.value;
       });
@@ -136,21 +136,21 @@ const LogPage = {
 
   resetMeditationForm() {
     document.getElementById('meditation-duration').value = '10';
-    document.querySelectorAll('#meditation-form .quick-btn').forEach(b => b.classList.remove('selected'));
-    document.querySelector('#meditation-form .quick-btn[data-value="10"]').classList.add('selected');
-    document.querySelectorAll('#meditation-time-options .time-option').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('#meditation-form .quick-durations .btn--option').forEach(b => b.classList.remove('selected'));
+    document.querySelector('#meditation-form .quick-durations .btn--option[data-value="10"]').classList.add('selected');
+    document.querySelectorAll('#meditation-time-options .btn--option').forEach(b => b.classList.remove('selected'));
     document.getElementById('meditation-time-options').classList.remove('visible');
     this.meditationTimeOfDay = null;
   },
 
   resetExerciseForm() {
     document.getElementById('exercise-duration').value = '30';
-    document.querySelectorAll('#exercise-form .quick-btn').forEach(b => b.classList.remove('selected'));
-    document.querySelector('#exercise-form .quick-btn[data-value="30"]').classList.add('selected');
-    document.querySelectorAll('.type-option-btn').forEach(b => b.classList.remove('selected'));
-    document.querySelector('.type-option-btn[data-value="cardio"]').classList.add('selected');
-    document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('selected'));
-    document.querySelector('.intensity-btn[data-value="medium"]').classList.add('selected');
+    document.querySelectorAll('#exercise-form .quick-durations .btn--option').forEach(b => b.classList.remove('selected'));
+    document.querySelector('#exercise-form .quick-durations .btn--option[data-value="30"]').classList.add('selected');
+    document.querySelectorAll('.type-options .btn--option').forEach(b => b.classList.remove('selected'));
+    document.querySelector('.type-options .btn--option[data-value="cardio"]').classList.add('selected');
+    document.querySelectorAll('.intensity-options .btn--option').forEach(b => b.classList.remove('selected'));
+    document.querySelector('.intensity-options .btn--option[data-value="medium"]').classList.add('selected');
     this.exerciseType = 'cardio';
     this.exerciseIntensity = 'medium';
   },
@@ -172,7 +172,7 @@ const LogPage = {
 
   showSuccess(message) {
     // Simple success feedback - could be enhanced with a toast
-    const btn = document.querySelector('.log-form.active .btn-primary');
+    const btn = document.querySelector('.log-form.active .btn--primary');
     const originalText = btn.textContent;
     btn.textContent = message;
     btn.style.background = '#090';

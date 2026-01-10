@@ -79,6 +79,8 @@ See `docs/COMPONENT-LIBRARY.md` for full API reference.
 | Session flow (timer-complete, rabbit hole) | `docs/plans/2025-01-01-balance-session-flow-improvements.md` |
 | Priority drift detection | `docs/plans/2026-01-01-priority-drift-detection-plan.md` |
 | Session effectiveness analysis | `docs/plans/2026-01-01-transcript-analysis-design.md` |
+| Next Up (quick task capture) | `docs/plans/2026-01-03-next-up-design.md` |
+| YouTube gatekeeper (NextDNS + server-side enforcement) | `docs/plans/2026-01-01-youtube-gatekeeper-design.md` |
 
 ## Cross-Service Documentation
 
@@ -87,6 +89,17 @@ See `docs/COMPONENT-LIBRARY.md` for full API reference.
 | Knowledge flow (read → think → browse) | `docs/plans/2025-12-23-knowledge-flow-redesign.md` |
 | Bookmark categorization (thesis/pins) | `bookmark-manager/docs/plans/2025-12-22-bookmark-categorization-design.md` |
 | **Thesis workflow (outline, citations, Zotero)** | `docs/plans/2025-12-29-thesis-workflow-design.md` |
+| **System-wide analytics** | `docs/plans/2026-01-03-system-wide-analytics-design.md` |
+
+## Saturday Analytics Ritual
+
+Weekly analysis of system usage data. **All calculations must be done via Python scripts, no mental math.**
+
+1. **Export:** `python scripts/weekly_analytics_export.py`
+2. **Analyze:** Share `analytics/weekly-YYYY-MM-DD.json` with Claude
+3. **Calculate:** Claude writes Python to compute funnel metrics, feature usage, dead features
+4. **Discuss:** Together brainstorm causes and solutions
+5. **Iterate:** Remove dead features, fix friction points
 
 ## Quick Reference
 

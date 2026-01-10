@@ -16,6 +16,7 @@ docker compose -f docker-compose.dev.yml up --build
 | bookmark-manager | http://localhost:8001   |
 | canvas           | http://localhost:8002   |
 | kasten           | http://localhost:8003   |
+| balance          | http://localhost:8005   |
 
 ## Hot Reload
 
@@ -64,7 +65,7 @@ docker compose -f docker-compose.dev.yml down
 | Image updates    | `docker compose build`    | `sudo k3s ctr import`     |
 | Network policies | None (all can talk)       | Zero-trust, explicit      |
 | TLS              | None (HTTP)               | Let's Encrypt             |
-| Ports            | 8001/8002/8003            | 443 via ingress           |
+| Ports            | 8001/8002/8003/8005       | 443 via ingress           |
 
 ## Claude Workflow
 
@@ -79,5 +80,6 @@ Each service stores SQLite in its own `data/` directory:
 - `./bookmark-manager/data/bookmarks.db`
 - `./canvas/data/canvas.db`
 - `./kasten/data/kasten.db`
+- `./balance/data/balance.db`
 
 These are bind-mounted and persist between container restarts.

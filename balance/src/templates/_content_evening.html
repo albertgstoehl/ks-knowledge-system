@@ -5,16 +5,16 @@
   </header>
 
     <div class="question-group">
-      <div class="feeling-options">
-        <button class="feeling-btn" data-value="heavy">
+      <div class="button-group feeling-options">
+        <button class="btn btn--option feeling-btn" data-value="heavy">
           <span class="indicator"></span>
           <span>Heavy</span>
         </button>
-        <button class="feeling-btn" data-value="okay">
+        <button class="btn btn--option feeling-btn" data-value="okay">
           <span class="indicator"></span>
           <span>Okay</span>
         </button>
-        <button class="feeling-btn" data-value="light">
+        <button class="btn btn--option feeling-btn" data-value="light">
           <span class="indicator"></span>
           <span>Light</span>
         </button>
@@ -23,22 +23,22 @@
 
     <div class="question-group">
       <label class="question-label">Meaningful time with someone?</label>
-      <div class="connection-options">
-        <button class="connection-btn" data-value="yes">Yes</button>
-        <button class="connection-btn" data-value="no">No</button>
+      <div class="button-group connection-options">
+        <button class="btn btn--option" data-value="yes">Yes</button>
+        <button class="btn btn--option" data-value="no">No</button>
       </div>
 
       <div class="who-selector" id="who-selector">
         <div class="who-label">Who? (optional)</div>
-        <div class="who-options">
-          <button class="who-btn" data-value="friend">Friend</button>
-          <button class="who-btn" data-value="family">Family</button>
-          <button class="who-btn" data-value="partner">Partner</button>
+        <div class="button-group who-options">
+          <button class="btn btn--option" data-value="friend">Friend</button>
+          <button class="btn btn--option" data-value="family">Family</button>
+          <button class="btn btn--option" data-value="partner">Partner</button>
         </div>
       </div>
     </div>
 
-    <button class="btn btn-primary btn-full" id="submit-btn" disabled>Done</button>
+    <button class="btn btn--primary btn--full" id="submit-btn" disabled>Done</button>
 
     <div class="day-summary">
       <div class="day-label">Today's activity</div>
@@ -83,9 +83,9 @@ const Evening = {
       });
     });
 
-    document.querySelectorAll('.connection-btn').forEach(btn => {
+    document.querySelectorAll('.connection-options .btn--option').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.connection-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.connection-options .btn--option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.hadConnection = btn.dataset.value === 'yes';
 
@@ -94,16 +94,16 @@ const Evening = {
           whoSelector.classList.add('visible');
         } else {
           whoSelector.classList.remove('visible');
-          document.querySelectorAll('.who-btn').forEach(b => b.classList.remove('selected'));
+          document.querySelectorAll('.who-options .btn--option').forEach(b => b.classList.remove('selected'));
           this.connectionType = null;
         }
         this.checkComplete();
       });
     });
 
-    document.querySelectorAll('.who-btn').forEach(btn => {
+    document.querySelectorAll('.who-options .btn--option').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.who-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.who-options .btn--option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.connectionType = btn.dataset.value;
       });
@@ -137,11 +137,11 @@ const Evening = {
         this.connectionType = pulse.connection_type;
 
         document.querySelector(`.feeling-btn[data-value="${pulse.feeling}"]`)?.classList.add('selected');
-        document.querySelector(`.connection-btn[data-value="${pulse.had_connection ? 'yes' : 'no'}"]`)?.classList.add('selected');
+        document.querySelector(`.connection-options .btn--option[data-value="${pulse.had_connection ? 'yes' : 'no'}"]`)?.classList.add('selected');
         if (pulse.had_connection) {
           document.getElementById('who-selector').classList.add('visible');
           if (pulse.connection_type) {
-            document.querySelector(`.who-btn[data-value="${pulse.connection_type}"]`)?.classList.add('selected');
+            document.querySelector(`.who-options .btn--option[data-value="${pulse.connection_type}"]`)?.classList.add('selected');
           }
         }
         this.checkComplete();

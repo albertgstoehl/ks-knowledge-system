@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, select, func
-from src.models import Bookmark, FeedItem
+from sqlalchemy import text
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,24 +8,25 @@ logger = logging.getLogger(__name__)
 
 async def expire_old_bookmarks(session: AsyncSession) -> int:
     """Delete bookmarks past their expiry date. Returns count deleted."""
-    now = datetime.utcnow()
+    # Use ISO format string for SQLite text comparison compatibility
+    # SQLite stores dates as TEXT, so we need consistent format
+    now_iso = datetime.utcnow().isoformat()
 
-    # Count before delete
-    count_query = select(func.count()).select_from(Bookmark).where(
-        Bookmark.expires_at != None,
-        Bookmark.expires_at < now
+    # Count before delete using raw SQL for reliable text comparison
+    count_result = await session.execute(
+        text("SELECT COUNT(*) FROM bookmarks WHERE expires_at IS NOT NULL AND expires_at < :now"),
+        {"now": now_iso}
     )
-    result = await session.execute(count_query)
-    count = result.scalar()
+    count = count_result.scalar()
 
     if count > 0:
         await session.execute(
-            delete(Bookmark).where(
-                Bookmark.expires_at != None,
-                Bookmark.expires_at < now
-            )
+            text("DELETE FROM bookmarks WHERE expires_at IS NOT NULL AND expires_at < :now"),
+            {"now": now_iso}
         )
         await session.commit()
+        # Expire session cache since raw SQL bypasses ORM identity map
+        session.expire_all()
         logger.info(f"Expired {count} bookmarks")
 
     return count
@@ -34,19 +34,22 @@ async def expire_old_bookmarks(session: AsyncSession) -> int:
 
 async def expire_old_feed_items(session: AsyncSession) -> int:
     """Delete feed items older than 7 days. Returns count deleted."""
-    cutoff = datetime.utcnow() - timedelta(days=7)
+    # Use ISO format string for SQLite text comparison compatibility
+    cutoff_iso = (datetime.utcnow() - timedelta(days=7)).isoformat()
 
-    count_query = select(func.count()).select_from(FeedItem).where(
-        FeedItem.published_at < cutoff
+    count_result = await session.execute(
+        text("SELECT COUNT(*) FROM feed_items WHERE published_at IS NOT NULL AND published_at < :cutoff"),
+        {"cutoff": cutoff_iso}
     )
-    result = await session.execute(count_query)
-    count = result.scalar()
+    count = count_result.scalar()
 
     if count > 0:
         await session.execute(
-            delete(FeedItem).where(FeedItem.published_at < cutoff)
+            text("DELETE FROM feed_items WHERE published_at IS NOT NULL AND published_at < :cutoff"),
+            {"cutoff": cutoff_iso}
         )
         await session.commit()
+        session.expire_all()
         logger.info(f"Expired {count} feed items")
 
     return count

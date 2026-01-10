@@ -3,6 +3,16 @@
     <div class="container">
       <p class="status" id="home-status">Ready to focus</p>
 
+      <!-- Next Up -->
+      <div class="next-up" style="border-top: none; margin-top: 0; padding-top: 0;">
+        <input type="text" id="nextup-input" class="input" placeholder="+ Add task..." maxlength="100">
+        <div class="next-up__hint">Press Enter · <span id="slots-left">5</span> <span id="slots-word">slots</span> left</div>
+        <div class="next-up__header" style="margin-top: var(--space-md);">Next Up</div>
+        <div id="nextup-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
       <div class="timer">
         <div class="timer__value" id="home-time">--:--</div>
         <div class="timer__label">pomodoro</div>
@@ -82,6 +92,11 @@
 
       <div class="session-counter">
         Session <span id="session-num">1</span> of <span id="session-cap">10</span> today
+      </div>
+
+      <div class="timer-capture">
+        <input type="text" id="timer-capture-input" class="input input--sm" placeholder="+ Quick capture...">
+        <div class="timer-capture__hint">Thought? Capture it, stay focused.</div>
       </div>
 
       <button class="btn btn--ghost" id="abandon-btn" style="margin-top: 3rem;">Abandon session</button>

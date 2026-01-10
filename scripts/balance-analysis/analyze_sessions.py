@@ -78,11 +78,14 @@ def build_analysis_prompt(session: dict, timeline: list[dict], summary: dict) ->
     return prompt
 
 
+CLAUDE_CLI = Path.home() / ".local" / "bin" / "claude"
+
+
 def analyze_with_claude(prompt: str) -> dict:
     """Run analysis via Claude CLI."""
     result = subprocess.run(
         [
-            "claude", "--print",
+            str(CLAUDE_CLI), "--print",
             "--output-format", "json",
             "--allowedTools", "",
             "--model", "haiku",
