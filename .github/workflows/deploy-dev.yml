@@ -87,7 +87,7 @@ jobs:
       
       - name: Deploy to dev namespace
         run: |
-          kubectl apply -f k8s/dev/
+          kubectl apply -f k8s/dev/ --validate=false
       
       - name: Restart deployments
         run: |

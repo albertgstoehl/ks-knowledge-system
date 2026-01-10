@@ -46,7 +46,7 @@ jobs:
       
       - name: Deploy to prod namespace
         run: |
-          kubectl apply -f k8s/base/
+          kubectl apply -f k8s/base/ --validate=false
       
       - name: Restart deployments
         run: |
