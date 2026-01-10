@@ -124,6 +124,38 @@ Weekly analysis of system usage data. **All calculations must be done via Python
 - Hot reload in dev via uvicorn `--reload`
 - K8s uses local images (`imagePullPolicy: Never`)
 
+## CI/CD Pipeline
+
+**Automated testing and deployment workflow:**
+
+| Branch | Environment | Workflow | URL Pattern |
+|--------|-------------|----------|-------------|
+| `dev` | Development | `.github/workflows/deploy-dev.yml` | `https://{service}.gstoehl.dev/dev/` |
+| `master` | Production | `.github/workflows/deploy-prod.yml` | `https://{service}.gstoehl.dev/` |
+
+**Dev Workflow** (triggered on push to `dev`):
+1. Build changed services → push to GHCR as `:dev` tag
+2. Deploy to `knowledge-system-dev` namespace
+3. Reset dev databases (fresh state for testing)
+4. Run 15 API tests + 8 UI tests (pytest + Playwright)
+5. Auto-create PR to master if tests pass
+
+**Production Workflow** (triggered on merge to `master`):
+1. Re-tag `:dev` images as `:latest` (no rebuild)
+2. Deploy to `knowledge-system` namespace
+3. Wait for pods to be ready
+
+**Environment Isolation:**
+- Dev and prod use separate namespaces with isolated databases (PVCs)
+- Dev routes have priority 100, prod routes priority 10 (Traefik)
+- Production break middleware does NOT affect dev environment
+- See `k8s/OPERATIONS.md` for troubleshooting
+
+**GitHub Actions Runner:**
+- Self-hosted runner at `~/actions-runner/` on K3s server
+- Must be running for workflows to execute
+- Start: `cd ~/actions-runner && ./run.sh`
+
 ## Documentation Maintenance (IMPORTANT)
 
 **After ANY changes to the knowledge system, update these files:**
@@ -132,6 +164,7 @@ Weekly analysis of system usage data. **All calculations must be done via Python
 |-------------|--------|
 | Architecture, services, data flow | `KNOWLEDGE-SYSTEM-OVERVIEW.md` |
 | K8s manifests, deployments, network policies | `k8s/OPERATIONS.md` |
+| CI/CD workflows, testing | `CLAUDE.md` (this file) + `k8s/OPERATIONS.md` |
 | New endpoints or features | Both overview + relevant service docs |
 
 This is non-negotiable. Outdated documentation causes wasted time and errors in future sessions.

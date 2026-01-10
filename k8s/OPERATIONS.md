@@ -85,19 +85,44 @@ kubectl get secrets -n knowledge-system
 kubectl get secrets -n knowledge-system-dev
 ```
 
-### CI/CD Image Workflow
+### CI/CD Pipeline
 
-**Dev branch push → GitHub Actions:**
-1. Builds images: `ghcr.io/albertgstoehl/{service}:dev`
-2. Pushes to GHCR
-3. Deploys to `knowledge-system-dev` namespace
-4. Runs E2E tests
-5. Auto-creates PR to main if tests pass
+**Workflow Files:**
+- `.github/workflows/deploy-dev.yml` - Dev deployment + E2E tests
+- `.github/workflows/deploy-prod.yml` - Production deployment
 
-**Main branch merge → GitHub Actions:**
-1. Re-tags `:dev` images as `:latest` (no rebuild)
-2. Pushes `:latest` to GHCR
-3. Deploys to `knowledge-system` namespace (prod)
+**Dev Workflow** (triggered on push to `dev` branch):
+
+1. **Detect Changes** - Determines which services changed
+2. **Build & Push** - Builds Docker images for changed services → `ghcr.io/albertgstoehl/{service}:dev`
+3. **Deploy to Dev** - Applies manifests to `knowledge-system-dev` namespace
+4. **Reset Databases** - Wipes dev databases for clean test state
+5. **Run Tests**:
+   - 15 API tests (pytest + httpx)
+   - 8 UI smoke tests (Playwright)
+6. **Create PR** - Auto-creates PR to `master` if all tests pass
+
+**Production Workflow** (triggered on push to `master` branch):
+
+1. **Re-tag Images** - Tags `:dev` images as `:latest` (no rebuild)
+2. **Push to GHCR** - Pushes `:latest` tags
+3. **Deploy to Prod** - Applies to `knowledge-system` namespace
+4. **Wait for Ready** - Waits for all pods to be ready (5min timeout)
+
+**GitHub Actions Runner:**
+- Self-hosted runner at `~/actions-runner/` on K3s server
+- Must be running for workflows to execute
+- Start: `cd ~/actions-runner && ./run.sh`
+- Check status: `cd ~/actions-runner && ./run.sh status`
+
+**Image Tags:**
+- Dev environment: `ghcr.io/albertgstoehl/{service}:dev`
+- Prod environment: `ghcr.io/albertgstoehl/{service}:latest`
+
+**GHCR Package Visibility:**
+- All packages must be **public** for K8s to pull without authentication
+- Check: https://github.com/albertgstoehl?tab=packages
+- If private, pods will get `ImagePullBackOff` errors
 
 ### Manual Image Update (Legacy)
 
@@ -169,6 +194,122 @@ kubectl exec -it deploy/balance -n knowledge-system -- curl -s -o /dev/null -w "
 kubectl logs -f -n kube-system -l app.kubernetes.io/name=traefik
 ```
 
+## CI/CD Troubleshooting
+
+### Workflow Debugging
+
+**Check workflow status:**
+```bash
+gh run list --workflow deploy-dev.yml --limit 5
+gh run list --workflow deploy-prod.yml --limit 5
+```
+
+**View failed workflow:**
+```bash
+gh run view <RUN_ID> --log-failed
+```
+
+**Watch workflow in real-time:**
+```bash
+gh run watch <RUN_ID>
+```
+
+### Common CI/CD Issues
+
+**Issue: Workflow not triggered**
+- **Check**: Is the GitHub Actions runner running?
+  ```bash
+  ssh user@server
+  cd ~/actions-runner && ./run.sh status
+  ```
+- **Fix**: Start runner: `./run.sh`
+
+**Issue: Image build fails**
+- **Check**: Build logs in GitHub Actions
+- **Common cause**: Missing dependencies in Dockerfile
+- **Fix**: Test build locally first:
+  ```bash
+  docker build -t test-image:latest ./balance
+  ```
+
+**Issue: Pods stuck in ImagePullBackOff**
+- **Cause**: GHCR images are private or pull secret is invalid
+- **Check**: 
+  ```bash
+  kubectl describe pod -l app=balance -n knowledge-system-dev
+  kubectl get secret ghcr-pull-secret -n knowledge-system-dev
+  ```
+- **Fix Option 1** (Recommended): Make GHCR packages public
+  - Go to https://github.com/albertgstoehl?tab=packages
+  - Set visibility to "Public" for each package
+- **Fix Option 2**: Recreate pull secret with fresh GitHub PAT:
+  ```bash
+  kubectl delete secret ghcr-pull-secret -n knowledge-system-dev
+  kubectl create secret docker-registry ghcr-pull-secret \
+    --docker-server=ghcr.io \
+    --docker-username=albertgstoehl \
+    --docker-password=$(cat ~/.config/gh/hosts.yml | grep oauth_token | awk '{print $2}') \
+    -n knowledge-system-dev
+  ```
+
+**Issue: E2E tests fail with "Connection refused"**
+- **Cause**: Pods not ready when tests run
+- **Check**: Workflow logs for "Wait for rollout to complete" step
+- **Fix**: Increase timeout in deploy-dev.yml (default: 3min)
+
+**Issue: E2E tests fail during production break**
+- **Cause**: Tests hitting production URLs instead of dev
+- **Check**: Test fixture URLs in `tests/conftest.py`
+- **Verify**: Dev routes have priority 100, should not be blocked
+  ```bash
+  kubectl get ingress knowledge-system-dev-ingress -n knowledge-system-dev -o yaml | grep priority
+  ```
+
+**Issue: PR not auto-created after tests pass**
+- **Cause**: PR already exists or GitHub CLI authentication failed
+- **Check**: 
+  ```bash
+  gh pr list --state open
+  ```
+- **Manual creation**:
+  ```bash
+  gh pr create --base master --head dev --title "Deploy to prod (tests passed)"
+  ```
+
+**Issue: Production deployment fails with "pods not ready"**
+- **Cause**: New pods can't pull `:latest` images OR application error
+- **Check pod logs**:
+  ```bash
+  kubectl logs -l app=balance -n knowledge-system --tail=50
+  ```
+- **Check pod events**:
+  ```bash
+  kubectl describe pod -l app=balance -n knowledge-system
+  ```
+
+### Workflow File Modifications
+
+**Skip database reset in dev (for debugging):**
+
+Edit `.github/workflows/deploy-dev.yml`, comment out:
+```yaml
+# - name: Reset databases
+#   run: |
+#     kubectl exec -n knowledge-system-dev deployment/balance -- sh -c "rm -f /app/data/*.db || true"
+```
+
+**Run tests against production (dangerous!):**
+
+Edit `tests/conftest.py`:
+```python
+def base_url():
+    return os.getenv("BASE_URL", "https://bookmark.gstoehl.dev")  # Remove /dev
+```
+
+**Disable auto-PR creation:**
+
+Edit `.github/workflows/deploy-dev.yml`, comment out the `create-pr` job.
+
 ## Rollback to Docker Compose
 
 If K3s fails, revert:
@@ -201,12 +342,70 @@ curl http://bookmark.gstoehl.dev/health
 | balance | DNS only |
 | telegram-bot | DNS + bookmark-manager + Telegram API |
 
+## Environment Isolation (Dev vs Prod)
+
+The system has two completely isolated environments:
+
+| Environment | Namespace | URL Pattern | Database | Image Tag |
+|-------------|-----------|-------------|----------|-----------|
+| **Development** | `knowledge-system-dev` | `https://{service}.gstoehl.dev/dev/` | Separate PVCs (1Gi each) | `:dev` |
+| **Production** | `knowledge-system` | `https://{service}.gstoehl.dev/` | Production PVCs (1-5Gi) | `:latest` |
+
+### Key Isolation Features
+
+**1. Separate Databases**
+- Each environment has its own PersistentVolumeClaims
+- Dev databases persist across pod restarts (no longer using emptyDir)
+- Dev database reset happens before E2E tests for clean state
+
+**2. Path-Based Routing with Priority**
+```
+https://bookmark.gstoehl.dev/dev/
+  ↓
+Traefik routes by priority:
+  Priority 100 (DEV)  → /dev path → knowledge-system-dev/bookmark-manager
+  Priority 10  (PROD) → /    path → knowledge-system/bookmark-manager
+```
+
+**3. Middleware Isolation**
+- **Dev Ingress**: Uses `strip-dev-prefix` middleware ONLY
+- **Prod Ingress**: Uses `balance-check` (break enforcement) middleware ONLY
+- Production breaks do NOT affect dev environment
+
+**4. Router Priority Configuration**
+```bash
+# Dev routes match FIRST (higher priority)
+kubectl -n knowledge-system-dev annotate ingress knowledge-system-dev-ingress \
+  traefik.ingress.kubernetes.io/router.priority="100"
+
+# Prod routes match SECOND (lower priority)
+kubectl -n knowledge-system annotate ingress knowledge-system-ingress \
+  traefik.ingress.kubernetes.io/router.priority="10"
+```
+
+### Common Issues
+
+**Issue: Dev environment blocked during production break**
+- **Cause**: Production `balance-check` middleware was applying to `/dev` routes
+- **Fix**: Router priority ensures dev routes match before prod routes
+- **Verify**: `curl -I https://bookmark.gstoehl.dev/dev/` should return 200 even during prod break
+
+**Issue: Dev database wiped on pod restart**
+- **Cause**: Old manifests used `emptyDir` instead of PVC
+- **Fix**: Dev now uses persistent volumes (see `k8s/dev/pvcs.yaml`)
+- **Verify**: `kubectl get pvc -n knowledge-system-dev`
+
+**Issue: ImagePullBackOff in dev**
+- **Cause**: GHCR packages are private OR `ghcr-pull-secret` is missing/expired
+- **Fix**: Make packages public OR recreate pull secret with fresh GitHub PAT
+
 ## Ingress Configuration
 
-| Ingress | Hosts | Middleware |
-|---------|-------|------------|
-| balance-ingress | balance.gstoehl.dev | None |
-| knowledge-system-ingress | bookmark, canvas, kasten | balance-check (ForwardAuth) |
+| Ingress | Namespace | Hosts | Path | Middleware | Priority |
+|---------|-----------|-------|------|------------|----------|
+| balance-ingress | knowledge-system | balance.gstoehl.dev | / | None | (default) |
+| knowledge-system-ingress | knowledge-system | bookmark, canvas, kasten | / | balance-check | 10 |
+| knowledge-system-dev-ingress | knowledge-system-dev | all services | /dev | strip-dev-prefix | 100 |
 
 ## CronJobs
 
@@ -280,19 +479,76 @@ If scaling becomes necessary, switch to a distributed task queue (e.g., Celery +
 - Kubeconfig: `~/.kube/config`
 - Backups: `/home/ags/backups/k3s-migration-2025-12-21/`
 
+## Testing
+
+### E2E Test Structure
+
+```
+tests/
+├── conftest.py              # Shared fixtures (URLs, Playwright browser)
+├── e2e/
+│   ├── api/                 # API tests (httpx)
+│   │   ├── test_balance.py      # 5 tests: health, sessions, priorities
+│   │   ├── test_bookmarks.py    # 5 tests: create, list, move, delete
+│   │   ├── test_canvas.py       # 3 tests: draft operations
+│   │   └── test_kasten.py       # 2 tests: list notes, get note
+│   └── ui/                  # UI smoke tests (Playwright)
+│       └── test_smoke.py        # 8 tests: page load + no console errors
+└── requirements-test.txt    # pytest, httpx, playwright
+```
+
+### Running Tests Locally
+
+```bash
+# Install test dependencies
+pip install -r tests/requirements-test.txt
+playwright install chromium
+
+# Run API tests
+pytest tests/e2e/api/ -v
+
+# Run UI tests
+pytest tests/e2e/ui/ -v
+
+# Run all tests
+pytest tests/e2e/ -v
+```
+
+### Test URLs
+
+Tests use environment variable `BASE_URL` (defaults to dev):
+
+```bash
+# Test against dev (default)
+pytest tests/e2e/api/ -v
+
+# Test against prod (use with caution!)
+BASE_URL=https://bookmark.gstoehl.dev pytest tests/e2e/api/ -v
+```
+
 ## Manifest Overview
 
-| File | Resources |
-|------|-----------|
-| `base/namespace.yaml` | Namespace: knowledge-system |
-| `base/clusterissuer.yaml` | Let's Encrypt cert-manager issuer |
-| `base/pvcs.yaml` | PVCs for all services |
-| `base/ingress.yaml` | Ingress for all domains (split: balance vs others) |
-| `base/middleware-balance-check.yaml` | Traefik ForwardAuth for break enforcement |
-| `base/bookmark-manager.yaml` | Deployment + Service |
-| `base/canvas.yaml` | Deployment + Service |
-| `base/kasten.yaml` | Deployment + Service |
-| `base/balance.yaml` | Deployment + Service |
-| `base/telegram-bot.yaml` | Deployment (no service, outbound only) |
-| `base/networkpolicy-*.yaml` | Zero-trust egress rules per service |
+| Directory/File | Resources |
+|----------------|-----------|
+| **Production** (`k8s/base/`) | |
+| `namespace.yaml` | Namespace: knowledge-system |
+| `clusterissuer.yaml` | Let's Encrypt cert-manager issuer |
+| `pvcs.yaml` | PVCs for all services (1-5Gi) |
+| `ingress.yaml` | Ingress for all domains (split: balance vs others) |
+| `middleware-balance-check.yaml` | Traefik ForwardAuth for break enforcement |
+| `bookmark-manager.yaml` | Deployment + Service |
+| `canvas.yaml` | Deployment + Service |
+| `kasten.yaml` | Deployment + Service |
+| `balance.yaml` | Deployment + Service |
+| `telegram-bot.yaml` | Deployment (no service, outbound only) |
+| `networkpolicy-*.yaml` | Zero-trust egress rules per service |
 | `canvas-daily-wipe.yaml` | CronJob for nightly draft wipe (midnight Zurich) |
+| **Development** (`k8s/dev/`) | |
+| `namespace.yaml` | Namespace: knowledge-system-dev |
+| `pvcs.yaml` | Dev PVCs (1Gi each, isolated from prod) |
+| `ingress.yaml` | Dev ingress (path `/dev`, priority 100) |
+| `middleware-strip-dev-prefix.yaml` | Removes /dev prefix before routing |
+| `balance.yaml` | Dev deployment (image: `:dev`, BASE_PATH=/dev) |
+| `bookmark-manager.yaml` | Dev deployment |
+| `canvas.yaml` | Dev deployment |
+| `kasten.yaml` | Dev deployment |
