@@ -127,13 +127,19 @@ jobs:
           kubectl exec -n knowledge-system-dev deployment/canvas -- sh -c "rm -f /app/data/*.db || true"
           kubectl exec -n knowledge-system-dev deployment/kasten -- sh -c "rm -f /app/data/*.db || true"
       
-      - name: Wait for pods to restart after reset
+      - name: Restart deployments to reinitialize databases
         run: |
-          sleep 10
-          kubectl wait --for=condition=ready pod -l app=balance -n knowledge-system-dev --timeout=2m
-          kubectl wait --for=condition=ready pod -l app=bookmark-manager -n knowledge-system-dev --timeout=2m
-          kubectl wait --for=condition=ready pod -l app=canvas -n knowledge-system-dev --timeout=2m
-          kubectl wait --for=condition=ready pod -l app=kasten -n knowledge-system-dev --timeout=2m
+          kubectl rollout restart deployment/balance -n knowledge-system-dev
+          kubectl rollout restart deployment/bookmark-manager -n knowledge-system-dev
+          kubectl rollout restart deployment/canvas -n knowledge-system-dev
+          kubectl rollout restart deployment/kasten -n knowledge-system-dev
+      
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status deployment/balance -n knowledge-system-dev --timeout=3m
+          kubectl rollout status deployment/bookmark-manager -n knowledge-system-dev --timeout=3m
+          kubectl rollout status deployment/canvas -n knowledge-system-dev --timeout=3m
+          kubectl rollout status deployment/kasten -n knowledge-system-dev --timeout=3m
 
   run-api-tests:
     needs: reset-dev-databases
