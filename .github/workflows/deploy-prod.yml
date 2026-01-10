@@ -3,7 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - main
+      - master
 
 env:
   REGISTRY: ghcr.io
@@ -61,3 +61,4 @@ jobs:
           kubectl wait --for=condition=ready pod -l app=bookmark-manager -n knowledge-system --timeout=5m
           kubectl wait --for=condition=ready pod -l app=canvas -n knowledge-system --timeout=5m
           kubectl wait --for=condition=ready pod -l app=kasten -n knowledge-system --timeout=5m
+
