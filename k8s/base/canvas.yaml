@@ -14,13 +14,17 @@ spec:
       labels:
         app: canvas
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: canvas
-          image: docker.io/library/canvas:latest
-          imagePullPolicy: Never
+          image: ghcr.io/albertgstoehl/canvas:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
+            - name: TZ
+              value: "Europe/Zurich"
             - name: DATABASE_URL
               value: "sqlite+aiosqlite:///./data/canvas.db"
             - name: KASTEN_URL

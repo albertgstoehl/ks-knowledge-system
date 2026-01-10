@@ -11,7 +11,7 @@ spec:
   policyTypes:
     - Egress
   egress:
-    # DNS only - balance is self-contained
+    # DNS
     - to:
         - namespaceSelector:
             matchLabels:
@@ -20,4 +20,8 @@ spec:
         - port: 53
           protocol: UDP
         - port: 53
+          protocol: TCP
+    # HTTPS for NextDNS API (api.nextdns.io)
+    - ports:
+        - port: 443
           protocol: TCP

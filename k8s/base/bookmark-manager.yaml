@@ -14,13 +14,17 @@ spec:
       labels:
         app: bookmark-manager
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: bookmark-manager
-          image: docker.io/library/bookmark-manager:latest
-          imagePullPolicy: Never
+          image: ghcr.io/albertgstoehl/bookmark-manager:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
+            - name: TZ
+              value: "Europe/Zurich"
             - name: CANVAS_URL
               value: "http://canvas.knowledge-system.svc.cluster.local:8000"
             - name: CANVAS_EXTERNAL_URL

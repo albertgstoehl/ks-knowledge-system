@@ -14,13 +14,17 @@ spec:
       labels:
         app: kasten
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: kasten
-          image: docker.io/library/kasten:latest
-          imagePullPolicy: Never
+          image: ghcr.io/albertgstoehl/kasten:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
+            - name: TZ
+              value: "Europe/Zurich"
             - name: NOTES_PATH
               value: "/app/notes"
             - name: DATABASE_URL
