@@ -176,8 +176,8 @@ jobs:
       
       - name: Run UI tests
         run: |
-          # Run pytest-playwright tests (will skip if no tests exist)
-          pytest tests/e2e/ui/ -v || echo "No UI tests found"
+          # Run pytest-playwright tests
+          pytest tests/e2e/ui/ -v
       
       - name: Upload test results
         if: always()

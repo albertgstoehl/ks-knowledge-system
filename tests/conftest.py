@@ -1,5 +1,7 @@
 import pytest
 import os
+from playwright.sync_api import Page, Browser
+from playwright.sync_api import sync_playwright
 
 @pytest.fixture(scope="session")
 def base_url():
@@ -27,3 +29,25 @@ def kasten_url(base_url):
 def balance_url(base_url):
     """Balance service URL."""
     return base_url.replace("bookmark.gstoehl.dev", "balance.gstoehl.dev")
+
+# Playwright fixtures for UI tests
+@pytest.fixture(scope="session")
+def browser():
+    """Browser instance for UI tests."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        yield browser
+        browser.close()
+
+@pytest.fixture
+def page(browser):
+    """Page instance for UI tests."""
+    page = browser.new_page()
+    yield page
+    page.close()
+
+# Alias fixtures for backward compatibility with API tests
+@pytest.fixture(scope="session")
+def bookmark_manager_url(bookmark_url):
+    """Alias for bookmark_url for consistency."""
+    return bookmark_url
