@@ -58,8 +58,6 @@ spec:
       volumes:
         - name: data
           emptyDir: {}
-      imagePullSecrets:
-        - name: ghcr-pull-secret
 ---
 apiVersion: v1
 kind: Service

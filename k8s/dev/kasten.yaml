@@ -54,8 +54,6 @@ spec:
           emptyDir: {}
         - name: notes
           emptyDir: {}
-      imagePullSecrets:
-        - name: ghcr-pull-secret
 ---
 apiVersion: v1
 kind: Service
