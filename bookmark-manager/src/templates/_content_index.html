@@ -36,7 +36,7 @@
             <span id="save-indicator"></span>
         </div>
         {% else %}
-        <div class="current-item-description" id="description">{{ current.description or 'No description' }}</div>
+        <div class="current-item-description" id="description">{{ (current.description or 'No description') | safe_html }}</div>
         <button class="read-more-btn" id="read-more-btn" onclick="toggleDescription()" style="display: none;">Read more</button>
         {% endif %}
 

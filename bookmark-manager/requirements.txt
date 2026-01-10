@@ -12,3 +12,4 @@ feedparser==6.0.11
 yt-dlp
 jinja2
 apscheduler>=3.10.0
+bleach==6.1.0
