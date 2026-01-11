@@ -138,3 +138,90 @@ class TestBalanceTimerComplete:
         expect(page.locator(".header__title")).to_contain_text("Balance")
         
         # Cleanup is handled by the next test's ensure_clean_state
+
+
+class TestBalanceSessionLifecycle:
+    """Tests for starting and abandoning sessions."""
+
+    def test_start_pomodoro_session(self, page: Page, balance_url: str, balance_api):
+        """
+        Test starting a new Pomodoro session via UI.
+        
+        Uses "personal" session type because it doesn't require Priority
+        or Next Up selection (unlike "expected" type).
+        """
+        # Ensure clean state
+        if not ensure_clean_state(balance_api, max_wait=60):
+            pytest.skip("Could not get clean state (break still active)")
+        
+        # Navigate to Balance
+        page.goto(balance_url)
+        page.wait_for_load_state("networkidle")
+        
+        # Should see home page with start button
+        home_page = page.locator("#page-home")
+        expect(home_page).to_be_visible()
+        
+        # Select session type "personal" (doesn't require Next Up or Priority)
+        page.locator("button.btn--option[data-type='personal']").click()
+        
+        # Enter intention
+        intention_input = page.locator("#intention-input")
+        intention_input.fill("Test Pomodoro session")
+        
+        # Click start button - should be enabled for personal type
+        start_btn = page.locator("#start-btn")
+        expect(start_btn).to_be_enabled()
+        start_btn.click()
+        
+        # Should transition to active session page
+        active_page = page.locator("#page-active")
+        expect(active_page).to_be_visible(timeout=5000)
+        
+        # Timer should be visible on active page (uses #active-time ID)
+        timer = page.locator("#active-time")
+        expect(timer).to_be_visible()
+        
+        # Intention should be displayed (uses #active-intention ID)
+        intention_display = page.locator("#active-intention")
+        expect(intention_display).to_contain_text("Test Pomodoro session")
+        
+        # Cleanup
+        balance_api.post("/api/sessions/abandon")
+
+    def test_abandon_session(self, page: Page, balance_url: str, balance_api):
+        """Test abandoning an active session."""
+        # Ensure clean state first
+        if not ensure_clean_state(balance_api, max_wait=60):
+            pytest.skip("Could not get clean state (break still active)")
+        
+        # Start a session via API
+        response = balance_api.post("/api/sessions/start", json={
+            "type": "personal",
+            "intention": "Session to abandon"
+        })
+        assert response.status_code == 200, f"Failed to start session: {response.text}"
+        
+        # Navigate to Balance
+        page.goto(balance_url)
+        page.wait_for_load_state("networkidle")
+        
+        # Should see active session page
+        active_page = page.locator("#page-active")
+        expect(active_page).to_be_visible(timeout=5000)
+        
+        # Click abandon button - this triggers a confirmation dialog
+        abandon_btn = page.locator("#abandon-btn")
+        expect(abandon_btn).to_be_visible()
+        
+        # Set up dialog handler before clicking
+        page.on("dialog", lambda dialog: dialog.accept())
+        abandon_btn.click()
+        
+        # Should return to home page after confirming abandon
+        home_page = page.locator("#page-home")
+        expect(home_page).to_be_visible(timeout=5000)
+        
+        # Start button should be available again
+        start_btn = page.locator("#start-btn")
+        expect(start_btn).to_be_visible()
