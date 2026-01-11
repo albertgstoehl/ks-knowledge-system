@@ -40,6 +40,7 @@
 
 {% block scripts %}
 <script>
+const basePath = "{{ base_path }}";
 const noteId = "{{ note.id }}";
 const parent = {{ parent | tojson }};
 const children = {{ children | tojson }};
@@ -59,7 +60,7 @@ function toggleSource() {
 }
 
 function pushToWorkspace() {
-    fetch('/api/notes/{{ note.id }}')
+    fetch(basePath + '/api/notes/{{ note.id }}')
         .then(r => r.json())
         .then(note => {
             return fetch(canvasUrl + '/api/workspace/notes', {
@@ -104,7 +105,7 @@ function pushToWorkspace() {
         circle.setAttribute('stroke-width', '2');
         if (!isCurrent) {
             circle.style.cursor = 'pointer';
-            circle.onclick = () => window.location.href = '/note/' + note.id;
+            circle.onclick = () => window.location.href = basePath + '/note/' + note.id;
             circle.onmouseover = () => circle.setAttribute('fill', '#f5f5f5');
             circle.onmouseout = () => circle.setAttribute('fill', '#fff');
             const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');

@@ -124,6 +124,38 @@ Weekly analysis of system usage data. **All calculations must be done via Python
 - Hot reload in dev via uvicorn `--reload`
 - K8s uses local images (`imagePullPolicy: Never`)
 
+## CI/CD Pipeline
+
+**Automated testing and deployment workflow:**
+
+| Branch | Environment | Workflow | URL Pattern |
+|--------|-------------|----------|-------------|
+| `dev` | Development | `.github/workflows/deploy-dev.yml` | `https://{service}.gstoehl.dev/dev/` |
+| `master` | Production | `.github/workflows/deploy-prod.yml` | `https://{service}.gstoehl.dev/` |
+
+**Dev Workflow** (triggered on push to `dev`):
+1. Build changed services → push to GHCR as `:dev` tag
+2. Deploy to `knowledge-system-dev` namespace
+3. Reset dev databases (fresh state for testing)
+4. Run 15 API tests + 24 UI tests (pytest + Playwright)
+5. Auto-create PR to master if tests pass
+
+**Production Workflow** (triggered on merge to `master`):
+1. Re-tag `:dev` images as `:latest` (no rebuild)
+2. Deploy to `knowledge-system` namespace
+3. Wait for pods to be ready
+
+**Environment Isolation:**
+- Dev and prod use separate namespaces with isolated databases (PVCs)
+- Dev routes have priority 100, prod routes priority 10 (Traefik)
+- Production break middleware does NOT affect dev environment
+- See `k8s/OPERATIONS.md` for troubleshooting
+
+**GitHub Actions Runner:**
+- Self-hosted runner at `~/actions-runner/` on K3s server
+- Must be running for workflows to execute
+- Start: `cd ~/actions-runner && ./run.sh`
+
 ## Documentation Maintenance (IMPORTANT)
 
 **After ANY changes to the knowledge system, update these files:**
@@ -132,6 +164,46 @@ Weekly analysis of system usage data. **All calculations must be done via Python
 |-------------|--------|
 | Architecture, services, data flow | `KNOWLEDGE-SYSTEM-OVERVIEW.md` |
 | K8s manifests, deployments, network policies | `k8s/OPERATIONS.md` |
+| CI/CD workflows, testing | `CLAUDE.md` (this file) + `k8s/OPERATIONS.md` |
 | New endpoints or features | Both overview + relevant service docs |
+| **New UI features or API endpoints** | Add E2E tests to `tests/e2e/` |
 
 This is non-negotiable. Outdated documentation causes wasted time and errors in future sessions.
+
+## Testing Requirements (IMPORTANT)
+
+**When adding new features, you MUST add corresponding tests:**
+
+| Change Type | Required Test |
+|-------------|---------------|
+| New API endpoint | Add to `tests/e2e/api/test_{service}.py` |
+| New UI feature/page | Add to `tests/e2e/ui/test_{service}.py` |
+| New user flow | Consider adding to `tests/e2e/ui/test_cross_service_flows.py` |
+| Bug fix | Add regression test that would catch the bug |
+
+**Test file locations:**
+- `tests/e2e/api/test_{service}.py` - API endpoint tests
+- `tests/e2e/ui/test_{service}.py` - UI/Playwright tests
+- `tests/e2e/ui/test_cross_service_flows.py` - Cross-service integration tests
+- `tests/e2e/ui/test_smoke.py` - Basic page load + no console errors
+
+**Running tests locally:**
+```bash
+# All E2E tests
+pytest tests/e2e/ -v
+
+# UI tests only
+pytest tests/e2e/ui/ -v
+
+# Specific service
+pytest tests/e2e/ui/test_balance.py -v
+
+# With browser visible
+pytest tests/e2e/ui/ --headed
+```
+
+**Test requirements:**
+- Tests must pass against dev environment (`https://{service}.gstoehl.dev/dev/`)
+- Use API fixtures for test data setup/cleanup (see `tests/e2e/ui/conftest.py`)
+- Follow existing patterns in test files
+- Tests run in CI on every push to `dev` branch

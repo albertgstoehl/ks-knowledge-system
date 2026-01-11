@@ -47,7 +47,8 @@ spec:
               cpu: "200m"
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: canvas-pvc
 ---
 apiVersion: v1
 kind: Service

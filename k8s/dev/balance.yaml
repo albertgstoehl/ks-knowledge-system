@@ -57,7 +57,8 @@ spec:
               cpu: "200m"
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: balance-pvc
 ---
 apiVersion: v1
 kind: Service

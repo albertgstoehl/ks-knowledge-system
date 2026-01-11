@@ -1,0 +1,11 @@
+# Traefik StripPrefix Middleware for dev environment
+# Removes /dev prefix before forwarding to services
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-dev-prefix
+  namespace: knowledge-system-dev
+spec:
+  stripPrefix:
+    prefixes:
+      - /dev

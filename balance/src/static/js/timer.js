@@ -6,6 +6,14 @@
 // 4. No local state survives reload - always fetch from server
 
 const Balance = {
+  // Base path for API calls (set from template, e.g., "/dev" or "")
+  basePath: typeof basePath !== 'undefined' ? basePath : '',
+
+  // Helper for API calls that respects basePath
+  api(path) {
+    return this.basePath + path;
+  },
+
   // Server sync state
   serverTimeDiff: 0,  // Offset between server and client clocks
   endTimestamp: null, // Unix timestamp when timer ends
@@ -245,7 +253,7 @@ const Balance = {
         const text = e.target.value.trim();
         if (text) {
           try {
-            const response = await fetch('/api/nextup', {
+const response = await fetch(this.api('/api/nextup'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ text })
@@ -277,7 +285,7 @@ const Balance = {
 
   async syncWithServer() {
     try {
-      const response = await fetch('/api/status');
+      const response = await fetch(this.api('/api/status'));
       const status = await response.json();
 
       // Calculate server-client time difference
@@ -345,7 +353,7 @@ const Balance = {
 
   async loadSettings() {
     try {
-      const settings = await fetch('/api/settings').then(r => r.json());
+      const settings = await fetch(this.api('/api/settings')).then(r => r.json());
       this.dailyCap = settings.daily_cap;
       if (this.el.sessionCap) {
         this.el.sessionCap.textContent = this.dailyCap;
@@ -357,7 +365,7 @@ const Balance = {
 
   async loadPriorities() {
     try {
-      const response = await fetch('/api/priorities');
+      const response = await fetch(this.api('/api/priorities'));
       this.priorities = await response.json();
       this.renderPriorityDropdown();
 
@@ -373,7 +381,7 @@ const Balance = {
 
   async loadNextUp() {
     try {
-      const response = await fetch('/api/nextup');
+      const response = await fetch(this.api('/api/nextup'));
       const data = await response.json();
       this.nextUpItems = data.items;
       this.maxNextUpItems = data.max;
@@ -437,7 +445,7 @@ const Balance = {
     if (!text.trim()) return;
 
     try {
-      const response = await fetch('/api/nextup', {
+      const response = await fetch(this.api('/api/nextup'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.trim() })
@@ -457,7 +465,7 @@ const Balance = {
 
   async deleteNextUp(id) {
     try {
-      await fetch(`/api/nextup/${id}`, { method: 'DELETE' });
+      await fetch(this.api(`/api/nextup/${id}`), { method: 'DELETE' });
 
       // Clear selection if deleting selected item
       if (this.selectedNextUpId === id) {
@@ -540,7 +548,7 @@ const Balance = {
 
   async loadTodaySessions() {
     try {
-      const sessions = await fetch('/api/sessions/today').then(r => r.json());
+      const sessions = await fetch(this.api('/api/sessions/today')).then(r => r.json());
       this.todaySessions = { expected: 0, personal: 0 };
       sessions.forEach(s => {
         if (s.ended_at) {
@@ -764,7 +772,7 @@ const Balance = {
         body.duration_minutes = this.selectedDuration;
       }
 
-      const response = await fetch('/api/sessions/start', {
+      const response = await fetch(this.api('/api/sessions/start'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -793,7 +801,7 @@ const Balance = {
 
     try {
       this.stopTick();
-      await fetch('/api/sessions/abandon', { method: 'POST' });
+      await fetch(this.api('/api/sessions/abandon'), { method: 'POST' });
 
       // Reset form
       this.intention = '';
@@ -822,7 +830,7 @@ const Balance = {
         body.rabbit_hole = this.selectedRabbitHole || false;
       }
 
-      const response = await fetch('/api/sessions/end', {
+      const response = await fetch(this.api('/api/sessions/end'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -853,7 +861,7 @@ const Balance = {
 
   async timerComplete() {
     try {
-      const response = await fetch('/api/sessions/timer-complete', {
+      const response = await fetch(this.api('/api/sessions/timer-complete'), {
         method: 'POST'
       });
 
@@ -889,7 +897,7 @@ const Balance = {
 
   async checkRabbitHole() {
     try {
-      const response = await fetch('/api/sessions/rabbit-hole-check');
+      const response = await fetch(this.api('/api/sessions/rabbit-hole-check'));
       const data = await response.json();
 
       this.showRabbitHolePrompt = data.should_alert;
@@ -916,11 +924,11 @@ const Balance = {
       let endpoint;
 
       if (type === 'meditation') {
-        endpoint = '/api/meditation';
+        endpoint = this.api('/api/meditation');
         body = { duration_minutes: parseInt(duration) };
       } else {
         const exerciseType = confirm('Cardio? (Cancel for Strength)') ? 'cardio' : 'strength';
-        endpoint = '/api/exercise';
+        endpoint = this.api('/api/exercise');
         body = {
           type: exerciseType,
           duration_minutes: parseInt(duration),

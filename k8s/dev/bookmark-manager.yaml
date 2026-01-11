@@ -59,7 +59,8 @@ spec:
               cpu: "1000m"
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: bookmark-manager-pvc
 ---
 apiVersion: v1
 kind: Service

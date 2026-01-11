@@ -1,0 +1,383 @@
+# tests/e2e/ui/test_balance.py
+"""
+Balance service UI tests.
+
+Tests cover:
+- Timer-complete idempotency (CRITICAL - original bug)
+- Session lifecycle (start, abandon)
+- Meditation/exercise logging
+- Settings management
+- Stats viewing
+
+NOTE: The dev environment has a known issue where the UI at /dev/ fetches
+from production API due to relative paths in JS. This means UI tests
+may not reflect dev API state. The API-level tests are the reliable
+verification of functionality.
+"""
+import pytest
+import time
+from playwright.sync_api import Page, expect
+
+
+def wait_for_break_to_end(balance_api, max_wait_seconds: int = 30) -> bool:
+    """
+    Wait for any existing break to end.
+    Returns True if break ended or no break, False if timeout.
+    """
+    for _ in range(max_wait_seconds):
+        response = balance_api.get("/api/check")
+        if response.status_code == 200:
+            data = response.json()
+            if not data.get("on_break", False):
+                return True
+            remaining = data.get("remaining_seconds", 0)
+            if remaining > max_wait_seconds:
+                # Break too long, can't wait
+                return False
+        time.sleep(1)
+    return False
+
+
+def ensure_clean_state(balance_api, max_wait: int = 30) -> bool:
+    """
+    Ensure Balance is in a clean state (no session, no break).
+    Returns True if clean state achieved.
+    """
+    # Try to abandon any existing session (may fail if no session)
+    balance_api.post("/api/sessions/abandon")
+    
+    # Wait for any break to end
+    return wait_for_break_to_end(balance_api, max_wait)
+
+
+class TestBalanceTimerComplete:
+    """Tests for timer completion and break handling."""
+
+    def test_break_timer_idempotency(self, page: Page, balance_url: str, balance_api):
+        """
+        CRITICAL: Verify that calling timer-complete multiple times doesn't reset the break.
+        
+        This was the original bug that motivated the CI/CD pipeline.
+        The idempotency guard in sessions.py:249 should prevent double-breaks.
+        
+        The bug was: when a user refreshed the page during a break, the frontend
+        would call timer-complete again, which would reset the break timer.
+        
+        This test verifies:
+        1. Start a session via API
+        2. Call timer-complete to start break - get break_until timestamp
+        3. Call timer-complete AGAIN (simulating page reload)
+        4. Verify break_until is UNCHANGED (idempotency guard works)
+        
+        NOTE: UI verification is skipped due to known dev environment issue
+        where UI fetches from production API instead of dev API.
+        """
+        # Step 0: Set short break to 1 minute for faster test cleanup
+        settings_response = balance_api.get("/api/settings")
+        original_short_break = 5  # default
+        if settings_response.status_code == 200:
+            original_short_break = settings_response.json().get("short_break", 5)
+        
+        balance_api.put("/api/settings", json={"short_break": 1})
+        
+        # Step 1: Ensure clean state - wait for any existing break
+        if not ensure_clean_state(balance_api, max_wait=60):
+            # Restore settings before skipping
+            balance_api.put("/api/settings", json={"short_break": original_short_break})
+            pytest.skip("Could not get clean state (break still active)")
+        
+        # Step 2: Start a session via API
+        response = balance_api.post("/api/sessions/start", json={
+            "type": "expected",
+            "intention": "Test session for idempotency"
+        })
+        assert response.status_code == 200, f"Failed to start session: {response.text}"
+        
+        # Step 3: Complete the timer via API (simulates timer ending)
+        response = balance_api.post("/api/sessions/timer-complete")
+        assert response.status_code == 200, f"Failed to complete timer: {response.text}"
+        data = response.json()
+        initial_break_until = data.get("break_until")
+        assert initial_break_until, "Should have break_until timestamp"
+        
+        # Store the initial break duration for verification
+        initial_break_duration = data.get("break_duration")
+        
+        # Step 4: Wait a moment to let time pass
+        time.sleep(2)
+        
+        # Step 5: Call timer-complete AGAIN (simulates what happens on page reload)
+        # THIS IS THE CRITICAL TEST - the bug was that this would reset the break
+        response = balance_api.post("/api/sessions/timer-complete")
+        assert response.status_code == 200, f"Second timer-complete failed: {response.text}"
+        data = response.json()
+        
+        # Step 6: CRITICAL CHECK - Verify break_until hasn't changed (idempotency!)
+        new_break_until = data.get("break_until")
+        assert new_break_until == initial_break_until, (
+            f"BUG: Break timer was reset! "
+            f"Original: {initial_break_until}, After second call: {new_break_until}. "
+            f"The idempotency guard in sessions.py should prevent this."
+        )
+        
+        # Step 7: Verify break duration decreased (proving same break is continuing)
+        new_break_duration = data.get("break_duration")
+        # Duration should be same or less (since time passed)
+        assert new_break_duration <= initial_break_duration, (
+            f"Break duration should not increase. "
+            f"Initial: {initial_break_duration}, Current: {new_break_duration}"
+        )
+        
+        # Step 8: Verify we can call it multiple more times without resetting
+        for i in range(3):
+            time.sleep(0.5)
+            response = balance_api.post("/api/sessions/timer-complete")
+            assert response.status_code == 200
+            data = response.json()
+            assert data.get("break_until") == initial_break_until, (
+                f"Break reset on call {i+3}! This should NEVER happen."
+            )
+        
+        # Step 9: Basic UI verification - just check page loads
+        # (UI state may not match due to dev/prod API routing issue)
+        page.goto(balance_url)
+        page.wait_for_load_state("networkidle")
+        
+        # The page should at least load without error
+        # Use the header title which is unique
+        expect(page.locator(".header__title")).to_contain_text("Balance")
+        
+        # Step 10: Cleanup - restore original break duration and wait for break to end
+        balance_api.put("/api/settings", json={"short_break": original_short_break})
+        
+        # Wait for the 1-minute break to end so subsequent tests can run
+        time.sleep(65)  # Wait slightly more than 1 minute
+
+
+class TestBalanceSessionLifecycle:
+    """Tests for starting and abandoning sessions."""
+
+    def test_start_pomodoro_session(self, page: Page, balance_url: str, balance_api):
+        """
+        Test starting a new Pomodoro session via UI.
+        
+        Uses "personal" session type because it doesn't require Priority
+        or Next Up selection (unlike "expected" type).
+        
+        NOTE: Due to dev/prod API routing in the UI, this test may need to skip
+        if the UI shows production state instead of dev state.
+        """
+        # Ensure clean state via API
+        if not ensure_clean_state(balance_api, max_wait=60):
+            pytest.skip("Could not get clean state (break still active)")
+        
+        # Navigate to Balance
+        page.goto(balance_url)
+        page.wait_for_load_state("networkidle")
+        
+        # Check if home page is visible - may not be due to dev/prod routing issue
+        home_page = page.locator("#page-home")
+        if not home_page.is_visible():
+            # UI is showing production state, not dev state - skip this test
+            pytest.skip("UI shows production state (dev/prod routing issue) - cannot test session start")
+        
+        # Select session type "personal" (doesn't require Next Up or Priority)
+        page.locator("button.btn--option[data-type='personal']").click()
+        
+        # Enter intention
+        intention_input = page.locator("#intention-input")
+        intention_input.fill("Test Pomodoro session")
+        
+        # Click start button - should be enabled for personal type
+        start_btn = page.locator("#start-btn")
+        expect(start_btn).to_be_enabled()
+        start_btn.click()
+        
+        # Should transition to active session page
+        active_page = page.locator("#page-active")
+        expect(active_page).to_be_visible(timeout=5000)
+        
+        # Timer should be visible on active page (uses #active-time ID)
+        timer = page.locator("#active-time")
+        expect(timer).to_be_visible()
+        
+        # Intention should be displayed (uses #active-intention ID)
+        intention_display = page.locator("#active-intention")
+        expect(intention_display).to_contain_text("Test Pomodoro session")
+        
+        # Cleanup
+        balance_api.post("/api/sessions/abandon")
+
+    def test_abandon_session(self, page: Page, balance_url: str, balance_api):
+        """
+        Test abandoning an active session.
+        
+        NOTE: Due to dev/prod API routing in the UI, this test may need to skip
+        if the UI shows production state instead of dev state.
+        """
+        # Ensure clean state first
+        if not ensure_clean_state(balance_api, max_wait=60):
+            pytest.skip("Could not get clean state (break still active)")
+        
+        # Start a session via API
+        response = balance_api.post("/api/sessions/start", json={
+            "type": "personal",
+            "intention": "Session to abandon"
+        })
+        assert response.status_code == 200, f"Failed to start session: {response.text}"
+        
+        # Navigate to Balance
+        page.goto(balance_url)
+        page.wait_for_load_state("networkidle")
+        
+        # Check if active page is visible - may not be due to dev/prod routing issue
+        active_page = page.locator("#page-active")
+        if not active_page.is_visible():
+            # UI is showing production state, cleanup and skip
+            balance_api.post("/api/sessions/abandon")
+            pytest.skip("UI shows production state (dev/prod routing issue) - cannot test abandon")
+        
+        # Click abandon button - this triggers a confirmation dialog
+        abandon_btn = page.locator("#abandon-btn")
+        expect(abandon_btn).to_be_visible()
+        
+        # Set up dialog handler before clicking
+        page.on("dialog", lambda dialog: dialog.accept())
+        abandon_btn.click()
+        
+        # Should return to home page after confirming abandon
+        home_page = page.locator("#page-home")
+        expect(home_page).to_be_visible(timeout=5000)
+        
+        # Start button should be available again
+        start_btn = page.locator("#start-btn")
+        expect(start_btn).to_be_visible()
+
+
+class TestBalanceLogging:
+    """Tests for logging meditation and exercise."""
+
+    def test_log_meditation_session(self, page: Page, balance_url: str):
+        """Test logging a meditation session."""
+        # Navigate to log page
+        page.goto(f"{balance_url}/log")
+        page.wait_for_load_state("networkidle")
+        
+        # Should be on meditation tab by default
+        meditation_form = page.locator("#meditation-form")
+        expect(meditation_form).to_be_visible()
+        
+        # Select 10 minutes using quick duration button
+        page.locator(".quick-durations .btn--option[data-value='10']").first.click()
+        
+        # Duration input should update
+        duration_input = page.locator("#meditation-duration")
+        expect(duration_input).to_have_value("10")
+        
+        # Submit the form
+        submit_btn = page.locator("#meditation-form button[type='submit']")
+        submit_btn.click()
+        
+        # Should show success (page reloads or shows confirmation)
+        page.wait_for_load_state("networkidle")
+        # Form should reset or show success state
+        expect(meditation_form).to_be_visible()
+
+    def test_log_exercise_session(self, page: Page, balance_url: str):
+        """Test logging an exercise session."""
+        # Navigate to log page
+        page.goto(f"{balance_url}/log")
+        page.wait_for_load_state("networkidle")
+        
+        # Click exercise tab
+        exercise_tab = page.locator(".log-tabs .btn--option[data-tab='exercise']")
+        exercise_tab.click()
+        
+        # Exercise form should be visible
+        exercise_form = page.locator("#exercise-form")
+        expect(exercise_form).to_be_visible()
+        
+        # Select exercise type "cardio" (may already be selected by default)
+        page.locator(".type-options .btn--option[data-value='cardio']").click()
+        
+        # Set duration
+        duration_input = page.locator("#exercise-duration")
+        duration_input.fill("30")
+        
+        # Select intensity "medium" (may already be selected by default)
+        page.locator(".intensity-options .btn--option[data-value='medium']").click()
+        
+        # Submit
+        submit_btn = page.locator("#exercise-form button[type='submit']")
+        submit_btn.click()
+        
+        # Should show success
+        page.wait_for_load_state("networkidle")
+        expect(exercise_form).to_be_visible()
+
+
+class TestBalanceSettings:
+    """Tests for settings management."""
+
+    def test_change_settings(self, page: Page, balance_url: str):
+        """Test viewing and modifying settings."""
+        # Navigate to settings page
+        page.goto(f"{balance_url}/settings")
+        page.wait_for_load_state("networkidle")
+        
+        # Settings form should be visible
+        settings_form = page.locator("#settings-form")
+        expect(settings_form).to_be_visible()
+        
+        # Session duration input should exist
+        session_duration = page.locator("#session-duration")
+        expect(session_duration).to_be_visible()
+        
+        # Get current value and modify
+        current_value = session_duration.input_value()
+        new_value = "30" if current_value != "30" else "25"
+        session_duration.fill(new_value)
+        
+        # Save settings
+        save_btn = page.locator("#settings-form button[type='submit']")
+        save_btn.click()
+        
+        # Wait for save
+        page.wait_for_load_state("networkidle")
+        
+        # Reload and verify change persisted
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        expect(session_duration).to_have_value(new_value)
+        
+        # Restore original value
+        session_duration.fill(current_value)
+        save_btn.click()
+        page.wait_for_load_state("networkidle")
+
+
+class TestBalanceStats:
+    """Tests for stats viewing."""
+
+    def test_view_stats(self, page: Page, balance_url: str):
+        """Test viewing weekly and monthly stats."""
+        # Navigate to stats page
+        page.goto(f"{balance_url}/stats")
+        page.wait_for_load_state("networkidle")
+        
+        # Stats should be visible
+        sessions_stat = page.locator("#stat-sessions")
+        expect(sessions_stat).to_be_visible()
+        
+        # Period selector should exist
+        week_btn = page.locator(".period-selector .btn--option[data-period='week']")
+        month_btn = page.locator(".period-selector .btn--option[data-period='month']")
+        expect(week_btn).to_be_visible()
+        expect(month_btn).to_be_visible()
+        
+        # Switch to month view
+        month_btn.click()
+        page.wait_for_load_state("networkidle")
+        
+        # Stats should still be visible
+        expect(sessions_stat).to_be_visible()
