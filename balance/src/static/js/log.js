@@ -1,5 +1,13 @@
 // Balance Log Page
 const LogPage = {
+  // Base path for API calls (set from template, e.g., "/dev" or "")
+  basePath: typeof basePath !== 'undefined' ? basePath : '',
+
+  // Helper for API calls that respects basePath
+  api(path) {
+    return this.basePath + path;
+  },
+
   meditationTimeOfDay: null,
   exerciseType: 'cardio',
   exerciseIntensity: 'medium',
@@ -85,7 +93,7 @@ const LogPage = {
         body.time_of_day = this.meditationTimeOfDay;
       }
 
-      const response = await fetch('/api/meditation', {
+      const response = await fetch(this.api('/api/meditation'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -110,7 +118,7 @@ const LogPage = {
     const duration = parseInt(document.getElementById('exercise-duration').value);
 
     try {
-      const response = await fetch('/api/exercise', {
+      const response = await fetch(this.api('/api/exercise'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -157,7 +165,7 @@ const LogPage = {
 
   async loadWeekSummary() {
     try {
-      const response = await fetch('/api/stats/week');
+      const response = await fetch(this.api('/api/stats/week'));
       if (response.ok) {
         const stats = await response.json();
         document.getElementById('meditation-summary').textContent =

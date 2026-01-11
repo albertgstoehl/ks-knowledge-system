@@ -5,6 +5,14 @@
     let selectedNodes = [];
     let selectedEdges = [];
 
+    // Base path for API calls (set from template, e.g., "/dev" or "")
+    const apiBasePath = typeof basePath !== 'undefined' ? basePath : '';
+    
+    // Helper for API calls
+    function api(path) {
+        return apiBasePath + path;
+    }
+
     // Kasten URL from template
     const kastenUrl = window.KASTEN_URL || 'https://kasten.gstoehl.dev';
 
@@ -14,7 +22,7 @@
 
     // Load workspace data (positions from Canvas, content from Kasten)
     async function loadWorkspace() {
-        const response = await fetch('/api/workspace');
+        const response = await fetch(api('/api/workspace'));
         const data = await response.json();
 
         nodes.clear();
@@ -150,7 +158,7 @@
     window.createConnection = async function() {
         const label = document.getElementById('connection-label').value || 'relates to';
 
-        const response = await fetch('/api/workspace/connections', {
+        const response = await fetch(api('/api/workspace/connections'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -180,7 +188,7 @@
     window.deleteSelected = async function() {
         // Delete notes first (API cascades to remove their connections)
         for (const nodeId of selectedNodes) {
-            const response = await fetch(`/api/workspace/notes/${nodeId}`, {
+            const response = await fetch(api(`/api/workspace/notes/${nodeId}`), {
                 method: 'DELETE'
             });
 
@@ -196,7 +204,7 @@
 
         // Delete remaining selected edges
         for (const edgeId of selectedEdges) {
-            const response = await fetch(`/api/workspace/connections/${edgeId}`, {
+            const response = await fetch(api(`/api/workspace/connections/${edgeId}`), {
                 method: 'DELETE'
             });
 
@@ -213,7 +221,7 @@
 
     // Export
     async function exportWorkspace() {
-        const response = await fetch('/api/workspace');
+        const response = await fetch(api('/api/workspace'));
         const data = await response.json();
 
         // Fetch all note content from Kasten

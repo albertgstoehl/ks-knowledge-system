@@ -1,6 +1,7 @@
 <script>
 (function() {
-    const API_BASE = '/bookmarks';
+    const basePath = '{{ base_path }}';
+    const API_BASE = basePath + '/bookmarks';
     const currentView = '{{ view }}';
 
     // Live expiry countdown timers
@@ -449,7 +450,7 @@
         citeBtn.textContent = 'Sending...';
 
         try {
-            const res = await fetch('/canvas/quotes', {
+            const res = await fetch(basePath + '/canvas/quotes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
