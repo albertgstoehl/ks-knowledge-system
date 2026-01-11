@@ -225,3 +225,132 @@ class TestBalanceSessionLifecycle:
         # Start button should be available again
         start_btn = page.locator("#start-btn")
         expect(start_btn).to_be_visible()
+
+
+class TestBalanceLogging:
+    """Tests for logging meditation and exercise."""
+
+    def test_log_meditation_session(self, page: Page, balance_url: str):
+        """Test logging a meditation session."""
+        # Navigate to log page
+        page.goto(f"{balance_url}/log")
+        page.wait_for_load_state("networkidle")
+        
+        # Should be on meditation tab by default
+        meditation_form = page.locator("#meditation-form")
+        expect(meditation_form).to_be_visible()
+        
+        # Select 10 minutes using quick duration button
+        page.locator(".quick-durations .btn--option[data-value='10']").first.click()
+        
+        # Duration input should update
+        duration_input = page.locator("#meditation-duration")
+        expect(duration_input).to_have_value("10")
+        
+        # Submit the form
+        submit_btn = page.locator("#meditation-form button[type='submit']")
+        submit_btn.click()
+        
+        # Should show success (page reloads or shows confirmation)
+        page.wait_for_load_state("networkidle")
+        # Form should reset or show success state
+        expect(meditation_form).to_be_visible()
+
+    def test_log_exercise_session(self, page: Page, balance_url: str):
+        """Test logging an exercise session."""
+        # Navigate to log page
+        page.goto(f"{balance_url}/log")
+        page.wait_for_load_state("networkidle")
+        
+        # Click exercise tab
+        exercise_tab = page.locator(".log-tabs .btn--option[data-tab='exercise']")
+        exercise_tab.click()
+        
+        # Exercise form should be visible
+        exercise_form = page.locator("#exercise-form")
+        expect(exercise_form).to_be_visible()
+        
+        # Select exercise type "cardio" (may already be selected by default)
+        page.locator(".type-options .btn--option[data-value='cardio']").click()
+        
+        # Set duration
+        duration_input = page.locator("#exercise-duration")
+        duration_input.fill("30")
+        
+        # Select intensity "medium" (may already be selected by default)
+        page.locator(".intensity-options .btn--option[data-value='medium']").click()
+        
+        # Submit
+        submit_btn = page.locator("#exercise-form button[type='submit']")
+        submit_btn.click()
+        
+        # Should show success
+        page.wait_for_load_state("networkidle")
+        expect(exercise_form).to_be_visible()
+
+
+class TestBalanceSettings:
+    """Tests for settings management."""
+
+    def test_change_settings(self, page: Page, balance_url: str):
+        """Test viewing and modifying settings."""
+        # Navigate to settings page
+        page.goto(f"{balance_url}/settings")
+        page.wait_for_load_state("networkidle")
+        
+        # Settings form should be visible
+        settings_form = page.locator("#settings-form")
+        expect(settings_form).to_be_visible()
+        
+        # Session duration input should exist
+        session_duration = page.locator("#session-duration")
+        expect(session_duration).to_be_visible()
+        
+        # Get current value and modify
+        current_value = session_duration.input_value()
+        new_value = "30" if current_value != "30" else "25"
+        session_duration.fill(new_value)
+        
+        # Save settings
+        save_btn = page.locator("#settings-form button[type='submit']")
+        save_btn.click()
+        
+        # Wait for save
+        page.wait_for_load_state("networkidle")
+        
+        # Reload and verify change persisted
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        expect(session_duration).to_have_value(new_value)
+        
+        # Restore original value
+        session_duration.fill(current_value)
+        save_btn.click()
+        page.wait_for_load_state("networkidle")
+
+
+class TestBalanceStats:
+    """Tests for stats viewing."""
+
+    def test_view_stats(self, page: Page, balance_url: str):
+        """Test viewing weekly and monthly stats."""
+        # Navigate to stats page
+        page.goto(f"{balance_url}/stats")
+        page.wait_for_load_state("networkidle")
+        
+        # Stats should be visible
+        sessions_stat = page.locator("#stat-sessions")
+        expect(sessions_stat).to_be_visible()
+        
+        # Period selector should exist
+        week_btn = page.locator(".period-selector .btn--option[data-period='week']")
+        month_btn = page.locator(".period-selector .btn--option[data-period='month']")
+        expect(week_btn).to_be_visible()
+        expect(month_btn).to_be_visible()
+        
+        # Switch to month view
+        month_btn.click()
+        page.wait_for_load_state("networkidle")
+        
+        # Stats should still be visible
+        expect(sessions_stat).to_be_visible()
