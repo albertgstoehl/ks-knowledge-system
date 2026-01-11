@@ -72,8 +72,18 @@ class TestBalanceTimerComplete:
         NOTE: UI verification is skipped due to known dev environment issue
         where UI fetches from production API instead of dev API.
         """
+        # Step 0: Set short break to 1 minute for faster test cleanup
+        settings_response = balance_api.get("/api/settings")
+        original_short_break = 5  # default
+        if settings_response.status_code == 200:
+            original_short_break = settings_response.json().get("short_break", 5)
+        
+        balance_api.put("/api/settings", json={"short_break": 1})
+        
         # Step 1: Ensure clean state - wait for any existing break
         if not ensure_clean_state(balance_api, max_wait=60):
+            # Restore settings before skipping
+            balance_api.put("/api/settings", json={"short_break": original_short_break})
             pytest.skip("Could not get clean state (break still active)")
         
         # Step 2: Start a session via API
@@ -137,7 +147,11 @@ class TestBalanceTimerComplete:
         # Use the header title which is unique
         expect(page.locator(".header__title")).to_contain_text("Balance")
         
-        # Cleanup is handled by the next test's ensure_clean_state
+        # Step 10: Cleanup - restore original break duration and wait for break to end
+        balance_api.put("/api/settings", json={"short_break": original_short_break})
+        
+        # Wait for the 1-minute break to end so subsequent tests can run
+        time.sleep(65)  # Wait slightly more than 1 minute
 
 
 class TestBalanceSessionLifecycle:

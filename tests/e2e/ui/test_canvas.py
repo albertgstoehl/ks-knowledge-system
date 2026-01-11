@@ -85,10 +85,18 @@ class TestCanvasWorkspace:
 
     def test_add_note_to_workspace(self, page: Page, canvas_url: str, canvas_api, kasten_api):
         """Test adding a note to the workspace."""
-        # Get a note from Kasten
+        # Get a note from Kasten, or create one if none exist
         response = kasten_api.get("/api/notes")
         if response.status_code != 200 or not response.json():
-            pytest.skip("No notes available in Kasten")
+            # Try to create a test note
+            create_response = kasten_api.post("/api/notes", json={
+                "id": "test-ws",
+                "title": "Test Workspace Note",
+                "content": "A note for workspace testing."
+            })
+            if create_response.status_code not in (200, 201):
+                pytest.skip("No notes available in Kasten and could not create one")
+            response = kasten_api.get("/api/notes")
         
         notes = response.json()
         note_id = notes[0]["id"]
@@ -129,10 +137,23 @@ class TestCanvasWorkspace:
 
     def test_connect_two_notes_in_workspace(self, page: Page, canvas_url: str, canvas_api, kasten_api):
         """Test that connect button exists for workspace with notes."""
-        # Get at least 2 notes
+        # Get at least 2 notes, or create them if needed
         response = kasten_api.get("/api/notes")
-        if response.status_code != 200 or len(response.json()) < 2:
-            pytest.skip("Need at least 2 notes in Kasten")
+        notes = response.json() if response.status_code == 200 else []
+        
+        # Create test notes if we don't have enough
+        if len(notes) < 2:
+            for i in range(2 - len(notes)):
+                create_response = kasten_api.post("/api/notes", json={
+                    "id": f"test-conn-{i}",
+                    "title": f"Test Connection Note {i}",
+                    "content": f"A note for connection testing {i}."
+                })
+            response = kasten_api.get("/api/notes")
+            notes = response.json() if response.status_code == 200 else []
+        
+        if len(notes) < 2:
+            pytest.skip("Need at least 2 notes in Kasten and could not create them")
         
         notes = response.json()
         note1_id = notes[0]["id"]
