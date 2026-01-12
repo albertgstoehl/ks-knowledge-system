@@ -16,13 +16,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Train", version="0.1.0", lifespan=lifespan, root_path=BASE_PATH)
 
-# Static files and templates
-static_path = os.path.join(os.path.dirname(__file__), "static")
+# Static files - use absolute paths for StaticFiles (required for proper resolution)
+_base = os.path.dirname(os.path.abspath(__file__))
+static_path = os.path.join(_base, "static")
 
 # Shared paths: try Docker mount first (/app/shared), then local (../../shared)
-_base = os.path.dirname(__file__)
-_docker_shared = os.path.join(_base, "..", "shared")
-_local_shared = os.path.join(_base, "..", "..", "shared")
+_docker_shared = os.path.abspath(os.path.join(_base, "..", "shared"))
+_local_shared = os.path.abspath(os.path.join(_base, "..", "..", "shared"))
 _shared_base = _docker_shared if os.path.exists(_docker_shared) else _local_shared
 
 # Mount shared (css + js) first, then service-specific static
