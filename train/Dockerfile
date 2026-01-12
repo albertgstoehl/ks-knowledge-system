@@ -10,7 +10,7 @@ COPY train/src/ ./src/
 COPY train/plan/ ./plan/
 COPY shared/ ./shared/
 
-ENV DATABASE_URL=/app/data/train.db
+ENV DATABASE_URL=sqlite:///./data/train.db
 
 EXPOSE 8000
 
