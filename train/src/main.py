@@ -14,7 +14,8 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Train", version="0.1.0", lifespan=lifespan, root_path=BASE_PATH)
+# Note: Don't use root_path - Traefik strips /dev prefix before reaching the app
+app = FastAPI(title="Train", version="0.1.0", lifespan=lifespan)
 
 # Static files - use absolute paths for StaticFiles (required for proper resolution)
 _base = os.path.dirname(os.path.abspath(__file__))

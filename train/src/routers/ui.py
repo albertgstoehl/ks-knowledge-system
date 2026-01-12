@@ -1,6 +1,6 @@
 from pathlib import Path
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from src.utils.paths import find_shared_dir
 
@@ -11,12 +11,7 @@ shared_templates_dir = find_shared_dir(Path(__file__)) / "templates"
 templates = Jinja2Templates(directory=[str(templates_dir), str(shared_templates_dir)])
 
 
-@router.get("/")
-async def root(request: Request):
-    # Use url_for to respect root_path for proper redirect in dev/prod
-    return RedirectResponse(url=request.url_for("today"))
-
-
+@router.get("/", response_class=HTMLResponse)
 @router.get("/today", response_class=HTMLResponse)
 async def today(request: Request):
     return templates.TemplateResponse("today.html", {"request": request, "active_tab": "Today"})
