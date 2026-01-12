@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+{% block content %}
+{% call ui.card() %}
+  <h2>Log Workout</h2>
+  <form id="set-form">
+    {% call ui.form_group("Exercise", "exercise") %}
+      {{ ui.input("exercise", placeholder="e.g. Bench Press") }}
+    {% endcall %}
+    {% call ui.form_group("Weight", "weight") %}
+      {{ ui.input("weight", type="number", placeholder="kg") }}
+    {% endcall %}
+    {% call ui.form_group("Reps", "reps") %}
+      {{ ui.input("reps", type="number", placeholder="8") }}
+    {% endcall %}
+    {% call ui.form_group("RIR", "rir") %}
+      {{ ui.input("rir", type="number", placeholder="2") }}
+    {% endcall %}
+    {{ ui.button("Add set", primary=true, type="submit") }}
+  </form>
+  <div id="sets" class="sets-list"></div>
+{% endcall %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ base_path }}/static/js/log.js"></script>
+{% endblock %}

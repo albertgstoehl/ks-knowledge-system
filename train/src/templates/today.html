@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+{% block content %}
+{% call ui.card() %}
+  <h2>Today</h2>
+  <p>Next session: A/B</p>
+  <div class="actions">
+    {{ ui.button("Start session", primary=true) }}
+  </div>
+{% endcall %}
+{% endblock %}

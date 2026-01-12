@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+{% block content %}
+{% call ui.card() %}
+  <h2>Plan</h2>
+  <div id="plan-body" class="plan-content"></div>
+{% endcall %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch("{{ base_path }}/api/plan/current")
+  .then((response) => {
+    if (!response.ok) {
+      throw new Error("No plan found");
+    }
+    return response.json();
+  })
+  .then((data) => {
+    document.getElementById("plan-body").innerText = data.markdown;
+  })
+  .catch((error) => {
+    document.getElementById("plan-body").innerText = "No plan registered yet.";
+  });
+</script>
+{% endblock %}

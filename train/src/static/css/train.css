@@ -1,0 +1,27 @@
+/* Train-specific styles */
+
+.page {
+  padding: var(--space-4);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.actions {
+  margin-top: var(--space-4);
+}
+
+.sets-list {
+  margin-top: var(--space-4);
+}
+
+.set-entry {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+}
+
+.plan-content {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
