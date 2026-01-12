@@ -12,8 +12,9 @@ templates = Jinja2Templates(directory=[str(templates_dir), str(shared_templates_
 
 
 @router.get("/")
-async def root():
-    return RedirectResponse(url="/today")
+async def root(request: Request):
+    # Use url_for to respect root_path for proper redirect in dev/prod
+    return RedirectResponse(url=request.url_for("today"))
 
 
 @router.get("/today", response_class=HTMLResponse)
