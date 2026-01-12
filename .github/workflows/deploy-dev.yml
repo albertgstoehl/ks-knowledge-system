@@ -17,6 +17,7 @@ jobs:
       bookmark-manager: ${{ steps.changes.outputs.bookmark-manager }}
       canvas: ${{ steps.changes.outputs.canvas }}
       kasten: ${{ steps.changes.outputs.kasten }}
+      train: ${{ steps.changes.outputs.train }}
       shared: ${{ steps.changes.outputs.shared }}
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +34,8 @@ jobs:
               - 'canvas/**'
             kasten:
               - 'kasten/**'
+            train:
+              - 'train/**'
             shared:
               - 'shared/**'
 
@@ -44,7 +47,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        service: [balance, bookmark-manager, canvas, kasten]
+        service: [balance, bookmark-manager, canvas, kasten, train]
     steps:
       - uses: actions/checkout@v4
       
@@ -95,6 +98,7 @@ jobs:
           kubectl rollout restart deployment/bookmark-manager -n knowledge-system-dev
           kubectl rollout restart deployment/canvas -n knowledge-system-dev
           kubectl rollout restart deployment/kasten -n knowledge-system-dev
+          kubectl rollout restart deployment/train -n knowledge-system-dev
       
       - name: Wait for rollout to complete
         run: |
@@ -102,6 +106,7 @@ jobs:
           kubectl rollout status deployment/bookmark-manager -n knowledge-system-dev --timeout=5m
           kubectl rollout status deployment/canvas -n knowledge-system-dev --timeout=5m
           kubectl rollout status deployment/kasten -n knowledge-system-dev --timeout=5m
+          kubectl rollout status deployment/train -n knowledge-system-dev --timeout=5m
 
   reset-dev-databases:
     needs: deploy-to-dev
@@ -119,6 +124,7 @@ jobs:
           kubectl wait --for=condition=ready pod -l app=bookmark-manager -n knowledge-system-dev --timeout=5m
           kubectl wait --for=condition=ready pod -l app=canvas -n knowledge-system-dev --timeout=5m
           kubectl wait --for=condition=ready pod -l app=kasten -n knowledge-system-dev --timeout=5m
+          kubectl wait --for=condition=ready pod -l app=train -n knowledge-system-dev --timeout=5m
       
       - name: Reset databases
         run: |
@@ -126,6 +132,7 @@ jobs:
           kubectl exec -n knowledge-system-dev deployment/bookmark-manager -- sh -c "rm -f /app/data/*.db || true"
           kubectl exec -n knowledge-system-dev deployment/canvas -- sh -c "rm -f /app/data/*.db || true"
           kubectl exec -n knowledge-system-dev deployment/kasten -- sh -c "rm -f /app/data/*.db || true"
+          kubectl exec -n knowledge-system-dev deployment/train -- sh -c "rm -f /app/data/*.db || true"
       
       - name: Restart deployments to reinitialize databases
         run: |
@@ -133,6 +140,7 @@ jobs:
           kubectl rollout restart deployment/bookmark-manager -n knowledge-system-dev
           kubectl rollout restart deployment/canvas -n knowledge-system-dev
           kubectl rollout restart deployment/kasten -n knowledge-system-dev
+          kubectl rollout restart deployment/train -n knowledge-system-dev
       
       - name: Wait for rollout to complete
         run: |
@@ -140,6 +148,7 @@ jobs:
           kubectl rollout status deployment/bookmark-manager -n knowledge-system-dev --timeout=3m
           kubectl rollout status deployment/canvas -n knowledge-system-dev --timeout=3m
           kubectl rollout status deployment/kasten -n knowledge-system-dev --timeout=3m
+          kubectl rollout status deployment/train -n knowledge-system-dev --timeout=3m
 
   run-api-tests:
     needs: reset-dev-databases

@@ -1,12 +1,14 @@
+# Build from project root: docker build -f train/Dockerfile -t train .
 FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY train/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src/ ./src/
-COPY plan/ ./plan/
+COPY train/src/ ./src/
+COPY train/plan/ ./plan/
+COPY shared/ ./shared/
 
 ENV DATABASE_URL=/app/data/train.db
 
