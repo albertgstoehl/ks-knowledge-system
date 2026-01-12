@@ -5,21 +5,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Train</title>
-    <link rel="stylesheet" href="/static/shared/css/variables.css" />
-    <link rel="stylesheet" href="/static/shared/css/base.css" />
-    <link rel="stylesheet" href="/static/shared/css/components.css" />
-    <link rel="stylesheet" href="/static/css/train.css" />
+    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/variables.css" />
+    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/base.css" />
+    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/components.css" />
+    <link rel="stylesheet" href="{{ base_path }}/static/css/train.css" />
   </head>
   <body>
     {{ ui.header("Train", [
-      ("Today", "/today"),
-      ("Log Workout", "/log"),
-      ("Plan", "/plan")
+      ("Today", base_path ~ "/"),
+      ("Log Workout", base_path ~ "/log"),
+      ("Plan", base_path ~ "/plan")
     ], active=active_tab) }}
     <main class="page">
       {% block content %}{% endblock %}
     </main>
-    <script src="/static/shared/js/components.js"></script>
+    <script src="{{ base_path }}/static/shared/js/components.js"></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>
