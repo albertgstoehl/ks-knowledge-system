@@ -1,11 +1,8 @@
-import os
 from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from src.utils.paths import find_shared_dir
-
-BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 
 router = APIRouter(tags=["ui"])
 
@@ -16,22 +13,19 @@ templates = Jinja2Templates(directory=[str(templates_dir), str(shared_templates_
 
 @router.get("/")
 async def root():
-    return RedirectResponse(url=f"{BASE_PATH}/today")
+    return RedirectResponse(url="/today")
 
 
 @router.get("/today", response_class=HTMLResponse)
 async def today(request: Request):
-    context = {"request": request, "active_tab": "Today", "base_path": BASE_PATH}
-    return templates.TemplateResponse("today.html", context)
+    return templates.TemplateResponse("today.html", {"request": request, "active_tab": "Today"})
 
 
 @router.get("/log", response_class=HTMLResponse)
 async def log(request: Request):
-    context = {"request": request, "active_tab": "Log Workout", "base_path": BASE_PATH}
-    return templates.TemplateResponse("log.html", context)
+    return templates.TemplateResponse("log.html", {"request": request, "active_tab": "Log Workout"})
 
 
 @router.get("/plan", response_class=HTMLResponse)
 async def plan(request: Request):
-    context = {"request": request, "active_tab": "Plan", "base_path": BASE_PATH}
-    return templates.TemplateResponse("plan.html", context)
+    return templates.TemplateResponse("plan.html", {"request": request, "active_tab": "Plan"})
