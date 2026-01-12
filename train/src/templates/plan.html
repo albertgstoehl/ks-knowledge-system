@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% import "components.html" as ui %}
 {% block content %}
-{% call ui.card() %}
-  <h2>Plan</h2>
-  <div id="plan-body" class="plan-content"></div>
-{% endcall %}
+<div class="page-header">
+  <h2>Training Plan</h2>
+</div>
+
+<div id="plan-body" class="plan-content">Loading...</div>
 {% endblock %}
 
 {% block scripts %}
@@ -20,7 +21,7 @@ fetch("{{ base_path }}/api/plan/current")
     document.getElementById("plan-body").innerText = data.markdown;
   })
   .catch((error) => {
-    document.getElementById("plan-body").innerText = "No plan registered yet.";
+    document.getElementById("plan-body").innerText = "No plan registered yet. Upload a plan markdown file to get started.";
   });
 </script>
 {% endblock %}

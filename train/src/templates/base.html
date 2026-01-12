@@ -13,11 +13,13 @@
   <body>
     {{ ui.header("Train", [
       ("Today", base_path ~ "/"),
-      ("Log Workout", base_path ~ "/log"),
+      ("Log", base_path ~ "/log"),
       ("Plan", base_path ~ "/plan")
     ], active=active_tab) }}
-    <main class="page">
-      {% block content %}{% endblock %}
+    <main class="content-container">
+      <div class="container">
+        {% block content %}{% endblock %}
+      </div>
     </main>
     <script src="{{ base_path }}/static/shared/js/components.js"></script>
     {% block scripts %}{% endblock %}

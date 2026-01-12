@@ -1,25 +1,40 @@
 {% extends "base.html" %}
 {% import "components.html" as ui %}
 {% block content %}
-{% call ui.card() %}
+<div class="page-header">
   <h2>Log Workout</h2>
-  <form id="set-form">
-    {% call ui.form_group("Exercise", "exercise") %}
-      {{ ui.input("exercise", placeholder="e.g. Bench Press") }}
-    {% endcall %}
-    {% call ui.form_group("Weight", "weight") %}
-      {{ ui.input("weight", type="number", placeholder="kg") }}
-    {% endcall %}
-    {% call ui.form_group("Reps", "reps") %}
-      {{ ui.input("reps", type="number", placeholder="8") }}
-    {% endcall %}
-    {% call ui.form_group("RIR", "rir") %}
-      {{ ui.input("rir", type="number", placeholder="2") }}
-    {% endcall %}
-    {{ ui.button("Add set", primary=true, type="submit") }}
-  </form>
-  <div id="sets" class="sets-list"></div>
-{% endcall %}
+</div>
+
+<form id="set-form">
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-group__label" for="exercise">Exercise</label>
+      <input type="text" name="exercise" id="exercise" class="input" placeholder="e.g. Bench Press" required>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-group__label" for="weight">Weight (kg)</label>
+      <input type="number" name="weight" id="weight" class="input" step="0.5" required>
+    </div>
+    <div class="form-group">
+      <label class="form-group__label" for="reps">Reps</label>
+      <input type="number" name="reps" id="reps" class="input" required>
+    </div>
+    <div class="form-group">
+      <label class="form-group__label" for="rir">RIR</label>
+      <input type="number" name="rir" id="rir" class="input" min="0" max="5" placeholder="2">
+    </div>
+  </div>
+  <div class="actions">
+    {{ ui.button("Add Set", primary=true, type="submit") }}
+  </div>
+</form>
+
+<div id="sets" class="sets-list">
+  <div class="sets-list__header">Recent Sets</div>
+  <!-- Populated by JS -->
+</div>
 {% endblock %}
 
 {% block scripts %}

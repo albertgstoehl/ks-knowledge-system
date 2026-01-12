@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 {% import "components.html" as ui %}
 {% block content %}
-{% call ui.card() %}
-  <h2>Today</h2>
-  <p>Next session: A/B</p>
-  <div class="actions">
-    {{ ui.button("Start session", primary=true) }}
-  </div>
-{% endcall %}
+<div class="page-header">
+  <h2>Today's Workout</h2>
+</div>
+
+<div class="session-info">
+  <div class="session-info__label">Next session</div>
+  <div class="session-info__value">A/B Split</div>
+</div>
+
+<div class="actions">
+  {{ ui.button("Start Workout", primary=true, lg=true) }}
+</div>
 {% endblock %}
