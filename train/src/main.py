@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from src.routers import ui, plans
+from src.routers import ui, plans, sessions
 
 BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 
@@ -32,3 +32,4 @@ async def health():
 
 app.include_router(ui.router)
 app.include_router(plans.router)
+app.include_router(sessions.router)
