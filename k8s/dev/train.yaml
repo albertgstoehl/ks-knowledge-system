@@ -24,7 +24,7 @@ spec:
             - name: TZ
               value: "Europe/Zurich"
             - name: DATABASE_URL
-              value: "./data/train.db"
+              value: "sqlite:///./data/train.db"
             - name: BASE_PATH
               value: "/dev"
           volumeMounts:
