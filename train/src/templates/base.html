@@ -1,27 +1,75 @@
-{% import "components.html" as ui %}
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Train</title>
-    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/variables.css" />
-    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/base.css" />
-    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/components.css" />
-    <link rel="stylesheet" href="{{ base_path }}/static/css/train.css" />
-  </head>
-  <body>
-    {{ ui.header("Train", [
-      ("Today", base_path ~ "/"),
-      ("Log", base_path ~ "/log"),
-      ("Plan", base_path ~ "/plan")
-    ], active=active_tab) }}
-    <main class="content-container">
-      <div class="container">
-        {% block content %}{% endblock %}
-      </div>
-    </main>
-    <script src="{{ base_path }}/static/shared/js/components.js"></script>
-    {% block scripts %}{% endblock %}
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{% block title %}Train{% endblock %}</title>
+  <!-- Shared component library -->
+  <link rel="stylesheet" href="{{ base_path }}/static/shared/css/variables.css">
+  <link rel="stylesheet" href="{{ base_path }}/static/shared/css/base.css">
+  <link rel="stylesheet" href="{{ base_path }}/static/shared/css/components.css">
+  <link rel="stylesheet" href="{{ base_path }}/static/shared/css/utilities.css">
+  <!-- Train-specific styles -->
+  <link rel="stylesheet" href="{{ base_path }}/static/css/train.css">
+  {% block head %}{% endblock %}
+</head>
+<body class="has-bottom-nav">
+  {% import "components.html" as ui %}
+  {% set tabs = [("Today", base_path ~ "/"), ("Log", base_path ~ "/log"), ("Plan", base_path ~ "/plan")] %}
+
+  <header class="header">
+    <h1 class="header__title">Train</h1>
+    <nav class="tabs header__tabs">
+      {% for label, url in tabs %}
+      <a href="{{ url }}"
+         class="tab{% if label == active_tab %} tab--active{% endif %}"
+         hx-get="{{ url }}"
+         hx-target="#main-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">{{ label }}</a>
+      {% endfor %}
+    </nav>
+  </header>
+
+  <main id="main-content" class="content-container">
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav__links">
+      {% for label, url in tabs %}
+      <a href="{{ url }}"
+         class="bottom-nav__link{% if label == active_tab %} bottom-nav__link--active{% endif %}"
+         hx-get="{{ url }}"
+         hx-target="#main-content"
+         hx-swap="innerHTML"
+         hx-push-url="true">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </nav>
+
+  <!-- Shared JS utilities -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="{{ base_path }}/static/shared/js/components.js"></script>
+
+  <!-- Base path for API calls -->
+  <script>var basePath = '{{ base_path }}';</script>
+
+  <script>
+  // Update active tab state after htmx navigation
+  document.body.addEventListener('htmx:afterSettle', function() {
+    var path = window.location.pathname;
+    document.querySelectorAll('.header__tabs .tab').forEach(function(tab) {
+      tab.classList.toggle('tab--active', tab.getAttribute('href') === path);
+    });
+    document.querySelectorAll('.bottom-nav__link').forEach(function(link) {
+      link.classList.toggle('bottom-nav__link--active', link.getAttribute('href') === path);
+    });
+  });
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
 </html>
