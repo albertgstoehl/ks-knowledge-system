@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Depends
+from datetime import date, datetime
+from typing import Optional
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,6 +54,42 @@ async def create_set(payload: SetCreate, session: AsyncSession = Depends(get_db)
         "rir": entry.rir,
         "order": entry.set_order,
     }
+
+
+@router.get("")
+async def list_sets(
+    session_id: Optional[int] = None,
+    since: Optional[date] = None,
+    session: AsyncSession = Depends(get_db),
+):
+    query = (
+        select(SetEntry, Exercise, Session)
+        .join(Exercise, Exercise.id == SetEntry.exercise_id)
+        .join(Session, Session.id == SetEntry.session_id)
+        .order_by(desc(SetEntry.id))
+    )
+
+    if session_id:
+        query = query.where(SetEntry.session_id == session_id)
+    if since:
+        query = query.where(Session.started_at >= datetime.combine(since, datetime.min.time()))
+
+    result = await session.execute(query)
+    rows = result.all()
+
+    return [
+        {
+            "id": set_entry.id,
+            "session_id": set_entry.session_id,
+            "exercise_name": exercise.name,
+            "muscle_groups": exercise.muscle_groups,
+            "weight": set_entry.weight,
+            "reps": set_entry.reps,
+            "rir": set_entry.rir,
+            "order": set_entry.set_order,
+        }
+        for set_entry, exercise, session_row in rows
+    ]
 
 
 @router.get("/recent")

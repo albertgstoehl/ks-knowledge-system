@@ -30,6 +30,12 @@ def balance_url(base_url):
     """Balance service URL."""
     return base_url.replace("bookmark.gstoehl.dev", "balance.gstoehl.dev")
 
+
+@pytest.fixture(scope="session")
+def train_url(base_url):
+    """Train service URL."""
+    return base_url.replace("bookmark.gstoehl.dev", "train.gstoehl.dev")
+
 # Playwright fixtures for UI tests
 @pytest.fixture(scope="session")
 def browser():
