@@ -55,7 +55,7 @@ def normalize_templates(raw_templates: dict) -> dict:
 
 router = APIRouter(prefix="/api/plan", tags=["plan"])
 
-PLAN_DIR = os.getenv("PLAN_DIR", "./plan")
+PLAN_DIR = os.getenv("PLAN_DIR", "./data/plans")
 
 
 @router.get("/current", response_model=PlanResponse)
