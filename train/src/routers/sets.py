@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends
 from datetime import date, datetime
 from typing import Optional
@@ -9,6 +10,42 @@ from src.database import get_db
 from src.models import Session, Exercise, SetEntry
 
 router = APIRouter(prefix="/api/sets", tags=["sets"])
+
+
+@router.get("")
+async def list_sets(
+    session_id: Optional[int] = None,
+    exercise_name: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """List sets with optional filters."""
+    query = (
+        select(SetEntry, Exercise, Session)
+        .join(Exercise, Exercise.id == SetEntry.exercise_id)
+        .join(Session, Session.id == SetEntry.session_id)
+    )
+
+    if session_id:
+        query = query.where(SetEntry.session_id == session_id)
+    if exercise_name:
+        query = query.where(Exercise.name == exercise_name)
+
+    query = query.order_by(desc(SetEntry.id))
+    result = await db.execute(query)
+    rows = result.all()
+
+    return [
+        {
+            "id": set_entry.id,
+            "session_id": set_entry.session_id,
+            "exercise_name": exercise.name,
+            "weight": set_entry.weight,
+            "reps": set_entry.reps,
+            "rir": set_entry.rir,
+            "order": set_entry.set_order,
+        }
+        for set_entry, exercise, session_row in rows
+    ]
 
 
 class SetCreate(BaseModel):
