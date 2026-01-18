@@ -3,11 +3,10 @@ from playwright.sync_api import Page, expect
 
 
 def test_today_page_loads(page: Page, train_url: str):
-    """Verify Today page shows template selector and start button."""
+    """Verify Today page loads (idle or active workout state)."""
     page.goto(f"{train_url}/")
-    # Template-aware UI: check for template dropdown and start button
-    expect(page.locator("#template-select")).to_be_visible()
-    expect(page.locator("button:has-text('Start Workout')")).to_be_visible()
+    # #today-content exists in both idle (template picker) and active (workout) states
+    expect(page.locator("#today-content")).to_be_visible()
 
 
 def test_history_page_loads(page: Page, train_url: str):
@@ -38,4 +37,4 @@ def test_bottom_nav_works(page: Page, train_url: str):
 
     # Click Today
     page.click(".bottom-nav >> text=Today")
-    expect(page.locator("#template-select")).to_be_visible()
+    expect(page.locator("#today-content")).to_be_visible()
