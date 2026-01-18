@@ -1,0 +1,126 @@
+<div class="p-md">
+  <div class="flex justify-between items-center mb-md border-b pb-sm">
+    <div>
+      <span class="font-bold">{{ active_session.template_key }}</span>
+      <span class="text-muted text-sm" id="sets-count">- 0 sets</span>
+    </div>
+  </div>
+
+  <div id="exercises-list" class="mb-lg">
+    <!-- Populated by JS -->
+  </div>
+
+  <div class="action-panel">
+    <button class="btn btn--danger btn--full" onclick="endWorkout()">
+      End Workout
+    </button>
+  </div>
+</div>
+
+<script>
+const sessionId = {{ active_session.id }};
+
+async function loadActiveWorkout() {
+  // Load exercises
+  const exResp = await fetch(`${basePath}/api/exercises`);
+  const exercises = await exResp.json();
+
+  // Load sets for this session
+  const setsResp = await fetch(`${basePath}/api/sets?session_id=${sessionId}`);
+  const sessionSets = await setsResp.json();
+
+  // Group sets by exercise
+  const setsByExercise = {};
+  sessionSets.forEach(s => {
+    if (!setsByExercise[s.exercise_name]) setsByExercise[s.exercise_name] = [];
+    setsByExercise[s.exercise_name].push(s);
+  });
+
+  document.getElementById('sets-count').textContent = `- ${sessionSets.length} sets`;
+
+  const html = exercises.map(ex => {
+    const exSets = setsByExercise[ex.name] || [];
+    const lastSet = ex.last_set || { weight: '', reps: '', rir: 2 };
+
+    return `
+    <div class="card mb-sm" id="exercise-${ex.id}">
+      <div class="p-sm cursor-pointer" onclick="toggleExercise(${ex.id})">
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="font-bold">${ex.name}</span>
+            <span class="text-muted text-sm">(${exSets.length} sets)</span>
+          </div>
+          <span class="text-muted">${exSets.length > 0 ? '+' : 'o'}</span>
+        </div>
+      </div>
+      <div id="exercise-detail-${ex.id}" class="border-t p-sm" style="display: none;">
+        <div class="text-sm text-muted mb-sm">
+          Last: ${ex.last_set ? `${ex.last_set.weight}kg x ${ex.last_set.reps}` : 'None'}
+        </div>
+        <div class="flex gap-sm mb-sm">
+          <input type="number" id="weight-${ex.id}" class="input" style="width: 80px" 
+                 value="${lastSet.weight || ''}" step="0.5" placeholder="kg">
+          <input type="number" id="reps-${ex.id}" class="input" style="width: 60px" 
+                 value="${lastSet.reps || ''}" placeholder="reps">
+          <input type="number" id="rir-${ex.id}" class="input" style="width: 50px" 
+                 value="${lastSet.rir !== null && lastSet.rir !== undefined ? lastSet.rir : ''}" min="0" max="5" placeholder="RIR">
+        </div>
+        <button class="btn btn--primary btn--full mb-sm" onclick="logSet(${ex.id}, '${ex.name.replace(/'/g, "\\'")}')">
+          Log Set
+        </button>
+        <div class="text-sm mb-sm" id="session-sets-${ex.id}">
+          ${exSets.map(s => `${s.weight}x${s.reps}`).join(', ') || 'No sets this session'}
+        </div>
+      </div>
+    </div>
+    `;
+  }).join('');
+
+  document.getElementById('exercises-list').innerHTML = html || '<div class="text-muted p-md">No exercises. Log your first set!</div>';
+}
+
+function toggleExercise(id) {
+  const detail = document.getElementById(`exercise-detail-${id}`);
+  detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+}
+
+async function logSet(exerciseId, exerciseName) {
+  const weight = parseFloat(document.getElementById(`weight-${exerciseId}`).value);
+  const reps = parseInt(document.getElementById(`reps-${exerciseId}`).value);
+  const rirVal = document.getElementById(`rir-${exerciseId}`).value;
+  const rir = rirVal !== '' ? parseInt(rirVal) : null;
+
+  if (!weight || !reps) {
+    alert('Enter weight and reps');
+    return;
+  }
+
+  await fetch(`${basePath}/api/sets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      exercise_name: exerciseName,
+      weight: weight,
+      reps: reps,
+      rir: rir
+    })
+  });
+
+  loadActiveWorkout();
+}
+
+async function endWorkout() {
+  if (!confirm('End this workout?')) return;
+
+  await fetch(`${basePath}/api/sessions/end`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: sessionId })
+  });
+
+  window.location.reload();
+}
+
+loadActiveWorkout();
+</script>

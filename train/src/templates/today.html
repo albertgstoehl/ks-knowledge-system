@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% import "components.html" as ui %}
+
 {% block content %}
-<div class="page-header">
-  <h2>Today's Workout</h2>
+<div id="today-content">
+  {% if active_session %}
+    {% include "partials/active_workout.html" %}
+  {% else %}
+    {% include "partials/idle_workout.html" %}
+  {% endif %}
 </div>
+{% endblock %}
 
-<div class="session-info">
-  <div class="session-info__label">Next session</div>
-  <div class="session-info__value">A/B Split</div>
-</div>
-
-<div class="actions">
-  {{ ui.button("Start Workout", primary=true, lg=true) }}
-</div>
+{% block scripts %}
+<script src="{{ base_path }}/static/js/today.js"></script>
 {% endblock %}

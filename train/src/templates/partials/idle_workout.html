@@ -1,0 +1,62 @@
+<div class="p-md">
+  <div class="mb-lg">
+    <div class="text-xl font-bold" id="template-name">Loading...</div>
+    <div class="text-muted text-sm" id="template-meta"></div>
+  </div>
+
+  <div id="exercises-list" class="mb-lg">
+    <!-- Populated by JS -->
+  </div>
+
+  <div class="action-panel">
+    <button class="btn btn--primary btn--full btn--lg" onclick="startWorkout()">
+      Start Workout
+    </button>
+  </div>
+</div>
+
+<script>
+async function loadTodayData() {
+  try {
+    // Load plan
+    const planResp = await fetch(`${basePath}/api/plan/current`);
+    if (planResp.ok) {
+      const plan = await planResp.json();
+      document.getElementById('template-name').textContent = plan.title;
+      document.getElementById('template-meta').textContent = 'Current plan';
+    } else {
+      document.getElementById('template-name').textContent = 'No Plan';
+      document.getElementById('template-meta').textContent = 'Register a plan to get started';
+    }
+  } catch (e) {
+    document.getElementById('template-name').textContent = 'Ready to Train';
+    document.getElementById('template-meta').textContent = '';
+  }
+
+  // Load exercises with last sets
+  const exResp = await fetch(`${basePath}/api/exercises`);
+  const exercises = await exResp.json();
+
+  if (exercises.length === 0) {
+    document.getElementById('exercises-list').innerHTML = '<div class="text-muted">No exercises yet. Start a workout to log your first set!</div>';
+    return;
+  }
+
+  const html = exercises.map(ex => `
+    <div class="card mb-sm">
+      <div class="p-sm">
+        <div class="font-bold">${ex.name}</div>
+        <div class="text-muted text-sm">
+          ${ex.last_set 
+            ? `Last: ${ex.last_set.weight}kg x ${ex.last_set.reps}${ex.last_set.rir !== null ? ` @ RIR ${ex.last_set.rir}` : ''}`
+            : 'No sets logged'}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('exercises-list').innerHTML = html;
+}
+
+loadTodayData();
+</script>
