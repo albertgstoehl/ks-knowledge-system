@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, desc
-from src.database import async_session_maker
+from src import database
 from src.models import Session
 from src.utils.paths import find_shared_dir
 
@@ -30,8 +30,8 @@ def _render(request: Request, template: str, context: dict | None = None):
 async def today(request: Request):
     # Check for active session (no ended_at)
     active_session = None
-    if async_session_maker:
-        async with async_session_maker() as db:
+    if database.async_session_maker:
+        async with database.async_session_maker() as db:
             result = await db.execute(
                 select(Session)
                 .where(Session.ended_at.is_(None))

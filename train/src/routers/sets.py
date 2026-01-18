@@ -54,15 +54,23 @@ class SetCreate(BaseModel):
     weight: float
     reps: int
     rir: int | None = None
+    notes: str | None = None
+    muscle_groups: list[str] | None = None
 
 
 @router.post("")
 async def create_set(payload: SetCreate, session: AsyncSession = Depends(get_db)):
+    import json
     result = await session.execute(select(Exercise).where(Exercise.name == payload.exercise_name))
     exercise = result.scalars().first()
     if not exercise:
-        exercise = Exercise(name=payload.exercise_name)
+        muscle_groups_json = json.dumps(payload.muscle_groups) if payload.muscle_groups else None
+        exercise = Exercise(name=payload.exercise_name, muscle_groups=muscle_groups_json)
         session.add(exercise)
+        await session.flush()
+    elif payload.muscle_groups and not exercise.muscle_groups:
+        # Update muscle groups if provided and not already set
+        exercise.muscle_groups = json.dumps(payload.muscle_groups)
         await session.flush()
 
     order_count = await session.execute(
@@ -76,6 +84,7 @@ async def create_set(payload: SetCreate, session: AsyncSession = Depends(get_db)
         weight=payload.weight,
         reps=payload.reps,
         rir=payload.rir,
+        notes=payload.notes,
         set_order=set_order,
     )
     session.add(entry)

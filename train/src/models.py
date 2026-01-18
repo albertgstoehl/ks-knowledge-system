@@ -49,6 +49,7 @@ class SetEntry(Base):
     weight = Column(Float, nullable=False)
     reps = Column(Integer, nullable=False)
     rir = Column(Integer)
+    notes = Column(Text)
 
     session = relationship("Session")
     exercise = relationship("Exercise")

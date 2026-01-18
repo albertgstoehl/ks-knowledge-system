@@ -18,57 +18,98 @@
 </div>
 
 <script>
+const basePath = '{{ base_path }}';
 const sessionId = {{ active_session.id }};
+const templateKey = '{{ active_session.template_key | replace("'", "\\'") }}';
+
+// Store exercise data globally for muscle groups lookup
+let exerciseData = {};
 
 async function loadActiveWorkout() {
-  // Load exercises
+  // Load plan for template exercises
+  let templateExercises = [];
+  try {
+    const planResp = await fetch(`${basePath}/api/plan/current`);
+    if (planResp.ok) {
+      const plan = await planResp.json();
+      templateExercises = (plan.templates && plan.templates[templateKey]) || [];
+      // Store exercise data (name -> muscles mapping)
+      templateExercises.forEach(ex => {
+        exerciseData[ex.name.toLowerCase()] = ex;
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load plan:', e);
+  }
+
+  // Load all exercises for last set data
   const exResp = await fetch(`${basePath}/api/exercises`);
-  const exercises = await exResp.json();
+  const allExercises = await exResp.json();
+  
+  // Create lookup by name (case-insensitive)
+  const exerciseByName = {};
+  allExercises.forEach(ex => {
+    exerciseByName[ex.name.toLowerCase()] = ex;
+  });
 
   // Load sets for this session
   const setsResp = await fetch(`${basePath}/api/sets?session_id=${sessionId}`);
   const sessionSets = await setsResp.json();
 
-  // Group sets by exercise
+  // Group sets by exercise name
   const setsByExercise = {};
   sessionSets.forEach(s => {
-    if (!setsByExercise[s.exercise_name]) setsByExercise[s.exercise_name] = [];
-    setsByExercise[s.exercise_name].push(s);
+    const key = s.exercise_name.toLowerCase();
+    if (!setsByExercise[key]) setsByExercise[key] = [];
+    setsByExercise[key].push(s);
   });
 
   document.getElementById('sets-count').textContent = `- ${sessionSets.length} sets`;
 
-  const html = exercises.map(ex => {
-    const exSets = setsByExercise[ex.name] || [];
-    const lastSet = ex.last_set || { weight: '', reps: '', rir: 2 };
+  // If no template exercises, fall back to showing all exercises  
+  const exercisesToShow = templateExercises.length > 0 
+    ? templateExercises 
+    : allExercises.map(e => ({name: e.name, muscles: []}));
 
+  const html = exercisesToShow.map((ex, idx) => {
+    const exName = ex.name;
+    const exMuscles = ex.muscles || [];
+    const exData = exerciseByName[exName.toLowerCase()];
+    const exSets = setsByExercise[exName.toLowerCase()] || [];
+    const lastSet = exData?.last_set || { weight: '', reps: '', rir: 2 };
+    const exId = exData?.id || `new-${idx}`;
+
+    // Store muscles in exerciseData for lookup
+    exerciseData[exId] = { name: exName, muscles: exMuscles };
+    
     return `
-    <div class="card mb-sm" id="exercise-${ex.id}">
-      <div class="p-sm cursor-pointer" onclick="toggleExercise(${ex.id})">
+    <div class="card mb-sm" id="exercise-${exId}">
+      <div class="p-sm cursor-pointer" onclick="toggleExercise('${exId}')">
         <div class="flex justify-between items-center">
           <div>
-            <span class="font-bold">${ex.name}</span>
+            <span class="font-bold">${exName}</span>
             <span class="text-muted text-sm">(${exSets.length} sets)</span>
           </div>
           <span class="text-muted">${exSets.length > 0 ? '+' : 'o'}</span>
         </div>
       </div>
-      <div id="exercise-detail-${ex.id}" class="border-t p-sm" style="display: none;">
+      <div id="exercise-detail-${exId}" class="border-t p-sm" style="display: none;">
         <div class="text-sm text-muted mb-sm">
-          Last: ${ex.last_set ? `${ex.last_set.weight}kg x ${ex.last_set.reps}` : 'None'}
+          Last: ${exData?.last_set ? `${exData.last_set.weight}kg x ${exData.last_set.reps}` : 'None'}
         </div>
         <div class="flex gap-sm mb-sm">
-          <input type="number" id="weight-${ex.id}" class="input" style="width: 80px" 
+          <input type="number" id="weight-${exId}" class="input" style="width: 80px" 
                  value="${lastSet.weight || ''}" step="0.5" placeholder="kg">
-          <input type="number" id="reps-${ex.id}" class="input" style="width: 60px" 
+          <input type="number" id="reps-${exId}" class="input" style="width: 60px" 
                  value="${lastSet.reps || ''}" placeholder="reps">
-          <input type="number" id="rir-${ex.id}" class="input" style="width: 50px" 
+          <input type="number" id="rir-${exId}" class="input" style="width: 50px" 
                  value="${lastSet.rir !== null && lastSet.rir !== undefined ? lastSet.rir : ''}" min="0" max="5" placeholder="RIR">
         </div>
-        <button class="btn btn--primary btn--full mb-sm" onclick="logSet(${ex.id}, '${ex.name.replace(/'/g, "\\'")}')">
+        <input type="text" id="notes-${exId}" class="input mb-sm" placeholder="Notes (optional)">
+        <button class="btn btn--primary btn--full mb-sm" onclick="logSet('${exId}')">
           Log Set
         </button>
-        <div class="text-sm mb-sm" id="session-sets-${ex.id}">
+        <div class="text-sm mb-sm" id="session-sets-${exId}">
           ${exSets.map(s => `${s.weight}x${s.reps}`).join(', ') || 'No sets this session'}
         </div>
       </div>
@@ -76,7 +117,7 @@ async function loadActiveWorkout() {
     `;
   }).join('');
 
-  document.getElementById('exercises-list').innerHTML = html || '<div class="text-muted p-md">No exercises. Log your first set!</div>';
+  document.getElementById('exercises-list').innerHTML = html || '<div class="text-muted p-md">No exercises in template.</div>';
 }
 
 function toggleExercise(id) {
@@ -84,11 +125,16 @@ function toggleExercise(id) {
   detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
 }
 
-async function logSet(exerciseId, exerciseName) {
+async function logSet(exerciseId) {
+  const exInfo = exerciseData[exerciseId] || {};
+  const exerciseName = exInfo.name || '';
+  const muscleGroups = exInfo.muscles || [];
+  
   const weight = parseFloat(document.getElementById(`weight-${exerciseId}`).value);
   const reps = parseInt(document.getElementById(`reps-${exerciseId}`).value);
   const rirVal = document.getElementById(`rir-${exerciseId}`).value;
   const rir = rirVal !== '' ? parseInt(rirVal) : null;
+  const notes = document.getElementById(`notes-${exerciseId}`).value || null;
 
   if (!weight || !reps) {
     alert('Enter weight and reps');
@@ -103,20 +149,25 @@ async function logSet(exerciseId, exerciseName) {
       exercise_name: exerciseName,
       weight: weight,
       reps: reps,
-      rir: rir
+      rir: rir,
+      notes: notes,
+      muscle_groups: muscleGroups
     })
   });
 
+  // Clear notes after logging
+  document.getElementById(`notes-${exerciseId}`).value = '';
   loadActiveWorkout();
 }
 
 async function endWorkout() {
-  if (!confirm('End this workout?')) return;
+  const notes = prompt('Session notes (optional):');
+  if (notes === null) return; // cancelled
 
   await fetch(`${basePath}/api/sessions/end`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ session_id: sessionId })
+    body: JSON.stringify({ session_id: sessionId, notes: notes || null })
   });
 
   window.location.reload();

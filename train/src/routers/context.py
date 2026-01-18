@@ -62,6 +62,7 @@ async def get_context(session: AsyncSession = Depends(get_db)):
                     "weight": set_entry.weight,
                     "reps": set_entry.reps,
                     "rir": set_entry.rir,
+                    "notes": set_entry.notes,
                 }
             )
 
