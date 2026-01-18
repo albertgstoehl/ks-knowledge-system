@@ -412,6 +412,18 @@
       </div>
     </section>
 
+    <!-- Chart -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Chart</div>
+      <p class="text-sm text-muted mb-md">Simple SVG line chart for progression data.</p>
+      <div class="styleguide-preview">
+        <div class="chart" id="demo-chart"></div>
+      </div>
+      <div class="styleguide-code">
+        renderLineChart('demo-chart', [{ y: 50, label: 'W1' }, { y: 55, label: 'W2' }]);
+      </div>
+    </section>
+
     <!-- Markdown Content -->
     <section class="styleguide-section">
       <div class="styleguide-title">Markdown Content</div>
@@ -515,5 +527,17 @@
     </section>
 
   </div>
+  <script src="js/components.js"></script>
+  <script>
+    // Initialize demo chart
+    renderLineChart('demo-chart', [
+      { y: 50, label: 'W1' },
+      { y: 52.5, label: 'W2' },
+      { y: 52.5, label: 'W3' },
+      { y: 55, label: 'W4' },
+      { y: 55, label: 'W5' },
+      { y: 57.5, label: 'W6' }
+    ]);
+  </script>
 </body>
 </html>
