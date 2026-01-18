@@ -3,9 +3,11 @@ from playwright.sync_api import Page, expect
 
 
 def test_today_page_loads(page: Page, train_url: str):
-    """Verify Today page shows Start Workout button."""
+    """Verify Today page shows template selector and start button."""
     page.goto(f"{train_url}/")
-    expect(page.locator("text=Start Workout")).to_be_visible()
+    # Template-aware UI: check for template dropdown and start button
+    expect(page.locator("#template-select")).to_be_visible()
+    expect(page.locator("button:has-text('Start Workout')")).to_be_visible()
 
 
 def test_history_page_loads(page: Page, train_url: str):
@@ -36,4 +38,4 @@ def test_bottom_nav_works(page: Page, train_url: str):
 
     # Click Today
     page.click(".bottom-nav >> text=Today")
-    expect(page.locator("text=Start Workout")).to_be_visible()
+    expect(page.locator("#template-select")).to_be_visible()
