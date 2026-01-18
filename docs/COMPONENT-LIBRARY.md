@@ -168,6 +168,18 @@ List container and items.
 {% endcall %}
 ```
 
+### markdown_content()
+
+Container for rendered markdown content with proper typography.
+
+```html
+<div class="markdown-content">
+  {{ rendered_html }}
+</div>
+```
+
+Styles headings, paragraphs, tables, lists, code, and horizontal rules.
+
 ### modal(title, id=none, hidden=true)
 
 Modal dialog. Use with `{% call %}`.
