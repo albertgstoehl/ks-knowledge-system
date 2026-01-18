@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+<div class="p-md">
+  <div class="mb-md">
+    <select id="exercise-select" class="input" onchange="loadExerciseHistory()">
+      <option value="">Select exercise...</option>
+    </select>
+  </div>
+
+  <div id="chart-container" class="chart mb-md" style="display: none;"></div>
+
+  <div id="stats-container" style="display: none;">
+    {% call ui.card() %}
+      <div class="flex justify-between mb-sm">
+        <span class="text-muted">Best</span>
+        <span id="stat-best">-</span>
+      </div>
+      <div class="flex justify-between mb-sm">
+        <span class="text-muted">Trend</span>
+        <span id="stat-trend">-</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-muted">Total sets</span>
+        <span id="stat-total">-</span>
+      </div>
+    {% endcall %}
+  </div>
+
+  <div id="recent-sets" class="mt-md" style="display: none;">
+    <div class="text-sm text-muted mb-sm">RECENT SETS</div>
+    <div id="recent-sets-list"></div>
+  </div>
+
+  <div id="empty-state" class="empty-state">
+    <div class="empty-state__title">No exercise selected</div>
+    <div class="empty-state__message">Choose an exercise to see progression</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadExercises() {
+  const resp = await fetch(`${basePath}/api/exercises`);
+  const exercises = await resp.json();
+  const select = document.getElementById('exercise-select');
+  exercises.forEach(ex => {
+    const opt = document.createElement('option');
+    opt.value = ex.name;
+    opt.textContent = ex.name;
+    select.appendChild(opt);
+  });
+}
+
+async function loadExerciseHistory() {
+  const name = document.getElementById('exercise-select').value;
+  if (!name) {
+    document.getElementById('empty-state').style.display = 'block';
+    document.getElementById('chart-container').style.display = 'none';
+    document.getElementById('stats-container').style.display = 'none';
+    document.getElementById('recent-sets').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('chart-container').style.display = 'block';
+  document.getElementById('stats-container').style.display = 'block';
+  document.getElementById('recent-sets').style.display = 'block';
+
+  const resp = await fetch(`${basePath}/api/sets?exercise_name=${encodeURIComponent(name)}`);
+  const sets = await resp.json();
+
+  if (sets.length === 0) {
+    document.getElementById('chart-container').innerHTML = '<div class="p-md text-muted">No data yet</div>';
+    return;
+  }
+
+  // Group by session and get max weight per session
+  const sessionMax = {};
+  sets.forEach(s => {
+    const key = s.session_id;
+    if (!sessionMax[key] || s.weight > sessionMax[key]) {
+      sessionMax[key] = s.weight;
+    }
+  });
+
+  const chartData = Object.entries(sessionMax).slice(-8).map(([session, weight], i) => ({
+    y: weight,
+    label: `S${i + 1}`
+  }));
+
+  if (chartData.length > 1) {
+    renderLineChart('chart-container', chartData);
+  } else {
+    document.getElementById('chart-container').innerHTML = '<div class="p-md text-muted">Need 2+ sessions for chart</div>';
+  }
+
+  // Stats
+  const weights = sets.map(s => s.weight);
+  const maxWeight = Math.max(...weights);
+  const maxSet = sets.find(s => s.weight === maxWeight);
+  document.getElementById('stat-best').textContent = `${maxWeight}kg x ${maxSet.reps}`;
+  document.getElementById('stat-total').textContent = sets.length;
+
+  // Trend (first vs last session)
+  if (chartData.length >= 2) {
+    const diff = chartData[chartData.length - 1].y - chartData[0].y;
+    document.getElementById('stat-trend').textContent = diff >= 0 ? `+${diff}kg` : `${diff}kg`;
+  } else {
+    document.getElementById('stat-trend').textContent = '-';
+  }
+
+  // Recent sets list
+  const recentHtml = sets.slice(0, 10).map(s =>
+    `<div class="flex justify-between py-xs border-b">${s.weight}kg x ${s.reps}${s.rir !== null ? ` @${s.rir}` : ''}</div>`
+  ).join('');
+  document.getElementById('recent-sets-list').innerHTML = recentHtml;
+}
+
+loadExercises();
+</script>
+{% endblock %}

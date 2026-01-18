@@ -1,26 +1,34 @@
 {% extends "base.html" %}
 {% import "components.html" as ui %}
+
 {% block content %}
-{% call ui.card() %}
-  <h2>Plan</h2>
-  <div id="plan-body" class="plan-content"></div>
-{% endcall %}
+<div class="p-md">
+  <div id="plan-container" class="markdown-content">
+    Loading plan...
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-fetch("{{ base_path }}/api/plan/current")
-  .then((response) => {
-    if (!response.ok) {
-      throw new Error("No plan found");
+async function loadPlan() {
+  try {
+    const resp = await fetch(`${basePath}/api/plan/current`);
+    if (!resp.ok) {
+      document.getElementById('plan-container').innerHTML = 
+        '<p class="text-muted">No plan registered yet.</p>';
+      return;
     }
-    return response.json();
-  })
-  .then((data) => {
-    document.getElementById("plan-body").innerText = data.markdown;
-  })
-  .catch((error) => {
-    document.getElementById("plan-body").innerText = "No plan registered yet.";
-  });
+    const data = await resp.json();
+    const html = marked.parse(data.markdown);
+    document.getElementById('plan-container').innerHTML = html;
+  } catch (e) {
+    document.getElementById('plan-container').innerHTML = 
+      '<p class="text-danger">Error loading plan</p>';
+  }
+}
+
+loadPlan();
 </script>
 {% endblock %}

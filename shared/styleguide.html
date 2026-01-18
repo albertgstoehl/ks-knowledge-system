@@ -412,6 +412,43 @@
       </div>
     </section>
 
+    <!-- Chart -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Chart</div>
+      <p class="text-sm text-muted mb-md">Simple SVG line chart for progression data.</p>
+      <div class="styleguide-preview">
+        <div class="chart" id="demo-chart"></div>
+      </div>
+      <div class="styleguide-code">
+        renderLineChart('demo-chart', [{ y: 50, label: 'W1' }, { y: 55, label: 'W2' }]);
+      </div>
+    </section>
+
+    <!-- Markdown Content -->
+    <section class="styleguide-section">
+      <div class="styleguide-title">Markdown Content</div>
+      <p class="text-sm text-muted mb-md">Container for rendered markdown with proper typography.</p>
+      <div class="styleguide-preview">
+        <div class="markdown-content">
+          <h1>Heading 1</h1>
+          <h2>Heading 2</h2>
+          <h3>Heading 3</h3>
+          <p>Paragraph with <strong>bold</strong> and <code>code</code>.</p>
+          <table>
+            <tr><th>Exercise</th><th>Sets</th><th>Reps</th></tr>
+            <tr><td>Bench Press</td><td>4</td><td>6-10</td></tr>
+            <tr><td>Incline DB</td><td>3</td><td>8-12</td></tr>
+          </table>
+          <ul>
+            <li>List item one</li>
+            <li>List item two</li>
+          </ul>
+          <hr>
+          <p>Content after horizontal rule.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Modal -->
     <section class="styleguide-section">
       <div class="styleguide-title">Modal</div>
@@ -490,5 +527,17 @@
     </section>
 
   </div>
+  <script src="js/components.js"></script>
+  <script>
+    // Initialize demo chart
+    renderLineChart('demo-chart', [
+      { y: 50, label: 'W1' },
+      { y: 52.5, label: 'W2' },
+      { y: 52.5, label: 'W3' },
+      { y: 55, label: 'W4' },
+      { y: 55, label: 'W5' },
+      { y: 57.5, label: 'W6' }
+    ]);
+  </script>
 </body>
 </html>

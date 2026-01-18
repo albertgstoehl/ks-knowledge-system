@@ -25,6 +25,9 @@ class Session(Base):
     ended_at = Column(DateTime)
     template_key = Column(String, nullable=False)
     notes = Column(Text)
+    plan_id = Column(Integer, ForeignKey("plans.id"))
+
+    plan = relationship("Plan")
 
 
 class Exercise(Base):
@@ -46,6 +49,7 @@ class SetEntry(Base):
     weight = Column(Float, nullable=False)
     reps = Column(Integer, nullable=False)
     rir = Column(Integer)
+    notes = Column(Text)
 
     session = relationship("Session")
     exercise = relationship("Exercise")

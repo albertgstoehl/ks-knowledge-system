@@ -324,15 +324,18 @@ DATABASE_URL    # SQLite path
 **API Endpoints:**
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/sessions/start` | Start workout session |
+| `POST /api/sessions/start` | Start workout session (optional plan) |
 | `POST /api/sessions/end` | End session with notes |
+| `GET /api/sessions` | List sessions (filters) |
 | `POST /api/sets` | Log a set |
+| `GET /api/sets` | List sets (filters) |
 | `GET /api/sets/recent` | Recent sets (last 20) |
+| `GET /api/context` | Plan iteration context (plan + history) |
 | `POST /api/plan/register` | Register new plan (markdown) |
 | `GET /api/plan/current` | Get current plan |
 
 **Data Model:**
-- `Sessions` - Workout sessions with start/end time and notes
+- `Sessions` - Workout sessions with start/end time, notes, plan_id
 - `SetEntry` - Individual sets (weight, reps, RIR, order)
 - `Exercise` - Exercise library with muscle groups
 - `Plan` - Training plans with markdown path and version history
