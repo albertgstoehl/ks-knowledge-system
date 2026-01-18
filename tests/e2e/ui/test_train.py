@@ -21,7 +21,9 @@ def test_plan_page_loads(page: Page, train_url: str):
 
 
 def test_bottom_nav_works(page: Page, train_url: str):
-    """Verify bottom nav navigates between tabs."""
+    """Verify bottom nav navigates between tabs (mobile viewport)."""
+    # Set mobile viewport - bottom nav only visible on mobile
+    page.set_viewport_size({"width": 375, "height": 667})
     page.goto(f"{train_url}/")
 
     # Click History
