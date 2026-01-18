@@ -30,7 +30,6 @@ def balance_url(base_url):
     """Balance service URL."""
     return base_url.replace("bookmark.gstoehl.dev", "balance.gstoehl.dev")
 
-
 @pytest.fixture(scope="session")
 def train_url(base_url):
     """Train service URL."""

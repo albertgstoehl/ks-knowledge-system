@@ -1,5 +1,4 @@
 import pytest
-import pytest
 import httpx
 
 
@@ -90,3 +89,60 @@ async def test_context_summary_has_volume(train_url):
         assert "weeks_on_plan" in summary
         assert "total_sessions" in summary
         assert "volume_by_muscle" in summary
+
+
+@pytest.mark.asyncio
+async def test_list_exercises(train_url):
+    """Test listing all exercises."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"{train_url}/api/exercises")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+
+
+@pytest.mark.asyncio
+async def test_exercises_include_last_set(train_url):
+    """Test that exercises endpoint includes last set data."""
+    async with httpx.AsyncClient() as client:
+        # First log a set
+        session_resp = await client.post(
+            f"{train_url}/api/sessions/start",
+            json={"template_key": "Test"},
+        )
+        assert session_resp.status_code == 200
+        session_id = session_resp.json()["id"]
+
+        await client.post(
+            f"{train_url}/api/sets",
+            json={
+                "session_id": session_id,
+                "exercise_name": "Test Exercise",
+                "weight": 50,
+                "reps": 10,
+                "rir": 2,
+            },
+        )
+
+        # Check exercises endpoint
+        resp = await client.get(f"{train_url}/api/exercises")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        exercise = next((e for e in data if e["name"] == "Test Exercise"), None)
+        assert exercise is not None
+        assert exercise["last_set"]["weight"] == 50
+        assert exercise["last_set"]["reps"] == 10
+
+
+@pytest.mark.asyncio
+async def test_list_sets_with_exercise_filter(train_url):
+    """Test filtering sets by exercise name."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{train_url}/api/sets",
+            params={"exercise_name": "Bench Press"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)

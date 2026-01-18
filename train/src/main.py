@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from src.routers import ui, plans, sessions, sets, context
+from src.routers import ui, plans, sessions, sets, context, exercises
 
 BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 
@@ -43,3 +43,4 @@ app.include_router(plans.router)
 app.include_router(sessions.router)
 app.include_router(sets.router)
 app.include_router(context.router)
+app.include_router(exercises.router)
