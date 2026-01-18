@@ -168,6 +168,38 @@ List container and items.
 {% endcall %}
 ```
 
+### markdown_content()
+
+Container for rendered markdown content with proper typography.
+
+```html
+<div class="markdown-content">
+  {{ rendered_html }}
+</div>
+```
+
+Styles headings, paragraphs, tables, lists, code, and horizontal rules.
+
+### Chart
+
+Simple SVG line chart for progression data.
+
+```html
+<div class="chart" id="my-chart"></div>
+<script>
+  renderLineChart('my-chart', [
+    { y: 50, label: 'W1' },
+    { y: 55, label: 'W2' },
+    { y: 57.5, label: 'W3' }
+  ]);
+</script>
+```
+
+**JavaScript API:**
+- `renderLineChart(containerId, data, options)` - Render line chart
+  - `data`: Array of `{ y: number, label?: string }`
+  - Automatically scales Y-axis to data range
+
 ### modal(title, id=none, hidden=true)
 
 Modal dialog. Use with `{% call %}`.
@@ -219,6 +251,8 @@ For custom markup, use these classes directly:
 | Priority List | `.priority-list`, `.priority-list__item`, `.priority-list__rank`, `.priority-list__name`, `.priority-list__meta`, `.priority-list__arrows`, `.priority-list__arrow` |
 | Dropdown (extended) | `.dropdown__item--with-meta`, `.dropdown__item-meta` |
 | Drift Alert | `.drift-alert`, `.drift-alert__header`, `.drift-alert__main`, `.drift-alert__context`, `.drift-alert__stat` |
+| Markdown | `.markdown-content` |
+| Chart | `.chart`, `.chart__svg`, `.chart__line`, `.chart__point`, `.chart__axis`, `.chart__label`, `.chart__grid` |
 
 ---
 
@@ -483,6 +517,7 @@ The shared library includes `js/components.js` with utility functions for intera
 | `closeDropdown(id)` | Close specific dropdown |
 | `toggleSourcePanel()` | Show/hide source details panel |
 | `movePriority(btn, direction)` | Move priority item up/down, updates ranks automatically |
+| `renderLineChart(containerId, data, options)` | Render SVG line chart with data points |
 
 Dropdowns auto-close when clicking outside.
 

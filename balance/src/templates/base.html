@@ -53,6 +53,9 @@
   <!-- Shared JS utilities -->
   <script src="{{ base_path }}/static/shared/js/components.js"></script>
 
+  <!-- Base path for API calls -->
+  <script>var basePath = '{{ base_path }}';</script>
+
   <!-- Core page scripts - loaded once -->
   <script src="{{ base_path }}/static/js/timer.js?v=7"></script>
   <script src="{{ base_path }}/static/js/log.js?v=3"></script>
@@ -61,7 +64,6 @@
   // Update active tab state after htmx navigation
   document.body.addEventListener('htmx:afterSettle', function() {
     var path = window.location.pathname;
-    var basePath = '{{ base_path }}';
     document.querySelectorAll('.header__tabs .tab').forEach(function(tab) {
       tab.classList.toggle('tab--active', tab.getAttribute('href') === path);
     });

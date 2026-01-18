@@ -1,0 +1,42 @@
+{% import "components.html" as ui %}
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Train</title>
+    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/variables.css" />
+    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/base.css" />
+    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/components.css" />
+    <link rel="stylesheet" href="{{ base_path }}/static/shared/css/utilities.css" />
+    <link rel="stylesheet" href="{{ base_path }}/static/css/train.css" />
+  </head>
+  <body class="has-bottom-nav">
+    {% set tabs = [("Today", base_path ~ "/"), ("History", base_path ~ "/history"), ("Plan", base_path ~ "/plan")] %}
+
+    <header class="header hidden-mobile">
+      <h1 class="header__title">Train</h1>
+      <nav class="tabs header__tabs">
+        {% for label, url in tabs %}
+        <a href="{{ url }}" class="tab{% if label == active_tab %} tab--active{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </nav>
+    </header>
+
+    <main class="content-container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <nav class="bottom-nav">
+      <div class="bottom-nav__links">
+        {% for label, url in tabs %}
+        <a href="{{ url }}" class="bottom-nav__link{% if label == active_tab %} bottom-nav__link--active{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </div>
+    </nav>
+
+    <script src="{{ base_path }}/static/shared/js/components.js"></script>
+    <script>var basePath = '{{ base_path }}';</script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

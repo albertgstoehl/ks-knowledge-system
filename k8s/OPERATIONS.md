@@ -14,6 +14,7 @@ kubectl logs -f deploy/bookmark-manager -n knowledge-system
 kubectl logs -f deploy/canvas -n knowledge-system
 kubectl logs -f deploy/kasten -n knowledge-system
 kubectl logs -f deploy/balance -n knowledge-system
+kubectl logs -f deploy/train -n knowledge-system
 
 # Restart a deployment
 kubectl rollout restart deploy/bookmark-manager -n knowledge-system
@@ -149,6 +150,8 @@ kubectl cp knowledge-system/$(kubectl get pod -n knowledge-system -l app=canvas 
 kubectl cp knowledge-system/$(kubectl get pod -n knowledge-system -l app=kasten -o jsonpath='{.items[0].metadata.name}'):/app/data/kasten.db ./backup-kasten.db
 
 kubectl cp knowledge-system/$(kubectl get pod -n knowledge-system -l app=balance -o jsonpath='{.items[0].metadata.name}'):/app/data/balance.db ./backup-balance.db
+
+kubectl cp knowledge-system/$(kubectl get pod -n knowledge-system -l app=train -o jsonpath='{.items[0].metadata.name}'):/app/data/train.db ./backup-train.db
 ```
 
 ## Apply All Manifests
@@ -340,6 +343,7 @@ curl http://bookmark.gstoehl.dev/health
 | canvas | DNS + internal pods only |
 | kasten | DNS only |
 | balance | DNS only |
+| train | DNS only |
 | telegram-bot | DNS + bookmark-manager + Telegram API |
 
 ## Environment Isolation (Dev vs Prod)
@@ -404,7 +408,7 @@ kubectl -n knowledge-system annotate ingress knowledge-system-ingress \
 | Ingress | Namespace | Hosts | Path | Middleware | Priority |
 |---------|-----------|-------|------|------------|----------|
 | balance-ingress | knowledge-system | balance.gstoehl.dev | / | None | (default) |
-| knowledge-system-ingress | knowledge-system | bookmark, canvas, kasten | / | balance-check | 10 |
+| knowledge-system-ingress | knowledge-system | bookmark, canvas, kasten, train | / | balance-check | 10 |
 | knowledge-system-dev-ingress | knowledge-system-dev | all services | /dev | strip-dev-prefix | 100 |
 
 ## CronJobs
@@ -540,6 +544,7 @@ BASE_URL=https://bookmark.gstoehl.dev pytest tests/e2e/api/ -v
 | `canvas.yaml` | Deployment + Service |
 | `kasten.yaml` | Deployment + Service |
 | `balance.yaml` | Deployment + Service |
+| `train.yaml` | Deployment + Service |
 | `telegram-bot.yaml` | Deployment (no service, outbound only) |
 | `networkpolicy-*.yaml` | Zero-trust egress rules per service |
 | `canvas-daily-wipe.yaml` | CronJob for nightly draft wipe (midnight Zurich) |

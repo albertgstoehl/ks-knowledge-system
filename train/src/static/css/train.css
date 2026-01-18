@@ -1,0 +1,113 @@
+/* Train-specific styles */
+
+/* Main content area */
+.content-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Page sections */
+.page-header {
+  margin-bottom: var(--space-lg);
+}
+
+.page-header h2 {
+  margin-bottom: var(--space-sm);
+}
+
+/* Actions row */
+.actions {
+  margin-top: var(--space-lg);
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* Form layout */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.form-group__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Sets list */
+.sets-list {
+  margin-top: var(--space-lg);
+}
+
+.sets-list__header {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.set-entry {
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.set-entry__exercise {
+  font-weight: 500;
+}
+
+.set-entry__details {
+  color: var(--color-muted);
+}
+
+/* Plan content */
+.plan-content {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+/* Session info card */
+.session-info {
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-lg);
+}
+
+.session-info__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.session-info__value {
+  font-size: var(--font-size-xl);
+  font-weight: 500;
+  margin-top: var(--space-xs);
+}

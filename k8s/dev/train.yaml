@@ -1,0 +1,62 @@
+# /home/ags/knowledge-system/k8s/dev/train.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: train
+  namespace: knowledge-system-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: train
+  template:
+    metadata:
+      labels:
+        app: train
+    spec:
+      containers:
+        - name: train
+          image: ghcr.io/albertgstoehl/train:dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: TZ
+              value: "Europe/Zurich"
+            - name: DATABASE_URL
+              value: "sqlite:///./data/train.db"
+            - name: BASE_PATH
+              value: "/dev"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: train-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: train
+  namespace: knowledge-system-dev
+spec:
+  selector:
+    app: train
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP

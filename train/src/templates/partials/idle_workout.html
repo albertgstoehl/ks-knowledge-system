@@ -1,0 +1,95 @@
+<div class="p-md">
+  <div class="mb-lg">
+    <div class="text-xl font-bold" id="template-name">Loading...</div>
+    <div class="text-muted text-sm" id="template-meta"></div>
+  </div>
+
+  <div class="mb-lg">
+    <select id="template-select" class="input">
+      <option value="">Select workout...</option>
+    </select>
+  </div>
+
+  <div id="exercises-preview" class="mb-lg">
+    <!-- Shows exercises for selected template -->
+  </div>
+
+  <div class="action-panel">
+    <button class="btn btn--primary btn--full btn--lg" onclick="startWorkout()">
+      Start Workout
+    </button>
+  </div>
+</div>
+
+<script>
+const basePath = '{{ base_path }}';
+let planTemplates = {};
+
+async function loadTodayData() {
+  const select = document.getElementById('template-select');
+  
+  try {
+    // Load plan
+    const planResp = await fetch(`${basePath}/api/plan/current`);
+    if (planResp.ok) {
+      const plan = await planResp.json();
+      document.getElementById('template-name').textContent = plan.title;
+      document.getElementById('template-meta').textContent = 'Current plan';
+      planTemplates = plan.templates || {};
+      
+      // Populate template dropdown
+      Object.keys(planTemplates).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = `${key} (${planTemplates[key].length} exercises)`;
+        select.appendChild(opt);
+      });
+    } else {
+      document.getElementById('template-name').textContent = 'No Plan';
+      document.getElementById('template-meta').textContent = 'Register a plan to get started';
+    }
+  } catch (e) {
+    document.getElementById('template-name').textContent = 'Ready to Train';
+    document.getElementById('template-meta').textContent = '';
+  }
+}
+
+function showTemplatePreview() {
+  const templateKey = document.getElementById('template-select').value;
+  const preview = document.getElementById('exercises-preview');
+  
+  if (!templateKey || !planTemplates[templateKey]) {
+    preview.innerHTML = '';
+    return;
+  }
+  
+  const exercises = planTemplates[templateKey];
+  const html = exercises.map(ex => `
+    <div class="py-xs border-b text-sm">${ex.name} <span class="text-muted">(${ex.muscles.join(', ')})</span></div>
+  `).join('');
+  
+  preview.innerHTML = html;
+}
+
+async function startWorkout() {
+  const templateKey = document.getElementById('template-select').value;
+  
+  if (!templateKey) {
+    alert('Select a workout template');
+    return;
+  }
+  
+  await fetch(`${basePath}/api/sessions/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      template_key: templateKey
+    })
+  });
+
+  window.location.reload();
+}
+
+document.getElementById('template-select').addEventListener('change', showTemplatePreview);
+loadTodayData();
+</script>

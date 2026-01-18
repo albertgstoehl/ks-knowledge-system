@@ -18,30 +18,31 @@ A personal knowledge management ecosystem running on K3s, consisting of intercon
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         TRAEFIK INGRESS (K3s)                               │
-│ ┌────────────────┬────────────────┬────────────────┬────────────────┐       │
-│ │bookmark.gstoehl│canvas.gstoehl  │kasten.gstoehl  │balance.gstoehl │       │
-│ │  [ForwardAuth] │  [ForwardAuth] │  [ForwardAuth] │   (no auth)    │       │
-│ └───────┬────────┴───────┬────────┴───────┬────────┴────────────────┘       │
-│         └────────────────┼────────────────┘                                 │
-│                          ▼                                                  │
-│              ┌─────────────────────┐                                        │
-│              │  balance-check MW   │◀─── /api/auth-check (200 or 302)       │
+│ ┌───────────────┬───────────────┬───────────────┬───────────────┬─────────┐ │
+│ │bookmark.gstoehl│canvas.gstoehl│kasten.gstoehl │train.gstoehl  │balance  │ │
+│ │ [ForwardAuth] │ [ForwardAuth] │ [ForwardAuth] │ [ForwardAuth] │(no auth)│ │
+│ └───────┬───────┴───────┬───────┴───────┬───────┴───────┬───────┴─────────┘ │
+│         └───────────────┼───────────────┼───────────────┘                   │
+│                         ▼               │                                   │
+│              ┌─────────────────────┐    │                                   │
+│              │  balance-check MW   │◀───┘ /api/auth-check (200 or 302)      │
 │              └─────────────────────┘                                        │
 └─────────────────────────────────────────────────────────────────────────────┘
-          │                        │                        │              │
-          ▼                        ▼                        ▼              ▼
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐  ┌─────────────────┐
-│ BOOKMARK-MANAGER│      │     CANVAS      │      │     KASTEN      │  │     BALANCE     │
-│   (Collection)  │─────▶│   (Synthesis)   │◀────▶│   (Browsing)    │  │   (Rhythms)     │
-│    Port 8000    │quotes│    Port 8000    │notes │    Port 8000    │  │    Port 8000    │
-└─────────────────┘      └─────────────────┘      └─────────────────┘  └─────────────────┘
-          │                        │                        │                  │
-          ▼                        ▼                        ▼                  ▼
-    ┌──────────┐            ┌──────────┐            ┌──────────┐        ┌──────────┐
-    │ SQLite   │            │ SQLite   │            │ SQLite   │        │ SQLite   │
-    │ (5Gi)    │            │ (1Gi)    │            │ + Notes  │        │ (1Gi)    │
-    └──────────┘            └──────────┘            │ (1Gi)    │        └──────────┘
-                                                    └──────────┘
+     │              │              │              │              │
+     ▼              ▼              ▼              ▼              ▼
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│ BOOKMARK │  │  CANVAS  │  │  KASTEN  │  │  TRAIN   │  │ BALANCE  │
+│ MANAGER  │─▶│(Synthesis│◀▶│(Browsing)│  │(Workouts)│  │(Rhythms) │
+│(Collect) │  │    )     │  │          │  │          │  │          │
+│Port 8000 │  │Port 8000 │  │Port 8000 │  │Port 8000 │  │Port 8000 │
+└──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘
+     │              │              │              │              │
+     ▼              ▼              ▼              ▼              ▼
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│ SQLite   │  │ SQLite   │  │ SQLite   │  │ SQLite   │  │ SQLite   │
+│ (5Gi)    │  │ (1Gi)    │  │ + Notes  │  │ + Plans  │  │ (1Gi)    │
+└──────────┘  └──────────┘  │ (1Gi)    │  │ (1Gi)    │  └──────────┘
+                            └──────────┘  └──────────┘
 ```
 
 ## Knowledge Flow
@@ -301,6 +302,52 @@ DATABASE_URL    # SQLite path
 
 ---
 
+### 6. Train
+
+**Purpose:** Workout logging and training plan management with session tracking and set entry
+
+**Domain:** `train.gstoehl.dev`
+
+**Tech Stack:**
+- Python 3.11 / FastAPI 0.115
+- SQLite with aiosqlite
+- Jinja2 templates + vanilla JS
+
+**Source Structure:** `train/src/`
+
+**Key Features:**
+- **Session Logging:** Start/end workout sessions with template keys (A/B splits)
+- **Set Entry:** Quick logging of exercise, weight, reps, RIR (reps in reserve)
+- **Plan Management:** Markdown-based training plans with version history
+- **Exercise Library:** Auto-created exercises with muscle group tracking
+
+**API Endpoints:**
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/sessions/start` | Start workout session (optional plan) |
+| `POST /api/sessions/end` | End session with notes |
+| `GET /api/sessions` | List sessions (filters) |
+| `POST /api/sets` | Log a set |
+| `GET /api/sets` | List sets (filters) |
+| `GET /api/sets/recent` | Recent sets (last 20) |
+| `GET /api/context` | Plan iteration context (plan + history) |
+| `POST /api/plan/register` | Register new plan (markdown) |
+| `GET /api/plan/current` | Get current plan |
+
+**Data Model:**
+- `Sessions` - Workout sessions with start/end time, notes, plan_id
+- `SetEntry` - Individual sets (weight, reps, RIR, order)
+- `Exercise` - Exercise library with muscle groups
+- `Plan` - Training plans with markdown path and version history
+
+**Environment Variables:**
+```
+DATABASE_URL    # SQLite path
+PLAN_DIR        # Markdown plans directory (default: ./plan)
+```
+
+---
+
 ## Kubernetes Infrastructure
 
 ### Namespace: `knowledge-system`
@@ -314,6 +361,7 @@ DATABASE_URL    # SQLite path
 | canvas | 1 | 128-256Mi | 50-200m | Never (local) |
 | kasten | 1 | 128-256Mi | 50-200m | Never (local) |
 | balance | 1 | 128-256Mi | 50-200m | Never (local) |
+| train | 1 | 128-256Mi | 50-200m | Never (local) |
 
 ### Persistent Storage
 
@@ -323,6 +371,7 @@ DATABASE_URL    # SQLite path
 | canvas-pvc | canvas | 1Gi | SQLite database |
 | kasten-pvc | kasten | 1Gi | SQLite index |
 | balance-pvc | balance | 1Gi | SQLite database |
+| train-pvc | train | 1Gi | SQLite + plans |
 
 ### Network Policies (Zero-Trust)
 
@@ -345,19 +394,23 @@ kasten:
 
 balance:
   → DNS only (standalone service)
+
+train:
+  → DNS only (standalone service)
 ```
 
 ---
 
 ## Service Communication Matrix
 
-| From → To | Bookmark Manager | Canvas | Kasten | Balance | External |
-|-----------|-----------------|--------|--------|---------|----------|
-| **Telegram Bot** | ✓ (bookmarks) | ✗ | ✗ | ✗ | ✓ (Telegram API) |
-| **Bookmark Manager** | - | ✓ (quotes) | ✗ | ✗ | ✓ (Jina, Claude, Archive.org) |
-| **Canvas** | ✗ | - | ✓ (notes, sources) | ✗ | ✗ |
-| **Kasten** | ✗ | ✗ | - | ✗ | ✗ |
-| **Balance** | ✗ | ✗ | ✗ | - | ✗ |
+| From → To | Bookmark Manager | Canvas | Kasten | Balance | Train | External |
+|-----------|-----------------|--------|--------|---------|-------|----------|
+| **Telegram Bot** | ✓ (bookmarks) | ✗ | ✗ | ✗ | ✗ | ✓ (Telegram API) |
+| **Bookmark Manager** | - | ✓ (quotes) | ✗ | ✗ | ✗ | ✓ (Jina, Claude, Archive.org) |
+| **Canvas** | ✗ | - | ✓ (notes, sources) | ✗ | ✗ | ✗ |
+| **Kasten** | ✗ | ✗ | - | ✗ | ✗ | ✗ |
+| **Balance** | ✗ | ✗ | ✗ | - | ✗ | ✗ |
+| **Train** | ✗ | ✗ | ✗ | ✗ | - | ✗ |
 
 ---
 

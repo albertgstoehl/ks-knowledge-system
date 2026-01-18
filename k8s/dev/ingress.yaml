@@ -16,6 +16,7 @@ spec:
         - canvas.gstoehl.dev
         - kasten.gstoehl.dev
         - balance.gstoehl.dev
+        - train.gstoehl.dev
       secretName: knowledge-system-dev-tls
   rules:
     - host: bookmark.gstoehl.dev
@@ -56,5 +57,15 @@ spec:
             backend:
               service:
                 name: balance
+                port:
+                  number: 8000
+    - host: train.gstoehl.dev
+      http:
+        paths:
+          - path: /dev
+            pathType: Prefix
+            backend:
+              service:
+                name: train
                 port:
                   number: 8000

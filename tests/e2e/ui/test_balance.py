@@ -50,6 +50,29 @@ def ensure_clean_state(balance_api, max_wait: int = 30) -> bool:
     return wait_for_break_to_end(balance_api, max_wait)
 
 
+def test_dev_ui_uses_dev_api(page: Page, balance_url: str):
+    """Ensure dev UI uses /dev/api instead of prod /api."""
+    if "/dev" not in balance_url:
+        pytest.skip("Only applicable to dev environment")
+
+    requests = []
+
+    def record_request(request):
+        url = request.url
+        if "/api/" in url:
+            requests.append(url)
+
+    page.on("request", record_request)
+    page.goto(balance_url)
+    page.wait_for_load_state("networkidle")
+
+    dev_api_requests = [url for url in requests if "/dev/api/" in url]
+    prod_api_requests = [url for url in requests if "://balance.gstoehl.dev/api/" in url]
+
+    assert dev_api_requests, "Expected dev UI to call /dev/api endpoints"
+    assert not prod_api_requests, "Dev UI should not call production /api endpoints"
+
+
 class TestBalanceTimerComplete:
     """Tests for timer completion and break handling."""
 

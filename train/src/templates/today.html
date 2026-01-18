@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+<div id="today-content">
+  {% if active_session %}
+    {% include "partials/active_workout.html" %}
+  {% else %}
+    {% include "partials/idle_workout.html" %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ base_path }}/static/js/today.js"></script>
+{% endblock %}

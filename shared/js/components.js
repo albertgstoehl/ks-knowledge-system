@@ -87,3 +87,59 @@ function updatePriorityList(list) {
     if (downBtn) downBtn.disabled = index === items.length - 1;
   });
 }
+
+/* ==========================================================================
+   CHART
+   Simple SVG line chart renderer
+   ========================================================================== */
+
+function renderLineChart(containerId, data, options = {}) {
+  const container = document.getElementById(containerId);
+  if (!container || !data || data.length === 0) return;
+
+  const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+  const width = container.clientWidth;
+  const height = container.clientHeight || 200;
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  // Calculate scales
+  const xValues = data.map((d, i) => i);
+  const yValues = data.map(d => d.y);
+  const yMin = Math.min(...yValues) * 0.95;
+  const yMax = Math.max(...yValues) * 1.05;
+
+  const xScale = (i) => padding.left + (i / (data.length - 1)) * chartWidth;
+  const yScale = (v) => padding.top + chartHeight - ((v - yMin) / (yMax - yMin)) * chartHeight;
+
+  // Build SVG
+  let svg = `<svg class="chart__svg" viewBox="0 0 ${width} ${height}">`;
+
+  // Y-axis grid lines
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i++) {
+    const y = padding.top + (i / yTicks) * chartHeight;
+    const val = yMax - (i / yTicks) * (yMax - yMin);
+    svg += `<line class="chart__grid" x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}"/>`;
+    svg += `<text class="chart__label" x="${padding.left - 5}" y="${y + 4}" text-anchor="end">${val.toFixed(1)}</text>`;
+  }
+
+  // Line path
+  const pathData = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(d.y)}`).join(' ');
+  svg += `<path class="chart__line" d="${pathData}"/>`;
+
+  // Points
+  data.forEach((d, i) => {
+    svg += `<circle class="chart__point" cx="${xScale(i)}" cy="${yScale(d.y)}" r="4"/>`;
+  });
+
+  // X-axis labels
+  data.forEach((d, i) => {
+    if (d.label) {
+      svg += `<text class="chart__label" x="${xScale(i)}" y="${height - 5}" text-anchor="middle">${d.label}</text>`;
+    }
+  });
+
+  svg += '</svg>';
+  container.innerHTML = svg;
+}
