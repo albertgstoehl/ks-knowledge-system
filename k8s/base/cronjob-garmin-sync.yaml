@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: garmin-sync
+  namespace: knowledge-system
+spec:
+  schedule: "0 6 * * *"  # 6am daily
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sync
+            image: train:latest
+            imagePullPolicy: Never
+            command:
+            - python
+            - scripts/sync_garmin.py
+            - --days
+            - "7"
+            env:
+            - name: GARMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: garmin-credentials
+                  key: username
+            - name: GARMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: garmin-credentials
+                  key: password
+            - name: TRAIN_API_URL
+              value: "http://train:8000"
+            volumeMounts:
+            - name: data
+              mountPath: /data
+          volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: train-pvc
+          restartPolicy: OnFailure

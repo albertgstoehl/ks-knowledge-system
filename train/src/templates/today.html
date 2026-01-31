@@ -3,6 +3,73 @@
 
 {% block content %}
 <div id="today-content">
+  {% if marathon_mode %}
+  {% call ui.card() %}
+    <div class="view-header">
+      <span class="view-header__title">MARATHON</span>
+    </div>
+    <p class="text-muted mb-md">{{ today_data.marathon.weeks_to_race }} weeks to race</p>
+    
+    <div class="grid grid-cols-3 gap-sm mb-md">
+      {% call ui.card() %}
+        <div class="text-center">
+          <div class="text-2xl font-bold">{{ today_data.marathon.readiness_score or '--' }}</div>
+          <div class="text-xs text-muted">READINESS</div>
+          {% if today_data.marathon.readiness_score %}
+            <span class="label">
+              {% if today_data.marathon.readiness_score >= 67 %}[GREEN]
+              {% elif today_data.marathon.readiness_score >= 34 %}[YELLOW]
+              {% else %}[RED]{% endif %}
+            </span>
+          {% endif %}
+        </div>
+      {% endcall %}
+      
+      {% call ui.card() %}
+        <div class="text-center">
+          <div class="text-2xl font-bold">{{ today_data.marathon.weekly_mileage }}</div>
+          <div class="text-xs text-muted">KM THIS WEEK</div>
+        </div>
+      {% endcall %}
+      
+      {% call ui.card() %}
+        <div class="text-center">
+          <div class="text-2xl font-bold">{{ today_data.marathon.runs_this_week }}/{{ today_data.marathon.target_runs_per_week }}</div>
+          <div class="text-xs text-muted">RUNS</div>
+        </div>
+      {% endcall %}
+    </div>
+    
+    <div class="border-t pt-md">
+      <div class="view-header">
+        <span class="view-header__title">TODAY'S RUN</span>
+      </div>
+      <p>{{ today_data.today_scheduled.distance_km }}km {{ today_data.today_scheduled.type }}</p>
+      <p class="text-muted">{{ today_data.today_scheduled.pace_range }}/km</p>
+      
+      <div class="mt-md">
+        {{ ui.button("MARK COMPLETE", primary=true, full=true) }}
+      </div>
+    </div>
+    
+    {% if today_data.yesterday_run %}
+    <div class="border-t pt-md mt-md">
+      <div class="view-header">
+        <span class="view-header__title">YESTERDAY</span>
+      </div>
+      <p>{{ today_data.yesterday_run.distance_km }}km @ {{ today_data.yesterday_run.pace }}</p>
+      {% if not today_data.yesterday_run.has_notes %}
+        {{ ui.button("+ Add Notes", sm=true) }}
+      {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="border-t pt-md mt-md text-center">
+      <a href="/runs/log" class="text-muted text-sm">Forgot Garmin? Log run manually</a>
+    </div>
+  {% endcall %}
+  {% endif %}
+  
   {% if active_session %}
     {% include "partials/active_workout.html" %}
   {% else %}

@@ -28,8 +28,14 @@ def _render(request: Request, template: str, context: dict | None = None):
 @router.get("/", response_class=HTMLResponse)
 @router.get("/today", response_class=HTMLResponse)
 async def today(request: Request):
+    from datetime import date, timedelta
+    from src.models import RecoverySummary, Run
+    from sqlalchemy import func
+    
     # Check for active session (no ended_at)
     active_session = None
+    today_data = None
+    
     if database.async_session_maker:
         async with database.async_session_maker() as db:
             result = await db.execute(
@@ -39,7 +45,66 @@ async def today(request: Request):
                 .limit(1)
             )
             active_session = result.scalars().first()
-    return _render(request, "today.html", {"active_tab": "Today", "active_session": active_session})
+            
+            # Get marathon training data
+            today = date.today()
+            week_ago = today - timedelta(days=7)
+            yesterday = today - timedelta(days=1)
+            
+            # Get recovery data
+            recovery_result = await db.execute(
+                select(RecoverySummary).where(RecoverySummary.date == today)
+            )
+            recovery = recovery_result.scalar_one_or_none()
+            
+            # Get weekly mileage
+            mileage_result = await db.execute(
+                select(func.sum(Run.distance_km)).where(Run.date >= week_ago)
+            )
+            weekly_mileage = mileage_result.scalar() or 0
+            
+            # Get runs this week
+            runs_result = await db.execute(
+                select(Run).where(Run.date >= week_ago)
+            )
+            runs_this_week = runs_result.scalars().all()
+            
+            # Get yesterday's run
+            yesterday_result = await db.execute(
+                select(Run).where(Run.date == yesterday)
+            )
+            yesterday_run = yesterday_result.scalar_one_or_none()
+            
+            # Race date
+            race_date = date(2026, 4, 15)
+            weeks_to_race = (race_date - today).days // 7
+            
+            today_data = {
+                "marathon": {
+                    "weeks_to_race": weeks_to_race,
+                    "readiness_score": recovery.readiness_score if recovery else None,
+                    "weekly_mileage": round(weekly_mileage, 1),
+                    "runs_this_week": len(runs_this_week),
+                    "target_runs_per_week": 3,
+                },
+                "yesterday_run": {
+                    "distance_km": yesterday_run.distance_km if yesterday_run else None,
+                    "pace": f"{int(yesterday_run.duration_minutes / yesterday_run.distance_km)}:{int((yesterday_run.duration_minutes / yesterday_run.distance_km % 1) * 60):02d}/km" if yesterday_run else None,
+                    "has_notes": yesterday_run.notes is not None if yesterday_run else False,
+                } if yesterday_run else None,
+                "today_scheduled": {
+                    "distance_km": 5,
+                    "pace_range": "6:15-6:30",
+                    "type": "easy",
+                },
+            }
+    
+    return _render(request, "today.html", {
+        "active_tab": "Today",
+        "active_session": active_session,
+        "marathon_mode": True,
+        "today_data": today_data,
+    })
 
 
 @router.get("/history", response_class=HTMLResponse)
