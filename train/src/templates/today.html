@@ -71,7 +71,7 @@
         <button type="button" 
                 class="btn btn--primary btn--full"
                 hx-post="{{ base_path }}/api/runs"
-                hx-vals='{"date": "{{ today_data.today_scheduled.date or today_data.today_date }}", "distance_km": {{ today_data.today_scheduled.distance_km }}, "duration_minutes": 0, "notes": "Logged via TODAY page"}'
+                hx-vals='{"date": "{{ today_data.today_date }}", "distance_km": {{ today_data.today_scheduled.distance_km }}, "duration_minutes": 30, "notes": "Completed via TODAY page"}'
                 hx-target="#today-content"
                 hx-swap="outerHTML">MARK COMPLETE</button>
       </div>
