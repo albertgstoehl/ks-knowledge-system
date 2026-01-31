@@ -71,10 +71,10 @@
         <button type="button" 
                 class="btn btn--primary btn--full"
                 hx-post="{{ base_path }}/api/runs"
+                hx-ext="json-enc"
                 hx-vals='{"date": "{{ today_data.today_date }}", "distance_km": {{ today_data.today_scheduled.distance_km }}, "duration_minutes": 30, "notes": "Completed via TODAY page"}'
                 hx-target="#today-content"
-                hx-swap="outerHTML"
-                hx-headers='{"Content-Type": "application/json"}'>MARK COMPLETE</button>
+                hx-swap="outerHTML">MARK COMPLETE</button>
       </div>
     </div>
     
