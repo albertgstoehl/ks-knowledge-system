@@ -103,6 +103,7 @@ async def today(request: Request):
                     "pace": f"{int(yesterday_run.duration_minutes / yesterday_run.distance_km)}:{int((yesterday_run.duration_minutes / yesterday_run.distance_km % 1) * 60):02d}/km" if yesterday_run else None,
                     "has_notes": yesterday_run.notes is not None if yesterday_run else False,
                 } if yesterday_run else None,
+                "today_date": today.isoformat(),
                 "today_scheduled": {
                     "distance_km": 5,
                     "pace_range": "6:15-6:30",

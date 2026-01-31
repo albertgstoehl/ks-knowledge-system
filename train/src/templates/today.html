@@ -68,7 +68,12 @@
       <p class="text-muted">{{ today_data.today_scheduled.pace_range }}/km</p>
       
       <div class="mt-md">
-        {{ ui.button("MARK COMPLETE", primary=true, full=true) }}
+        <button type="button" 
+                class="btn btn--primary btn--full"
+                hx-post="{{ base_path }}/api/runs"
+                hx-vals='{"date": "{{ today_data.today_scheduled.date or today_data.today_date }}", "distance_km": {{ today_data.today_scheduled.distance_km }}, "duration_minutes": 0, "notes": "Logged via TODAY page"}'
+                hx-target="#today-content"
+                hx-swap="outerHTML">MARK COMPLETE</button>
       </div>
     </div>
     
@@ -85,7 +90,7 @@
     {% endif %}
     
     <div class="border-t pt-md mt-md text-center">
-      <a href="/runs/log" class="text-muted text-sm">Forgot Garmin? Log run manually</a>
+      <a href="{{ base_path }}/runs/log" class="text-muted text-sm">Forgot Garmin? Log run manually</a>
     </div>
   {% endcall %}
   {% endif %}
