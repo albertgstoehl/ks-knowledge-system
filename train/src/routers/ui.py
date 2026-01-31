@@ -79,6 +79,16 @@ async def today(request: Request):
             race_date = date(2026, 4, 15)
             weeks_to_race = (race_date - today).days // 7
             
+            # Calculate readiness breakdown if we have recovery data
+            readiness_data = None
+            if recovery:
+                from src.routers.recovery import calculate_readiness
+                readiness_data = calculate_readiness({
+                    "sleep_score": recovery.sleep_score,
+                    "hrv_avg": recovery.hrv_avg,
+                    "resting_hr": recovery.resting_hr
+                })
+            
             today_data = {
                 "marathon": {
                     "weeks_to_race": weeks_to_race,
@@ -87,6 +97,7 @@ async def today(request: Request):
                     "runs_this_week": len(runs_this_week),
                     "target_runs_per_week": 3,
                 },
+                "readiness": readiness_data,
                 "yesterday_run": {
                     "distance_km": yesterday_run.distance_km if yesterday_run else None,
                     "pace": f"{int(yesterday_run.duration_minutes / yesterday_run.distance_km)}:{int((yesterday_run.duration_minutes / yesterday_run.distance_km % 1) * 60):02d}/km" if yesterday_run else None,

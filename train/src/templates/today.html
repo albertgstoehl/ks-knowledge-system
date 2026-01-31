@@ -10,21 +10,41 @@
     </div>
     <p class="text-muted mb-md">{{ today_data.marathon.weeks_to_race }} weeks to race</p>
     
+    {# Readiness Verdict #}
+    {% if today_data.readiness %}
+    <div class="border p-md mb-md">
+      <div class="text-center mb-sm">
+        <span class="font-bold">
+          {% if today_data.readiness.verdict == "GREEN" %}[GREEN]
+          {% elif today_data.readiness.verdict == "YELLOW" %}[YELLOW]
+          {% elif today_data.readiness.verdict == "RED" %}[RED]
+          {% else %}[--]{% endif %}
+        </span>
+        <span class="text-muted">{{ today_data.readiness.checks }}</span>
+      </div>
+      <p class="text-sm text-center text-muted">{{ today_data.readiness.guidance }}</p>
+    </div>
+    
+    {# Metrics Breakdown #}
     <div class="grid grid-cols-3 gap-sm mb-md">
+      {% for metric in today_data.readiness.metrics %}
       {% call ui.card() %}
         <div class="text-center">
-          <div class="text-2xl font-bold">{{ today_data.marathon.readiness_score or '--' }}</div>
-          <div class="text-xs text-muted">READINESS</div>
-          {% if today_data.marathon.readiness_score %}
-            <span class="label">
-              {% if today_data.marathon.readiness_score >= 67 %}[GREEN]
-              {% elif today_data.marathon.readiness_score >= 34 %}[YELLOW]
-              {% else %}[RED]{% endif %}
-            </span>
-          {% endif %}
+          <div class="text-xs text-muted">{{ metric.name|upper }}</div>
+          <div class="text-lg font-bold">{{ metric.value }}{{ metric.unit }}</div>
+          <div class="text-xs">
+            {% if metric.status == "GREEN" %}[GREEN]
+            {% elif metric.status == "YELLOW" %}[YELLOW]
+            {% else %}[RED]{% endif %}
+          </div>
+          <div class="text-xs text-muted">target: {{ metric.target }}</div>
         </div>
       {% endcall %}
-      
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="grid grid-cols-2 gap-sm mb-md">
       {% call ui.card() %}
         <div class="text-center">
           <div class="text-2xl font-bold">{{ today_data.marathon.weekly_mileage }}</div>

@@ -66,3 +66,113 @@ async def get_today_data(session: AsyncSession = Depends(get_db)):
             "type": "easy",
         },
     }
+
+
+@router.get("/context")
+async def get_health_context(session: AsyncSession = Depends(get_db)):
+    """
+    Get rich health context for AI-assisted discussions.
+    
+    This endpoint provides trend data and baseline comparisons
+    for use during weekly reviews and training discussions.
+    """
+    today = date.today()
+    
+    # 30-day baseline calculation
+    days_30_ago = today - timedelta(days=30)
+    days_7_ago = today - timedelta(days=7)
+    yesterday = today - timedelta(days=1)
+    
+    # 30-day averages (baseline)
+    baseline_result = await session.execute(
+        select(
+            func.avg(RecoverySummary.sleep_score).label("sleep_avg"),
+            func.avg(RecoverySummary.hrv_avg).label("hrv_avg"),
+            func.avg(RecoverySummary.resting_hr).label("rhr_avg"),
+        )
+        .where(RecoverySummary.date >= days_30_ago)
+        .where(RecoverySummary.date < today)
+    )
+    baseline = baseline_result.one()
+    
+    # Today's values
+    today_result = await session.execute(
+        select(RecoverySummary).where(RecoverySummary.date == today)
+    )
+    today_recovery = today_result.scalar_one_or_none()
+    
+    # Yesterday's values (for day-over-day)
+    yesterday_result = await session.execute(
+        select(RecoverySummary).where(RecoverySummary.date == yesterday)
+    )
+    yesterday_recovery = yesterday_result.scalar_one_or_none()
+    
+    # 7-day training load trend
+    runs_week_1 = await session.execute(
+        select(func.sum(Run.distance_km))
+        .where(Run.date >= days_7_ago)
+    )
+    runs_week_2 = await session.execute(
+        select(func.sum(Run.distance_km))
+        .where(Run.date >= days_30_ago + timedelta(days=7))
+        .where(Run.date < days_7_ago)
+    )
+    
+    weekly_mileage_current = runs_week_1.scalar() or 0
+    weekly_mileage_previous = runs_week_2.scalar() or 0
+    
+    # Recent runs for pattern analysis
+    recent_runs_result = await session.execute(
+        select(Run)
+        .where(Run.date >= days_7_ago)
+        .order_by(Run.date.desc())
+    )
+    recent_runs = recent_runs_result.scalars().all()
+    
+    return {
+        "user_baseline": {
+            "period": "last_30_days",
+            "sleep_avg": round(baseline.sleep_avg, 1) if baseline.sleep_avg else None,
+            "hrv_avg": round(baseline.hrv_avg, 1) if baseline.hrv_avg else None,
+            "rhr_avg": round(baseline.rhr_avg, 1) if baseline.rhr_avg else None,
+        },
+        "today_vs_baseline": {
+            "sleep": _calc_pct_change(today_recovery.sleep_score, baseline.sleep_avg) if today_recovery else None,
+            "hrv": _calc_pct_change(today_recovery.hrv_avg, baseline.hrv_avg) if today_recovery else None,
+            "rhr": _calc_pct_change(today_recovery.resting_hr, baseline.rhr_avg, invert=True) if today_recovery else None,
+        } if today_recovery else None,
+        "yesterday_vs_baseline": {
+            "sleep": _calc_pct_change(yesterday_recovery.sleep_score, baseline.sleep_avg) if yesterday_recovery else None,
+            "hrv": _calc_pct_change(yesterday_recovery.hrv_avg, baseline.hrv_avg) if yesterday_recovery else None,
+            "rhr": _calc_pct_change(yesterday_recovery.resting_hr, baseline.rhr_avg, invert=True) if yesterday_recovery else None,
+        } if yesterday_recovery else None,
+        "training_load": {
+            "weekly_mileage_current": round(weekly_mileage_current, 1),
+            "weekly_mileage_previous": round(weekly_mileage_previous, 1),
+            "trend": "increasing" if weekly_mileage_current > weekly_mileage_previous * 1.1 else ("decreasing" if weekly_mileage_current < weekly_mileage_previous * 0.9 else "stable"),
+            "runs_this_week": len(recent_runs),
+            "recent_runs": [
+                {
+                    "date": r.date.isoformat(),
+                    "distance_km": r.distance_km,
+                    "pace": f"{int(r.duration_minutes / r.distance_km)}:{int((r.duration_minutes / r.distance_km % 1) * 60):02d}",
+                    "effort": r.effort,
+                }
+                for r in recent_runs
+            ]
+        },
+        "marathon": {
+            "weeks_to_race": (date(2026, 4, 15) - today).days // 7,
+            "race_date": "2026-04-15",
+        }
+    }
+
+
+def _calc_pct_change(current, baseline, invert=False):
+    """Calculate percentage change from baseline."""
+    if current is None or baseline is None or baseline == 0:
+        return None
+    change = ((current - baseline) / baseline) * 100
+    if invert:
+        change = -change  # For metrics where lower is better (RHR)
+    return f"{change:+.0f}%"

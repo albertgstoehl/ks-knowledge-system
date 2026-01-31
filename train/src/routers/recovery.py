@@ -30,22 +30,99 @@ class RecoveryResponse(BaseModel):
     weekly_mileage: float
 
 
-def calculate_readiness_score(data: dict) -> int:
-    """Calculate 0-100 readiness score from metrics."""
-    score = 50  # baseline
+def calculate_readiness(data: dict) -> dict:
+    """
+    Calculate readiness verdict with transparent per-metric checks.
     
+    Targets based on Garmin's established thresholds for trained athletes:
+    - Sleep: 70+ (Garmin's 'fair' threshold)
+    - HRV: 45+ ms (typical for active adults)
+    - RHR: 50- bpm (trained runner baseline)
+    """
+    metrics = []
+    checks_passed = 0
+    total_checks = 0
+    
+    # Sleep Score: 0-100 Garmin score
     if data.get("sleep_score"):
-        score += (data["sleep_score"] - 70) * 0.3
+        sleep = data["sleep_score"]
+        if sleep >= 80:
+            status = "GREEN"
+            checks_passed += 1
+        elif sleep >= 70:
+            status = "GREEN"
+            checks_passed += 1
+        else:
+            status = "YELLOW" if sleep >= 60 else "RED"
+        total_checks += 1
+        metrics.append({
+            "name": "sleep",
+            "value": sleep,
+            "unit": "",
+            "target": "70+",
+            "status": status
+        })
     
-    # HRV: higher is better (simplified)
+    # HRV: Higher is better recovery
     if data.get("hrv_avg"):
-        score += (data["hrv_avg"] - 45) * 0.5
+        hrv = data["hrv_avg"]
+        if hrv >= 50:
+            status = "GREEN"
+            checks_passed += 1
+        elif hrv >= 45:
+            status = "GREEN"
+            checks_passed += 1
+        else:
+            status = "YELLOW" if hrv >= 40 else "RED"
+        total_checks += 1
+        metrics.append({
+            "name": "hrv",
+            "value": hrv,
+            "unit": "ms",
+            "target": "45+",
+            "status": status
+        })
     
-    # RHR: lower is better (simplified)
+    # Resting HR: Lower is better
     if data.get("resting_hr"):
-        score -= (data["resting_hr"] - 50) * 0.3
+        rhr = data["resting_hr"]
+        if rhr <= 50:
+            status = "GREEN"
+            checks_passed += 1
+        elif rhr <= 55:
+            status = "GREEN"
+            checks_passed += 1
+        else:
+            status = "YELLOW" if rhr <= 60 else "RED"
+        total_checks += 1
+        metrics.append({
+            "name": "resting_hr",
+            "value": rhr,
+            "unit": "bpm",
+            "target": "50-",
+            "status": status
+        })
     
-    return max(0, min(100, int(score)))
+    # Overall verdict
+    if total_checks == 0:
+        verdict = "UNKNOWN"
+        guidance = "No data available"
+    elif checks_passed == total_checks:
+        verdict = "GREEN"
+        guidance = "Full training capacity"
+    elif checks_passed >= total_checks * 0.5:
+        verdict = "YELLOW"
+        guidance = "Moderate training - keep it conversational"
+    else:
+        verdict = "RED"
+        guidance = "Rest day recommended"
+    
+    return {
+        "verdict": verdict,
+        "guidance": guidance,
+        "checks": f"{checks_passed}/{total_checks}",
+        "metrics": metrics
+    }
 
 
 @router.post("/sync")
@@ -54,13 +131,18 @@ async def sync_recovery(
     session: AsyncSession = Depends(get_db)
 ):
     """Sync daily recovery data from Garmin."""
+    from src.models import Run
+    
     # Calculate weekly mileage (last 7 days of runs)
-    from src.models import Session as TrainSession, SetEntry
+    week_ago = date.today() - timedelta(days=7)
+    mileage_result = await session.execute(
+        select(func.sum(Run.distance_km))
+        .where(Run.date >= week_ago)
+    )
+    weekly_mileage = mileage_result.scalar() or 0.0
     
-    # TODO: Calculate from runs table once we have it
-    weekly_mileage = 0.0
-    
-    readiness = calculate_readiness_score(payload.model_dump())
+    # Calculate readiness with full breakdown
+    readiness_data = calculate_readiness(payload.model_dump())
     
     # Check if exists
     result = await session.execute(
@@ -76,7 +158,7 @@ async def sync_recovery(
         existing.sleep_duration_hours = payload.sleep_duration_hours
         existing.deep_sleep_percent = payload.deep_sleep_percent
         existing.avg_stress = payload.avg_stress
-        existing.readiness_score = readiness
+        existing.readiness_score = 100 if readiness_data["verdict"] == "GREEN" else (50 if readiness_data["verdict"] == "YELLOW" else 0)
         existing.weekly_mileage = weekly_mileage
     else:
         # Create new
@@ -88,7 +170,7 @@ async def sync_recovery(
             sleep_duration_hours=payload.sleep_duration_hours,
             deep_sleep_percent=payload.deep_sleep_percent,
             avg_stress=payload.avg_stress,
-            readiness_score=readiness,
+            readiness_score=100 if readiness_data["verdict"] == "GREEN" else (50 if readiness_data["verdict"] == "YELLOW" else 0),
             weekly_mileage=weekly_mileage,
         )
         session.add(summary)
@@ -97,8 +179,8 @@ async def sync_recovery(
     
     return {
         "date": payload.date,
-        "readiness_score": readiness,
         "weekly_mileage": weekly_mileage,
+        "readiness": readiness_data
     }
 
 

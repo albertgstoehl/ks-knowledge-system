@@ -17,4 +17,6 @@ async def test_sync_recovery_data(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["date"] == "2026-01-31"
-    assert data["readiness_score"] > 0
+    assert data["readiness"]["verdict"] in ["GREEN", "YELLOW", "RED"]
+    assert data["readiness"]["guidance"] != ""
+    assert len(data["readiness"]["metrics"]) > 0
