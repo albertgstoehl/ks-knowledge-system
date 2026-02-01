@@ -127,3 +127,10 @@ async def history(request: Request):
 @router.get("/plan", response_class=HTMLResponse)
 async def plan(request: Request):
     return _render(request, "plan.html", {"active_tab": "Plan"})
+
+
+@router.get("/runs/log", response_class=HTMLResponse)
+async def log_run(request: Request):
+    """Manual run logging page (for when you forgot your watch)."""
+    from datetime import date
+    return _render(request, "log_run.html", {"active_tab": "Today", "today_date": date.today().isoformat()})
