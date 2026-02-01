@@ -18,7 +18,7 @@ import httpx
 
 RUNALYZE_TOKEN = os.getenv("RUNALYZE_TOKEN")
 TRAIN_API_URL = os.getenv("TRAIN_API_URL", "http://localhost:8000")
-RUNALYZE_API_URL = "https://runalyze.com/api/v2"
+RUNALYZE_API_URL = "https://runalyze.com/api/v1"
 
 
 async def fetch_runalyze_stats(client: httpx.AsyncClient, target_date: date) -> dict:
@@ -26,12 +26,11 @@ async def fetch_runalyze_stats(client: httpx.AsyncClient, target_date: date) -> 
     if not RUNALYZE_TOKEN:
         raise ValueError("RUNALYZE_TOKEN environment variable required")
     
-    headers = {"Authorization": f"Bearer {RUNALYZE_TOKEN}"}
+    headers = {"token": RUNALYZE_TOKEN}
     
-    # For Supporter tier, we use /stats/current for today's data
-    # For historical, we'd need different endpoints
+    # Supporter/Premium tier: use /statistics/current for today's data
     resp = await client.get(
-        f"{RUNALYZE_API_URL}/stats/current",
+        f"{RUNALYZE_API_URL}/statistics/current",
         headers=headers
     )
     resp.raise_for_status()
@@ -41,17 +40,21 @@ async def fetch_runalyze_stats(client: httpx.AsyncClient, target_date: date) -> 
 
 def transform_to_train_format(stats: dict, target_date: date) -> dict:
     """Transform Runalyze stats to Train API format."""
+    # Map Runalyze field names to our field names
+    # fitness = CTL, fatigue = ATL, performance = TSB
     return {
         "date": target_date.isoformat(),
-        "resting_hr": stats.get("resting_heart_rate"),
-        "hrv_avg": stats.get("hrv", {}).get("last_night_avg"),
-        "sleep_score": stats.get("sleep", {}).get("score"),
-        "sleep_duration_hours": stats.get("sleep", {}).get("duration_hours"),
-        "vo2max": stats.get("effective_vo2max"),
-        "marathon_shape": stats.get("marathon_shape", {}).get("marathon"),
-        "atl": stats.get("atl"),
-        "ctl": stats.get("ctl"),
-        "tsb": stats.get("ctl", 0) - stats.get("atl", 0) if stats.get("ctl") and stats.get("atl") else None,
+        # Health metrics - not available from this endpoint, would need Garmin
+        "resting_hr": None,
+        "hrv_avg": stats.get("hrvBaseline"),
+        "sleep_score": None,
+        "sleep_duration_hours": None,
+        # Training metrics from Runalyze calculations
+        "vo2max": stats.get("effectiveVO2max") if stats.get("effectiveVO2max") else None,
+        "marathon_shape": stats.get("marathonShape") if stats.get("marathonShape") else None,
+        "atl": stats.get("fatigue"),  # ATL = Acute Training Load (fatigue)
+        "ctl": stats.get("fitness"),   # CTL = Chronic Training Load (fitness)
+        "tsb": stats.get("performance"),  # TSB = Training Stress Balance (performance)
     }
 
 
@@ -67,7 +70,10 @@ async def sync_date(target_date: date, client: httpx.AsyncClient) -> bool:
         )
         resp.raise_for_status()
         
-        print(f"✓ Synced {target_date}: shape={payload['marathon_shape']}%, tsb={payload['tsb']}")
+        shape = payload.get('marathon_shape')
+        tsb = payload.get('tsb')
+        vo2max = payload.get('vo2max')
+        print(f"✓ Synced {target_date}: shape={shape}%, tsb={tsb}, vo2max={vo2max}")
         return True
         
     except Exception as e:
