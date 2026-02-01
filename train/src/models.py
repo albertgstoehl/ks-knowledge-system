@@ -77,6 +77,29 @@ class RecoverySummary(Base):
     energy = Column(Integer)
 
 
+class DailyMetrics(Base):
+    __tablename__ = "daily_metrics"
+
+    date = Column(Date, primary_key=True)
+    
+    # Health metrics from Runalyze (originally from Garmin)
+    resting_hr = Column(Integer)
+    hrv_avg = Column(Integer)
+    sleep_score = Column(Integer)
+    sleep_duration_hours = Column(Float)
+    
+    # Training metrics from Runalyze (calculated)
+    vo2max = Column(Float)
+    marathon_shape = Column(Float)
+    tsb = Column(Float)
+    atl = Column(Float)
+    ctl = Column(Float)
+    
+    # User subjective inputs
+    soreness = Column(Integer)
+    energy = Column(Integer)
+
+
 class Run(Base):
     __tablename__ = "runs"
     
