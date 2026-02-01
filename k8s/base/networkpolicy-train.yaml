@@ -21,7 +21,7 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
-    # Allow Garmin Connect
+    # Allow Garmin Connect & Runalyze API
     - to:
       - ipBlock:
           cidr: 0.0.0.0/0
