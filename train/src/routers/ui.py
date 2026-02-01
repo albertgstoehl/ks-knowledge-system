@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, desc
 from src import database
-from src.models import Session
+from src.models import Session, DailyMetrics
 from src.utils.paths import find_shared_dir
 
 router = APIRouter(tags=["ui"])
@@ -29,7 +29,7 @@ def _render(request: Request, template: str, context: dict | None = None):
 @router.get("/today", response_class=HTMLResponse)
 async def today(request: Request):
     from datetime import date, timedelta
-    from src.models import RecoverySummary, Run
+    from src.models import Run
     from sqlalchemy import func
     
     # Check for active session (no ended_at)
@@ -51,11 +51,11 @@ async def today(request: Request):
             week_ago = today - timedelta(days=7)
             yesterday = today - timedelta(days=1)
             
-            # Get recovery data
-            recovery_result = await db.execute(
-                select(RecoverySummary).where(RecoverySummary.date == today)
+            # Get daily metrics from Runalyze
+            metrics_result = await db.execute(
+                select(DailyMetrics).where(DailyMetrics.date == today)
             )
-            recovery = recovery_result.scalar_one_or_none()
+            metrics = metrics_result.scalar_one_or_none()
             
             # Get weekly mileage
             mileage_result = await db.execute(
@@ -79,25 +79,40 @@ async def today(request: Request):
             race_date = date(2026, 4, 15)
             weeks_to_race = (race_date - today).days // 7
             
-            # Calculate readiness breakdown if we have recovery data
-            readiness_data = None
-            if recovery:
-                from src.routers.recovery import calculate_readiness
-                readiness_data = calculate_readiness({
-                    "sleep_score": recovery.sleep_score,
-                    "hrv_avg": recovery.hrv_avg,
-                    "resting_hr": recovery.resting_hr
-                })
+            # Calculate status for metrics
+            def _get_shape_status(shape):
+                if shape is None:
+                    return "no_data"
+                if shape >= 90:
+                    return "race_ready"
+                if shape >= 70:
+                    return "building"
+                return "insufficient"
+
+            def _get_tsb_status(tsb):
+                if tsb is None:
+                    return "no_data"
+                if tsb < -25:
+                    return "overreached"
+                if tsb < -10:
+                    return "training_zone"
+                if tsb < 10:
+                    return "recovered"
+                return "detraining"
             
             today_data = {
                 "marathon": {
                     "weeks_to_race": weeks_to_race,
-                    "readiness_score": recovery.readiness_score if recovery else None,
+                    "has_data": metrics is not None,
+                    "shape_pct": metrics.marathon_shape if metrics else None,
+                    "shape_status": _get_shape_status(metrics.marathon_shape if metrics else None),
+                    "tsb": metrics.tsb if metrics else None,
+                    "tsb_status": _get_tsb_status(metrics.tsb if metrics else None),
+                    "vo2max": metrics.vo2max if metrics else None,
                     "weekly_mileage": round(weekly_mileage, 1),
                     "runs_this_week": len(runs_this_week),
                     "target_runs_per_week": 3,
                 },
-                "readiness": readiness_data,
                 "yesterday_run": {
                     "distance_km": yesterday_run.distance_km if yesterday_run else None,
                     "pace": f"{int(yesterday_run.duration_minutes / yesterday_run.distance_km)}:{int((yesterday_run.duration_minutes / yesterday_run.distance_km % 1) * 60):02d}/km" if yesterday_run else None,
