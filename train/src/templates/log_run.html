@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% import "components.html" as ui %}
+
+{% block content %}
+<div class="p-md">
+  <div class="view-header mb-lg">
+    <span class="view-header__title">LOG RUN</span>
+  </div>
+  
+  <p class="text-muted mb-md">Forgot your Garmin? Log your run manually.</p>
+  
+  <form hx-post="{{ base_path }}/api/runs"
+        hx-ext="json-enc"
+        hx-target="#result"
+        hx-swap="innerHTML">
+    
+    <div class="mb-md">
+      <label class="text-xs text-muted">DATE</label>
+      <input type="date" name="date" class="input" value="{{ today_date }}" required>
+    </div>
+    
+    <div class="mb-md">
+      <label class="text-xs text-muted">DISTANCE (km)</label>
+      <input type="number" name="distance_km" class="input" step="0.1" placeholder="5.0" required>
+    </div>
+    
+    <div class="mb-md">
+      <label class="text-xs text-muted">DURATION (minutes)</label>
+      <input type="number" name="duration_minutes" class="input" placeholder="30" required>
+    </div>
+    
+    <div class="mb-md">
+      <label class="text-xs text-muted">EFFORT (1-10, optional)</label>
+      <input type="number" name="effort" class="input" min="1" max="10" placeholder="5">
+    </div>
+    
+    <div class="mb-md">
+      <label class="text-xs text-muted">NOTES (optional)</label>
+      <textarea name="notes" class="textarea" rows="3" placeholder="How did it feel?"></textarea>
+    </div>
+    
+    <div id="result"></div>
+    
+    <div class="mt-lg">
+      {{ ui.button("LOG RUN", primary=true, full=true, type="submit") }}
+    </div>
+    
+    <div class="mt-md text-center">
+      <a href="{{ base_path }}/" class="text-muted text-sm">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+// On successful submit, redirect to today page
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+  if (evt.detail.successful && evt.detail.target.id === 'result') {
+    document.getElementById('result').innerHTML = '<div class="text-center mb-md">[GREEN] Run logged!</div>';
+    setTimeout(function() {
+      window.location.href = '{{ base_path }}/';
+    }, 1000);
+  }
+});
+</script>
+{% endblock %}

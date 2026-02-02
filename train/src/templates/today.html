@@ -3,6 +3,123 @@
 
 {% block content %}
 <div id="today-content">
+  {% if marathon_mode %}
+  {% call ui.card() %}
+    <div class="view-header">
+      <span class="view-header__title">MARATHON</span>
+      <span class="text-muted">Week {{ 10 - today_data.marathon.weeks_to_race }} of 10</span>
+    </div>
+    
+    {% if today_data.marathon.weeks_to_race > 0 %}
+      <p class="text-muted mb-md">{{ today_data.marathon.weeks_to_race }} weeks to race</p>
+    {% else %}
+      <p class="text-accent mb-md">RACE WEEK</p>
+    {% endif %}
+    
+    {% if today_data.marathon.has_data %}
+      <div class="grid grid-cols-3 gap-sm mb-md">
+        <!-- Marathon Shape -->
+        {% call ui.card() %}
+          <div class="text-center">
+            <div class="text-2xl font-bold {{ 'text-success' if today_data.marathon.shape_status == 'race_ready' else ('text-warning' if today_data.marathon.shape_status == 'building' else 'text-error') }}">
+              {{ "%.0f"|format(today_data.marathon.shape_pct) if today_data.marathon.shape_pct else '--' }}%
+            </div>
+            <div class="text-xs text-muted">SHAPE</div>
+            <span class="label {{ 'label--success' if today_data.marathon.shape_status == 'race_ready' else ('label--warning' if today_data.marathon.shape_status == 'building' else 'label--error') }}">
+              {{ today_data.marathon.shape_status|replace('_', ' ')|title }}
+            </span>
+          </div>
+        {% endcall %}
+        
+        <!-- TSB -->
+        {% call ui.card() %}
+          <div class="text-center">
+            <div class="text-2xl font-bold {{ 'text-error' if today_data.marathon.tsb_status == 'overreached' else ('text-success' if today_data.marathon.tsb_status == 'training_zone' else 'text-warning') }}">
+              {{ "%.0f"|format(today_data.marathon.tsb) if today_data.marathon.tsb is not none else '--' }}
+            </div>
+            <div class="text-xs text-muted">TSB</div>
+            <span class="label {{ 'label--error' if today_data.marathon.tsb_status == 'overreached' else ('label--success' if today_data.marathon.tsb_status == 'training_zone' else 'label--warning') }}">
+              {{ today_data.marathon.tsb_status|replace('_', ' ')|title }}
+            </span>
+          </div>
+        {% endcall %}
+        
+        <!-- VO2max -->
+        {% call ui.card() %}
+          <div class="text-center">
+            <div class="text-2xl font-bold">{{ "%.1f"|format(today_data.marathon.vo2max) if today_data.marathon.vo2max else '--' }}</div>
+            <div class="text-xs text-muted">VO2MAX</div>
+            <span class="label">Fitness</span>
+          </div>
+        {% endcall %}
+      </div>
+      
+      <!-- Alerts -->
+      {% if today_data.marathon.tsb_status == 'overreached' %}
+        <div class="alert alert--error mb-md">
+          <strong>Rest day recommended.</strong> TSB below -25 indicates deep fatigue.
+        </div>
+      {% endif %}
+      
+      {% if today_data.marathon.shape_status == 'insufficient' and today_data.marathon.weeks_to_race <= 3 %}
+        <div class="alert alert--warning mb-md">
+          <strong>Adjust race goal.</strong> Marathon Shape below 70% - consider run-walk strategy.
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="alert alert--info mb-md">
+        No Runalyze data yet. Run sync to import.
+      </div>
+    {% endif %}
+    
+    <!-- Weekly mileage -->
+    <div class="border-t pt-md">
+      <div class="flex justify-between items-center">
+        <span>Weekly mileage</span>
+        <span class="font-bold">{{ today_data.marathon.weekly_mileage }} km</span>
+      </div>
+      <div class="flex justify-between items-center text-sm text-muted">
+        <span>Runs this week</span>
+        <span>{{ today_data.marathon.runs_this_week }}/{{ today_data.marathon.target_runs_per_week }}</span>
+      </div>
+    </div>
+    
+    <div class="border-t pt-md mt-md">
+      <div class="view-header">
+        <span class="view-header__title">TODAY'S RUN</span>
+      </div>
+      <p>{{ today_data.today_scheduled.distance_km }}km {{ today_data.today_scheduled.type }}</p>
+      <p class="text-muted">{{ today_data.today_scheduled.pace_range }}/km</p>
+      
+      <div class="mt-md">
+        <button type="button" 
+                class="btn btn--primary btn--full"
+                hx-post="{{ base_path }}/api/runs"
+                hx-ext="json-enc"
+                hx-vals='{"date": "{{ today_data.today_date }}", "distance_km": {{ today_data.today_scheduled.distance_km }}, "duration_minutes": 30, "notes": "Completed via TODAY page"}'
+                hx-target="#today-content"
+                hx-swap="outerHTML">MARK COMPLETE</button>
+      </div>
+    </div>
+    
+    {% if today_data.yesterday_run %}
+    <div class="border-t pt-md mt-md">
+      <div class="view-header">
+        <span class="view-header__title">YESTERDAY</span>
+      </div>
+      <p>{{ today_data.yesterday_run.distance_km }}km @ {{ today_data.yesterday_run.pace }}</p>
+      {% if not today_data.yesterday_run.has_notes %}
+        {{ ui.button("+ Add Notes", sm=true) }}
+      {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="border-t pt-md mt-md text-center">
+      <a href="{{ base_path }}/runs/log" class="text-muted text-sm">Forgot Garmin? Log run manually</a>
+    </div>
+  {% endcall %}
+  {% endif %}
+  
   {% if active_session %}
     {% include "partials/active_workout.html" %}
   {% else %}

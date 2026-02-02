@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: runalyze-sync
+  namespace: knowledge-system
+spec:
+  schedule: "30 6 * * *"  # 6:30am daily (after Runalyze processes Garmin data)
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sync
+            image: train:latest
+            imagePullPolicy: Never
+            command:
+            - python
+            - scripts/sync_runalyze.py
+            - --days
+            - "1"
+            env:
+            - name: RUNALYZE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: runalyze-credentials
+                  key: token
+            - name: TRAIN_API_URL
+              value: "http://train:8000"
+            volumeMounts:
+            - name: data
+              mountPath: /app/data
+          volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: train-pvc
+          restartPolicy: OnFailure

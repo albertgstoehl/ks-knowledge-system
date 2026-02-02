@@ -11,7 +11,7 @@ spec:
   policyTypes:
     - Egress
   egress:
-    # DNS only - train doesn't need external network access
+    # DNS
     - to:
         - namespaceSelector:
             matchLabels:
@@ -21,3 +21,10 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
+    # Allow Garmin Connect & Runalyze API
+    - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+      ports:
+      - protocol: TCP
+        port: 443

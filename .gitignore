@@ -1,5 +1,9 @@
 .playwright-mcp/
 .worktrees/
 
+# Python bytecode
+__pycache__/
+*.pyc
+
 # Analytics exports (weekly JSON files for Claude analysis)
 analytics/

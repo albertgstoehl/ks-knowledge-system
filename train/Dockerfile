@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY train/src/ ./src/
 COPY train/plan/ ./plan/
+COPY train/scripts/ ./scripts/
 COPY shared/ ./shared/
 
 ENV DATABASE_URL=sqlite:///./data/train.db
