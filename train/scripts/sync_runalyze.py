@@ -5,7 +5,7 @@ Sync Runalyze data to Train database.
 Usage:
     python sync_runalyze.py              # Sync today
     python sync_runalyze.py --days 7     # Sync last 7 days
-    python sync_runalyze.py --backfill   # Backfill from Runalyze history
+    python sync_runalyze.py --activities # Sync activities
 """
 
 import argparse
@@ -13,6 +13,7 @@ import asyncio
 import os
 import sys
 from datetime import date, timedelta
+from datetime import datetime
 
 import httpx
 
@@ -65,6 +66,51 @@ async def fetch_runalyze_stats(client: httpx.AsyncClient, target_date: date) -> 
     return stats
 
 
+async def fetch_runalyze_activities(client: httpx.AsyncClient, days: int = 7) -> list:
+    """Fetch running activities from Runalyze API."""
+    if not RUNALYZE_TOKEN:
+        raise ValueError("RUNALYZE_TOKEN environment variable required")
+    
+    headers = {"token": RUNALYZE_TOKEN}
+    
+    resp = await client.get(
+        f"{RUNALYZE_API_URL}/activity",
+        headers=headers,
+        params={"limit": 50}  # Get last 50 activities
+    )
+    resp.raise_for_status()
+    
+    activities = resp.json()
+    
+    # Filter to running activities within date range
+    cutoff = datetime.now() - timedelta(days=days)
+    runs = []
+    
+    for act in activities:
+        sport = act.get('sport', {}).get('name', '')
+        if sport != 'Running':
+            continue
+        
+        # Parse activity date
+        act_date = datetime.fromisoformat(act['date_time'].replace('Z', '+00:00'))
+        if act_date < cutoff:
+            continue
+        
+        runs.append({
+            'date': act_date.date().isoformat(),
+            'distance_km': round(act.get('distance', 0), 2),
+            'duration_minutes': int(act.get('duration', 0) / 60),
+            'avg_hr': act.get('hr_avg'),
+            'max_hr': act.get('hr_max'),
+            'elevation_gain_m': act.get('elevation_up'),
+            'notes': f"Synced from Runalyze: {act.get('title', 'Run')}",
+            'source': 'garmin',
+            'external_id': str(act.get('id'))
+        })
+    
+    return runs
+
+
 def transform_to_train_format(stats: dict, target_date: date) -> dict:
     """Transform Runalyze stats to Train API format."""
     # Extract latest HRV if available
@@ -105,6 +151,43 @@ def transform_to_train_format(stats: dict, target_date: date) -> dict:
     }
 
 
+async def sync_activities(client: httpx.AsyncClient) -> int:
+    """Sync running activities from Runalyze to Train."""
+    runs = await fetch_runalyze_activities(client, days=7)
+    
+    if not runs:
+        print("No running activities found in last 7 days")
+        return 0
+    
+    synced = 0
+    for run in runs:
+        try:
+            # Check if already exists
+            check_resp = await client.get(
+                f"{TRAIN_API_URL}/api/runs",
+                params={"date": run['date']}
+            )
+            
+            # Create the run
+            resp = await client.post(
+                f"{TRAIN_API_URL}/api/runs",
+                json=run
+            )
+            
+            if resp.status_code in [200, 201]:
+                print(f"✓ Synced run: {run['date']} - {run['distance_km']}km in {run['duration_minutes']}min")
+                synced += 1
+            elif resp.status_code == 409:
+                print(f"→ Already exists: {run['date']}")
+            else:
+                print(f"✗ Failed to sync {run['date']}: HTTP {resp.status_code}")
+                
+        except Exception as e:
+            print(f"✗ Error syncing {run['date']}: {e}", file=sys.stderr)
+    
+    return synced
+
+
 async def sync_date(target_date: date, client: httpx.AsyncClient) -> bool:
     """Sync a single date to Train."""
     try:
@@ -141,10 +224,16 @@ async def main():
     parser = argparse.ArgumentParser(description="Sync Runalyze to Train")
     parser.add_argument("--days", type=int, default=1, help="Number of days to sync")
     parser.add_argument("--date", help="Specific date (YYYY-MM-DD)")
+    parser.add_argument("--activities", action="store_true", help="Sync activities/runs")
     args = parser.parse_args()
     
     async with httpx.AsyncClient() as client:
-        if args.date:
+        if args.activities:
+            print("Syncing activities from Runalyze...")
+            synced = await sync_activities(client)
+            print(f"\nSynced {synced} activities")
+            sys.exit(0 if synced >= 0 else 1)
+        elif args.date:
             target = date.fromisoformat(args.date)
             success = await sync_date(target, client)
             sys.exit(0 if success else 1)
